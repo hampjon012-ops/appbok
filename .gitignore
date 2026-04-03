@@ -1,0 +1,17 @@
+# Miljövariabler och hemligheter — committa aldrig
+.env
+**/.env
+.env.*
+!.env.example
+
+# Beroenden och byggen
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
+# OS & editor
+.DS_Store
+.cursor/
+.idea/
+*.log

@@ -1,0 +1,14 @@
+{
+    "salonName": "Studio Blank",
+    "tagline": "Minimalistisk Hårvård",
+    "theme": {
+        "backgroundColor": "#FAFAFA",
+        "primaryAccent": "#111111",
+        "textColor": "#1A1A1A"
+    },
+    "services": [
+        { "id": "1", "name": "Klippning", "price": "Från 550 kr", "duration": "45 min" },
+        { "id": "2", "name": "Färg & Slingor", "price": "Från 1200 kr", "duration": "120 min" },
+        { "id": "3", "name": "Tvätt & Fön", "price": "Från 400 kr", "duration": "30 min" }
+    ]
+}

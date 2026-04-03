@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boka Tid - Frisör</title>
+    <!-- Modern typography via Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- White Label Header -->
+        <header class="hero">
+            <h1 id="salon-name" class="salon-name">Laddar...</h1>
+            <p id="salon-tagline" class="salon-tagline"></p>
+            <button id="book-btn" class="btn-primary">Boka tid</button>
+        </header>
+
+        <!-- Booking Modal / Flow (Hidden by default) -->
+        <div id="booking-modal" class="modal hidden">
+            <div class="modal-content">
+                <button id="close-modal" class="close-btn">&times;</button>
+                <h2>Boka din tid</h2>
+                
+                <!-- Step 1: Services -->
+                <div id="step-1" class="booking-step active">
+                    <h3>Välj behandling</h3>
+                    <div id="services-list" class="services-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Step 2: Date & Time -->
+                <div id="step-2" class="booking-step hidden">
+                    <h3>Välj dag och tid</h3>
+                    <div class="calendar-wrapper">
+                        <p class="temp-text">Kalender kommer här</p>
+                    </div>
+                    <button id="back-to-step-1" class="btn-secondary">Tillbaka</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>

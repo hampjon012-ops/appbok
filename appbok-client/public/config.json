@@ -1,0 +1,72 @@
+{
+  "salonId": "a0000000-0000-0000-0000-000000000001",
+  "salonSlug": "colorisma",
+  "salonName": "Colorisma",
+  "tagline": "Upplev hantverk och personlig service i en lugn och modern miljö.",
+  "logoUrl": "/logo.png",
+  "theme": {
+    "backgroundColor": "#FAFAFA",
+    "primaryAccent": "#A89483",
+    "secondaryColor": "#EBE8E3",
+    "textColor": "#1A1A1A"
+  },
+  "stripe": {
+    "currency": "sek"
+  },
+  "instagram": [
+    "https://images.unsplash.com/photo-1595476108010-b4d1f10d5e43?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1620331311520-246422fd82f9?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1522337660859-02fbefca4702?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1562322140-8baeececf3df?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1519699047748-de8e457a634e?q=80&w=800&auto=format&fit=crop"
+  ],
+  "categories": [
+    {
+      "id": "kat-1",
+      "name": "Klippning",
+      "description": "Professionell klippning anpassad efter ditt hår och din stil.",
+      "services": [
+        { "id": "1", "name": "Klippning inkl. tvätt & fön", "price": "Från 750 kr", "priceAmount": 75000, "duration": "60 min" },
+        { "id": "2", "name": "Klippning kort hår (Maskin/Sax)", "price": "Från 550 kr", "priceAmount": 55000, "duration": "45 min" },
+        { "id": "3", "name": "Barnklippning (upp till 12 år)", "price": "Från 450 kr", "priceAmount": 45000, "duration": "30 min" },
+        { "id": "4", "name": "Skägg & trimning", "price": "Från 350 kr", "priceAmount": 35000, "duration": "30 min" }
+      ]
+    },
+    {
+      "id": "kat-2",
+      "name": "Färgning",
+      "description": "Helcolor, slingor eller balayage med premium produkter.",
+      "services": [
+        { "id": "5", "name": "Balayage / Ombre", "price": "Från 1 800 kr", "priceAmount": 180000, "duration": "180 min" },
+        { "id": "6", "name": "Folieslingor - Hel", "price": "Från 1 500 kr", "priceAmount": 150000, "duration": "150 min" },
+        { "id": "7", "name": "Utväxt (Max 3cm)", "price": "Från 1 200 kr", "priceAmount": 120000, "duration": "90 min" }
+      ]
+    },
+    {
+      "id": "kat-3",
+      "name": "Behandling",
+      "description": "Djupverkande hårvård och keratinbehandling.",
+      "services": [
+        { "id": "8", "name": "Olaplex Stand-Alone", "price": "Från 600 kr", "priceAmount": 60000, "duration": "45 min" },
+        { "id": "9", "name": "Tvätt & Fön", "price": "Från 450 kr", "priceAmount": 45000, "duration": "30 min" }
+      ]
+    }
+  ],
+  "stylists": [
+    { "id": "s1", "name": "Emma Lindqvist", "title": "Senior Kolorist", "photo": "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=400&q=80" },
+    { "id": "s2", "name": "Marcus Holm", "title": "Frisör & Barberer", "photo": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&q=80" },
+    { "id": "s3", "name": "Sofia Berg", "title": "Balayage Specialist", "photo": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80" },
+    { "id": "s4", "name": "Valfri stylist", "title": "Bästa tillgängliga tid", "photo": "" }
+  ],
+  "contact": {
+    "address": "Sveavägen 42, 111 34 Stockholm",
+    "phone": "08-123 456 78",
+    "hours": [
+      "Måndag — Fredag: 09:00 — 19:00",
+      "Lördag: 10:00 — 16:00",
+      "Söndag: Stängt"
+    ]
+  },
+  "mapUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2035.152436735467!2d18.0685!3d59.3293!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x465f9d511ea63683%3A0xe5eb6c4c34a2e5d5!2sStockholm%20Centralstation!5e0!3m2!1ssv!2sse!4v1700000000000!5m2!1ssv!2sse"
+}
