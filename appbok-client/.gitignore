@@ -26,3 +26,4 @@ dist-ssr
 .vercel
 .env*.local
 server/.env
+lint_out.txt
