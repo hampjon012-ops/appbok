@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { replaceWithAdminDashboard } from '../lib/adminUrls.js';
 
 export default function Invite() {
   const { token } = useParams();
@@ -61,7 +62,7 @@ export default function Invite() {
         localStorage.setItem('sb_salon', JSON.stringify(data.salon || {}));
       }
 
-      navigate('/admin'); // Redirect to dashboard
+      replaceWithAdminDashboard();
     } catch (err) {
       setErrorMsg(err.message);
     } finally {

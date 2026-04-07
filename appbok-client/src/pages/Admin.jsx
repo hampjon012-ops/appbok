@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
 import SuperadminTab from './SuperadminTab.jsx';
@@ -7,6 +6,7 @@ import SuperadminSettingsTab from '../components/SuperadminSettingsTab.jsx';
 import SalonAdminSettingsTab from '../components/SalonAdminSettingsTab.jsx';
 import SidebarRoleBadge from '../components/SidebarRoleBadge.jsx';
 import { adminApiHeaders as authHeaders, getSalonIdForPublicApi } from '../lib/adminApiHeaders.js';
+import { replaceWithAdminLogin } from '../lib/adminUrls.js';
 
 // ── Auth helper ──────────────────────────────────────────────────────────────
 function getAuth() {
@@ -185,22 +185,24 @@ function ImpersonationBanner({ salonName }) {
 }
 
 export default function Admin() {
-  const navigate = useNavigate();
   const { token, user, salon } = getAuth();
   const isSuperAdmin = user?.role === 'superadmin';
   const [activeTab, setActiveTab] = useState(() => (isSuperAdmin ? 'superadmin' : 'dashboard'));
 
   useEffect(() => {
-    if (!token) { navigate('/login'); return; }
+    if (!token) {
+      replaceWithAdminLogin();
+      return;
+    }
     document.title = `Admin — ${salon?.name || 'SalonBook'}`;
-  }, [token, navigate, salon]);
+  }, [token, salon]);
 
   const handleLogout = () => {
     localStorage.removeItem('sb_token');
     localStorage.removeItem('sb_user');
     localStorage.removeItem('sb_salon');
     localStorage.removeItem('sb_superadmin_impersonate');
-    navigate('/login');
+    replaceWithAdminLogin();
   };
 
   const tabs = useMemo(() => {
