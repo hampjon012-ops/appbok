@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminLoginScreen from '../components/admin/AdminLoginScreen.jsx';
 
 export default function Login() {
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState('login'); // 'login' | 'register'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -13,7 +12,8 @@ export default function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Logga in — Appbok Admin';
+    document.title = 'Logga in — SalonBook Admin';
+    // If already logged in, redirect
     if (localStorage.getItem('sb_token')) navigate('/admin');
   }, [navigate]);
 
@@ -23,10 +23,9 @@ export default function Login() {
     setLoading(true);
 
     const endpoint = mode === 'register' ? '/api/auth/register' : '/api/auth/login';
-    const body =
-      mode === 'register'
-        ? { email, password, name, salonName }
-        : { email, password };
+    const body = mode === 'register'
+      ? { email, password, name, salonName }
+      : { email, password };
 
     try {
       const res = await fetch(endpoint, {
@@ -53,26 +52,85 @@ export default function Login() {
     }
   };
 
-  const onToggleMode = (next) => {
-    setMode(next);
-    setError('');
-  };
-
   return (
-    <AdminLoginScreen
-      mode={mode}
-      onToggleMode={onToggleMode}
-      name={name}
-      salonName={salonName}
-      email={email}
-      password={password}
-      onNameChange={setName}
-      onSalonNameChange={setSalonName}
-      onEmailChange={setEmail}
-      onPasswordChange={setPassword}
-      error={error}
-      loading={loading}
-      onSubmit={handleSubmit}
-    />
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-header">
+          <h1>SalonBook</h1>
+          <p>{mode === 'login' ? 'Logga in på din salong' : 'Skapa konto för din salong'}</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="login-form">
+          {mode === 'register' && (
+            <>
+              <div className="form-group">
+                <label htmlFor="login-name">Ditt namn</label>
+                <input
+                  id="login-name"
+                  type="text"
+                  placeholder="Förnamn Efternamn"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="login-salon">Salongens namn</label>
+                <input
+                  id="login-salon"
+                  type="text"
+                  placeholder="T.ex. Studio Milano"
+                  value={salonName}
+                  onChange={e => setSalonName(e.target.value)}
+                  required
+                />
+              </div>
+            </>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="login-email">E-post</label>
+            <input
+              id="login-email"
+              type="email"
+              placeholder="din@email.se"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="login-password">Lösenord</label>
+            <input
+              id="login-password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              minLength={6}
+            />
+          </div>
+
+          {error && <p className="api-error">{error}</p>}
+
+          <button type="submit" className="btn-pay" disabled={loading}>
+            {loading
+              ? '⏳ Vänta...'
+              : mode === 'login' ? 'Logga in' : 'Skapa konto'
+            }
+          </button>
+        </form>
+
+        <div className="login-toggle">
+          {mode === 'login' ? (
+            <p>Har du inget konto? <button onClick={() => { setMode('register'); setError(''); }} className="text-link">Skapa ett här</button></p>
+          ) : (
+            <p>Har du redan ett konto? <button onClick={() => { setMode('login'); setError(''); }} className="text-link">Logga in</button></p>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
