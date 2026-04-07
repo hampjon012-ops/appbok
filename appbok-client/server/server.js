@@ -45,7 +45,16 @@ function corsOrigin(origin, callback) {
       callback(null, true);
       return;
     }
+    if (hostname.endsWith('.localhost')) {
+      callback(null, true);
+      return;
+    }
     if (hostname.endsWith('.vercel.app')) {
+      callback(null, true);
+      return;
+    }
+    /** Multi-tenant: www, admin, salongs-subdomäner — samma API som www.appbok.se */
+    if (hostname === 'appbok.se' || hostname.endsWith('.appbok.se')) {
       callback(null, true);
       return;
     }
