@@ -12,7 +12,7 @@ export default function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Logga in — SalonBook Admin';
+    document.title = 'Logga in — Appbok';
     // If already logged in, redirect
     if (localStorage.getItem('sb_token')) navigate('/admin');
   }, [navigate]);
@@ -55,10 +55,21 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-header">
-          <h1>SalonBook</h1>
-          <p>{mode === 'login' ? 'Logga in på din salong' : 'Skapa konto för din salong'}</p>
+        <div className="login-brand-bar">
+          <img
+            src="/sidebar-logo.png"
+            alt="Appbok"
+            className="login-brand-img"
+            decoding="async"
+          />
         </div>
+        <div className="login-card-content">
+          <div className="login-header">
+            <p className="login-brand-subtitle">Administrationspanel</p>
+            <p className="login-brand-tagline">
+              {mode === 'login' ? 'Logga in på din salong' : 'Skapa konto för din salong'}
+            </p>
+          </div>
 
         <form onSubmit={handleSubmit} className="login-form">
           {mode === 'register' && (
@@ -122,13 +133,6 @@ export default function Login() {
             }
           </button>
         </form>
-
-        <div className="login-toggle">
-          {mode === 'login' ? (
-            <p>Har du inget konto? <button onClick={() => { setMode('register'); setError(''); }} className="text-link">Skapa ett här</button></p>
-          ) : (
-            <p>Har du redan ett konto? <button onClick={() => { setMode('login'); setError(''); }} className="text-link">Logga in</button></p>
-          )}
         </div>
       </div>
     </div>

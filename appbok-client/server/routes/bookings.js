@@ -156,7 +156,7 @@ router.post('/', async (req, res) => {
         if (tokens) {
           const event = await createCalendarEvent(tokens, {
             summary: `${customer_name} — ${data.id.slice(0, 8)}`,
-            description: `Bokning via SalonBook\nKund: ${customer_name}\nTelefon: ${customer_phone || '-'}\nE-post: ${customer_email || '-'}`,
+            description: `Bokning via Appbok\nKund: ${customer_name}\nTelefon: ${customer_phone || '-'}\nE-post: ${customer_email || '-'}`,
             date: booking_date,
             time: booking_time,
             durationMinutes: duration_minutes || 60,

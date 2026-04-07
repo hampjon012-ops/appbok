@@ -99,7 +99,7 @@ router.post('/invite', requireAuth, requireAdmin, async (req, res) => {
 
       const result = await sendInviteEmail({
         to: email,
-        salonName: salon?.name || 'SalonBook',
+        salonName: salon?.name || 'Appbok',
         inviteUrl,
       });
       emailSent = result.success;

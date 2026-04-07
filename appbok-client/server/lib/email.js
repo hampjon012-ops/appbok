@@ -53,7 +53,7 @@ function buildInviteHtml({ salonName, inviteUrl }) {
           <!-- Header -->
           <tr>
             <td style="background-color:#6f4e37; padding:30px 40px; text-align:center;">
-              <h1 style="margin:0; color:#ffffff; font-size:24px; font-weight:600;">SalonBook</h1>
+              <h1 style="margin:0; color:#ffffff; font-size:24px; font-weight:600;">Appbok</h1>
             </td>
           </tr>
           <!-- Body -->
@@ -61,7 +61,7 @@ function buildInviteHtml({ salonName, inviteUrl }) {
             <td style="padding:40px;">
               <h2 style="margin:0 0 20px; color:#333333; font-size:20px;">Hej!</h2>
               <p style="margin:0 0 16px; color:#555555; font-size:16px; line-height:1.5;">
-                Du har blivit inbjuden att gå med i <strong>${salonName}</strong> som personal på SalonBook.
+                Du har blivit inbjuden att gå med i <strong>${salonName}</strong> som personal på Appbok.
               </p>
               <p style="margin:0 0 24px; color:#555555; font-size:16px; line-height:1.5;">
                 Klicka på knappen nedan för att skapa ditt konto och komma igång:
@@ -86,7 +86,7 @@ function buildInviteHtml({ salonName, inviteUrl }) {
           <tr>
             <td style="background-color:#f9f9f9; padding:20px 40px; text-align:center; border-top:1px solid #eeeeee;">
               <p style="margin:0; color:#aaaaaa; font-size:12px;">
-                Detta mail skickades från SalonBook.
+                Detta mail skickades från Appbok.
               </p>
             </td>
           </tr>
@@ -118,7 +118,7 @@ export async function sendInviteEmail({ to, salonName, inviteUrl }) {
     await transporter.sendMail({
       from: SMTP_FROM,
       to,
-      subject: `Du är inbjuden till ${salonName} på SalonBook!`,
+      subject: `Du är inbjuden till ${salonName} på Appbok!`,
       html: buildInviteHtml({ salonName, inviteUrl }),
     });
 
@@ -203,7 +203,7 @@ function buildBookingConfirmationHtml({ customerName, serviceName, stylistName, 
           <tr>
             <td style="background-color:#f9f9f9; padding:20px 40px; text-align:center; border-top:1px solid #eeeeee;">
               <p style="margin:0; color:#aaaaaa; font-size:12px;">
-                Detta mail skickades från ${salonName} via SalonBook.
+                Detta mail skickades från ${salonName} via Appbok.
               </p>
             </td>
           </tr>
@@ -273,7 +273,7 @@ function buildCancellationHtml({ customerName, serviceName, date, time, salonNam
           <tr>
             <td style="background-color:#f9f9f9; padding:20px 40px; text-align:center; border-top:1px solid #eeeeee;">
               <p style="margin:0; color:#aaaaaa; font-size:12px;">
-                Detta mail skickades från ${salonName} via SalonBook.
+                Detta mail skickades från ${salonName} via Appbok.
               </p>
             </td>
           </tr>
@@ -356,7 +356,7 @@ function buildStylistNotificationHtml({ stylistName, customerName, serviceName, 
           <tr>
             <td style="background-color:#f9f9f9; padding:20px 40px; text-align:center; border-top:1px solid #eeeeee;">
               <p style="margin:0; color:#aaaaaa; font-size:12px;">
-                Detta mail skickades från ${salonName} via SalonBook.
+                Detta mail skickades från ${salonName} via Appbok.
               </p>
             </td>
           </tr>

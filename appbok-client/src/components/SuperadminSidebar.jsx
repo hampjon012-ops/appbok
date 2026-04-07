@@ -62,7 +62,7 @@ export default function SuperadminSidebar({ activeTab, onTabChange, user, onLogo
       <div className="sa-sidebar-header sa-sidebar-header--logo">
         <img
           src="/sidebar-logo.png"
-          alt="Kök & Bar"
+          alt="Appbok"
           className="sidebar-brand-img"
           decoding="async"
         />

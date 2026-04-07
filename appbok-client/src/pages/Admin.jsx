@@ -194,7 +194,7 @@ export default function Admin() {
       replaceWithAdminLogin();
       return;
     }
-    document.title = `Admin — ${salon?.name || 'SalonBook'}`;
+    document.title = `Admin — ${salon?.name || 'Appbok'}`;
   }, [token, salon]);
 
   const handleLogout = () => {
@@ -261,7 +261,7 @@ export default function Admin() {
           <div className="admin-sidebar-header admin-sidebar-header--logo">
             <img
               src="/sidebar-logo.png"
-              alt="Kök & Bar"
+              alt="Appbok"
               className="sidebar-brand-img"
               decoding="async"
             />
