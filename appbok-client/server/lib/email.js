@@ -52,7 +52,7 @@ function buildInviteHtml({ salonName, inviteUrl }) {
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden;">
           <!-- Header -->
           <tr>
-            <td style="background-color:#A89483; padding:30px 40px; text-align:center;">
+            <td style="background-color:#6f4e37; padding:30px 40px; text-align:center;">
               <h1 style="margin:0; color:#ffffff; font-size:24px; font-weight:600;">SalonBook</h1>
             </td>
           </tr>
@@ -69,7 +69,7 @@ function buildInviteHtml({ salonName, inviteUrl }) {
               <!-- Button -->
               <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
                 <tr>
-                  <td style="background-color:#A89483; border-radius:6px;">
+                  <td style="background-color:#6f4e37; border-radius:6px;">
                     <a href="${inviteUrl}" target="_blank" rel="noopener noreferrer"
                        style="display:inline-block; padding:14px 32px; color:#ffffff; text-decoration:none; font-size:16px; font-weight:600;">
                       Registrera dig här
@@ -151,7 +151,7 @@ function buildBookingConfirmationHtml({ customerName, serviceName, stylistName, 
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden;">
           <tr>
-            <td style="background-color:#A89483; padding:30px 40px; text-align:center;">
+            <td style="background-color:#6f4e37; padding:30px 40px; text-align:center;">
               <h1 style="margin:0; color:#ffffff; font-size:24px; font-weight:600;">${salonName}</h1>
             </td>
           </tr>
@@ -229,7 +229,7 @@ function buildCancellationHtml({ customerName, serviceName, date, time, salonNam
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden;">
           <tr>
-            <td style="background-color:#A89483; padding:30px 40px; text-align:center;">
+            <td style="background-color:#6f4e37; padding:30px 40px; text-align:center;">
               <h1 style="margin:0; color:#ffffff; font-size:24px; font-weight:600;">${salonName}</h1>
             </td>
           </tr>
@@ -299,7 +299,7 @@ function buildStylistNotificationHtml({ stylistName, customerName, serviceName, 
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden;">
           <tr>
-            <td style="background-color:#A89483; padding:30px 40px; text-align:center;">
+            <td style="background-color:#6f4e37; padding:30px 40px; text-align:center;">
               <h1 style="margin:0; color:#ffffff; font-size:24px; font-weight:600;">Ny bokning — ${salonName}</h1>
             </td>
           </tr>

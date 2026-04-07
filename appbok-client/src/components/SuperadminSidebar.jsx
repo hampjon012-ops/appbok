@@ -1,3 +1,5 @@
+import SidebarRoleBadge from './SidebarRoleBadge.jsx';
+
 function CrownIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -57,11 +59,13 @@ export default function SuperadminSidebar({ activeTab, onTabChange, user, onLogo
   return (
     <aside className="sa-sidebar">
       {/* Header */}
-      <div className="sa-sidebar-header">
-        <div className="sa-logo-row">
-          <span className="sa-logo-text">Appbok</span>
-          <span className="sa-badge">Superadmin</span>
-        </div>
+      <div className="sa-sidebar-header sa-sidebar-header--logo">
+        <img
+          src="/sidebar-logo.png"
+          alt="Kök & Bar"
+          className="sidebar-brand-img"
+          decoding="async"
+        />
       </div>
 
       {/* Navigation */}
@@ -83,10 +87,13 @@ export default function SuperadminSidebar({ activeTab, onTabChange, user, onLogo
       {/* Footer */}
       <div className="sa-sidebar-footer">
         <div className="sa-user-info">
-          <span className="sa-user-name">{user?.name || 'Superadmin'}</span>
+          <div className="sa-user-name-row">
+            <span className="sa-user-name">{user?.name || 'Superadmin'}</span>
+            <SidebarRoleBadge role={user?.role} />
+          </div>
           <span className="sa-user-email">{user?.email}</span>
         </div>
-        <button className="sa-logout-btn" onClick={onLogout}>
+        <button type="button" className="sa-logout-btn" onClick={onLogout}>
           <LogoutIcon />
           <span>Logga ut</span>
         </button>

@@ -37,6 +37,16 @@ export function requireAuth(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded; // { id, email, role, salonId, name }
+    
+    // Impersonation Support for Superadmin
+    if (req.user.role === 'superadmin') {
+      const impId = req.headers['x-impersonate-salon-id'];
+      if (impId) {
+        req.user.originalSalonId = req.user.salonId;
+        req.user.salonId = impId;
+      }
+    }
+
     next();
   } catch {
     return res.status(401).json({ error: 'Ogiltig eller utgången token.' });
@@ -68,12 +78,14 @@ export function requireSuperAdmin(req, res, next) {
  */
 export function signToken(user) {
   const effective = withEffectiveRole(user);
+  const sid = effective.salon_id ?? effective.salonId ?? null;
   return jwt.sign(
     {
       id: effective.id,
       email: effective.email,
       role: effective.role,
-      salonId: effective.salon_id,
+      salonId: sid,
+      salon_id: sid,
       name: effective.name,
     },
     JWT_SECRET,

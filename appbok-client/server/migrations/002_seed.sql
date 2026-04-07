@@ -32,7 +32,7 @@ VALUES (
 -- 3. Staff
 INSERT INTO users (id, salon_id, email, name, role, title, photo_url) VALUES
   ('c0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'emma@colorisma.se', 'Emma Lindqvist', 'staff', 'Senior Kolorist', 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=400&q=80'),
-  ('c0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'marcus@colorisma.se', 'Marcus Holm', 'staff', 'Frisör & Barberer', 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&q=80'),
+  ('c0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'ulf@colorisma.se', 'Ulf Jonsson', 'staff', 'Frisör & Stylist', 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&q=80'),
   ('c0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001', 'sofia@colorisma.se', 'Sofia Berg', 'staff', 'Balayage Specialist', 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80');
 
 -- 4. Kategorier

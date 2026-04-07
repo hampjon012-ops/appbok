@@ -1,24 +1,36 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
 import SuperadminTab from './SuperadminTab.jsx';
 import SuperadminSettingsTab from '../components/SuperadminSettingsTab.jsx';
 import SalonAdminSettingsTab from '../components/SalonAdminSettingsTab.jsx';
+import SidebarRoleBadge from '../components/SidebarRoleBadge.jsx';
+import { adminApiHeaders as authHeaders, getSalonIdForPublicApi } from '../lib/adminApiHeaders.js';
 
 // ── Auth helper ──────────────────────────────────────────────────────────────
 function getAuth() {
   const token = localStorage.getItem('sb_token');
   const user = JSON.parse(localStorage.getItem('sb_user') || 'null');
   const salon = JSON.parse(localStorage.getItem('sb_salon') || 'null');
+  
+  if (user?.role === 'superadmin') {
+    const impRaw = localStorage.getItem('sb_superadmin_impersonate');
+    if (impRaw) {
+      try {
+        const impersonating = JSON.parse(impRaw);
+        if (impersonating && typeof impersonating === 'object') {
+          return {
+            token,
+            user: { ...user, role: 'admin', originalRole: 'superadmin' },
+            salon: impersonating
+          };
+        }
+      } catch (e) {}
+    }
+  }
+  
   return { token, user, salon };
-}
-
-function authHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${localStorage.getItem('sb_token')}`,
-  };
 }
 
 function fmtKr(öre) {
@@ -26,7 +38,152 @@ function fmtKr(öre) {
   return `${(n / 100).toLocaleString('sv-SE')} kr`;
 }
 
+const CHART_AXIS_TICK = { fontSize: 12, fill: '#737373' };
+const CHART_AXIS_LINE = { stroke: '#d4d4d4' };
+
+function formatUpcomingBookingWhen(bookingDate, bookingTime) {
+  const timeStr = (bookingTime || '').slice(0, 5) || '—';
+  if (!bookingDate) return { timeStr, dateStr: '' };
+  const parts = bookingDate.split('-').map(Number);
+  if (parts.length < 3 || parts.some((x) => !Number.isFinite(x))) {
+    return { timeStr, dateStr: bookingDate };
+  }
+  const [y, m, d] = parts;
+  const dt = new Date(y, m - 1, d);
+  const dateStr = dt.toLocaleDateString('sv-SE', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+  return { timeStr, dateStr };
+}
+
+function upcomingBookingStatusMeta(status) {
+  const s = status || 'confirmed';
+  if (s === 'confirmed') return { label: 'Bekräftad', variant: 'confirmed' };
+  if (s === 'completed') return { label: 'Genomförd', variant: 'completed' };
+  if (s === 'cancelled') return { label: 'Avbokad', variant: 'cancelled' };
+  return { label: String(s), variant: 'muted' };
+}
+
+function DashboardChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0];
+  const p = row?.payload;
+  const value = row?.value;
+  const formatted = typeof value === 'number' ? fmtKr(value) : value;
+  let labelLine = label;
+  if (p?.monthLabel != null && p?.month) {
+    labelLine = `${p.monthLabel} ${String(p.month).slice(0, 4)}`;
+  } else if (p?.monthLabel != null) {
+    labelLine = p.monthLabel;
+  }
+  return (
+    <div className="dashboard-chart-tooltip">
+      {labelLine != null && String(labelLine).length > 0 && (
+        <div className="dashboard-chart-tooltip-label">{labelLine}</div>
+      )}
+      <div className="dashboard-chart-tooltip-value">{formatted}</div>
+    </div>
+  );
+}
+
+const DASHBOARD_MONTH_LABELS_SV = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'Maj',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Okt',
+  'Nov',
+  'Dec',
+];
+
+/** 12 staplar: innevarande kalenderår (Stockholm), månader utan data → 0. */
+function buildDashboardRevenueChartData(apiMonthly) {
+  const ymd = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Stockholm' });
+  const year = ymd.slice(0, 4);
+  const map = new Map();
+  (apiMonthly || []).forEach((row) => {
+    if (row?.month && String(row.month).startsWith(year)) {
+      map.set(row.month, typeof row.revenue === 'number' ? row.revenue : 0);
+    }
+  });
+  return DASHBOARD_MONTH_LABELS_SV.map((monthLabel, i) => {
+    const month = `${year}-${String(i + 1).padStart(2, '0')}`;
+    return {
+      month,
+      monthLabel,
+      revenue: map.get(month) ?? 0,
+    };
+  });
+}
+
+function DashboardBellIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  );
+}
+
+function DashboardChevronDownIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+const DASHBOARD_PERIOD_OPTIONS = [
+  { id: 'today', label: 'Idag' },
+  { id: 'week', label: 'Denna vecka' },
+  { id: 'month', label: 'Denna månad' },
+  { id: 'year', label: 'I år' },
+];
+
 // ── Admin Layout ─────────────────────────────────────────────────────────────
+function ImpersonationBanner({ salonName }) {
+  return (
+    <div style={{
+      background: '#f97316',
+      color: 'white',
+      padding: '10px 20px',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      fontWeight: 'bold',
+      zIndex: 9999,
+      position: 'sticky',
+      top: 0
+    }}>
+      <span>Du är inloggad som {salonName}</span>
+      <button 
+        onClick={() => {
+          localStorage.removeItem('sb_superadmin_impersonate');
+          window.location.reload();
+        }}
+        style={{
+          background: 'rgba(255,255,255,0.2)',
+          border: 'none',
+          color: 'white',
+          padding: '6px 12px',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontWeight: 'bold'
+        }}
+      >
+        Återgå till Superadmin
+      </button>
+    </div>
+  );
+}
+
 export default function Admin() {
   const navigate = useNavigate();
   const { token, user, salon } = getAuth();
@@ -42,6 +199,7 @@ export default function Admin() {
     localStorage.removeItem('sb_token');
     localStorage.removeItem('sb_user');
     localStorage.removeItem('sb_salon');
+    localStorage.removeItem('sb_superadmin_impersonate');
     navigate('/login');
   };
 
@@ -65,6 +223,13 @@ export default function Admin() {
 
   const saTabs = ['dashboard', 'superadmin', 'billing', 'settings'];
 
+  const [newBookingOpen, setNewBookingOpen] = useState(false);
+  const canOpenBookingsModal = useMemo(() => tabs.some((t) => t.id === 'bookings'), [tabs]);
+
+  useEffect(() => {
+    if (activeTab !== 'bookings') setNewBookingOpen(false);
+  }, [activeTab]);
+
   useEffect(() => {
     if (isSuperAdmin) {
       setActiveTab((cur) => (saTabs.includes(cur) ? cur : 'dashboard'));
@@ -76,8 +241,12 @@ export default function Admin() {
   if (!token) return null;
 
   return (
-    <div className="admin-layout">
-      {/* Sidebar — always superadmin variant */}
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f4f2' }}>
+      {user?.originalRole === 'superadmin' && (
+        <ImpersonationBanner salonName={salon?.name || 'Salong'} />
+      )}
+      <div className="admin-layout" style={{ flex: 1, minHeight: 0 }}>
+        {/* Sidebar — always superadmin variant */}
       {isSuperAdmin ? (
         <SuperadminSidebar
           activeTab={activeTab}
@@ -87,9 +256,13 @@ export default function Admin() {
         />
       ) : (
         <aside className="admin-sidebar">
-          <div className="admin-sidebar-header">
-            <h2>{salon?.name || 'Min Salong'}</h2>
-            <span className="admin-badge">{user?.role === 'staff' ? 'Personal' : 'Admin'}</span>
+          <div className="admin-sidebar-header admin-sidebar-header--logo">
+            <img
+              src="/sidebar-logo.png"
+              alt="Kök & Bar"
+              className="sidebar-brand-img"
+              decoding="async"
+            />
           </div>
           <nav className="admin-nav">
             {tabs.map(tab => (
@@ -105,18 +278,33 @@ export default function Admin() {
           </nav>
           <div className="admin-sidebar-footer">
             <div className="admin-user-info">
-              <span className="admin-user-name">{user?.name}</span>
+              <div className="admin-user-name-row">
+                <span className="admin-user-name">{user?.name}</span>
+                <SidebarRoleBadge role={user?.role} />
+              </div>
               <span className="admin-user-email">{user?.email}</span>
             </div>
-            <button className="admin-logout-btn" onClick={handleLogout}>Logga ut</button>
+            <button type="button" className="admin-logout-btn" onClick={handleLogout}>
+              Logga ut
+            </button>
           </div>
         </aside>
       )}
 
       {/* Main */}
       <main className="admin-main">
-        {activeTab === 'dashboard'   && <DashboardTab />}
-        {activeTab === 'bookings'   && <BookingsTab />}
+        {activeTab === 'dashboard' && (
+          <DashboardTab
+            showNewBookingButton={canOpenBookingsModal}
+            onNewBooking={() => {
+              setActiveTab('bookings');
+              setNewBookingOpen(true);
+            }}
+          />
+        )}
+        {activeTab === 'bookings' && (
+          <BookingsTab newBookingOpen={newBookingOpen} setNewBookingOpen={setNewBookingOpen} />
+        )}
         {activeTab === 'staff'      && <StaffTab />}
         {activeTab === 'services'  && <ServicesTab />}
         {activeTab === 'settings' && (
@@ -131,17 +319,59 @@ export default function Admin() {
         {activeTab === 'superadmin' && <SuperadminTab />}
         {activeTab === 'billing'    && <BillingTab user={user} />}
       </main>
+      </div>
     </div>
   );
 }
 
 // ─── Dashboard Tab ───────────────────────────────────────────────────────────
-function DashboardTab() {
+function DashboardTab({ onNewBooking, showNewBookingButton }) {
   const [stats, setStats] = useState(null);
   const [monthlyStats, setMonthlyStats] = useState([]);
   const [topStylists, setTopStylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statsError, setStatsError] = useState('');
+
+  const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadNotificationsCount] = useState(0);
+
+  const bellAnchorRef = useRef(null);
+  const dateAnchorRef = useRef(null);
+
+  const selectedPeriodLabel = useMemo(
+    () => DASHBOARD_PERIOD_OPTIONS.find((o) => o.id === selectedPeriod)?.label ?? 'Denna månad',
+    [selectedPeriod]
+  );
+
+  const revenueChartData = useMemo(() => buildDashboardRevenueChartData(monthlyStats), [monthlyStats]);
+  const revenueChartYear = revenueChartData[0]?.month?.slice(0, 4) || '';
+
+  useEffect(() => {
+    if (!isDateMenuOpen && !isNotificationOpen) return undefined;
+    const onPointerDown = (e) => {
+      const el = e.target;
+      if (bellAnchorRef.current?.contains(el)) return;
+      if (dateAnchorRef.current?.contains(el)) return;
+      setIsDateMenuOpen(false);
+      setIsNotificationOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [isDateMenuOpen, isNotificationOpen]);
+
+  useEffect(() => {
+    if (!isDateMenuOpen && !isNotificationOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setIsDateMenuOpen(false);
+        setIsNotificationOpen(false);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isDateMenuOpen, isNotificationOpen]);
 
   useEffect(() => {
     const parse = async (r) => {
@@ -173,32 +403,108 @@ function DashboardTab() {
   if (!stats) return <div className="admin-empty">Kunde inte hämta statistik.</div>;
 
   return (
-    <div className="admin-section">
-      <h2 className="admin-section-title">Dashboard</h2>
+    <div className="admin-section dashboard-section">
+      <div className="dashboard-action-bar">
+        <h1 className="dashboard-overview-title">Översikt</h1>
+        <div className="dashboard-action-tools">
+          <div className="dashboard-popover-anchor" ref={bellAnchorRef}>
+            <button
+              type="button"
+              className="dashboard-bell-btn"
+              aria-label={
+                unreadNotificationsCount > 0
+                  ? `Notiser, ${unreadNotificationsCount} olästa`
+                  : 'Notiser'
+              }
+              aria-expanded={isNotificationOpen}
+              aria-haspopup="dialog"
+              onClick={() => {
+                setIsNotificationOpen((v) => !v);
+                setIsDateMenuOpen(false);
+              }}
+            >
+              <DashboardBellIcon />
+              {unreadNotificationsCount > 0 ? (
+                <span className="dashboard-bell-dot" aria-hidden />
+              ) : null}
+            </button>
+            {isNotificationOpen ? (
+              <div
+                className="dashboard-dropdown-panel dashboard-dropdown-panel--notifications"
+                role="dialog"
+                aria-label="Notiser"
+              >
+                <div className="dashboard-dropdown-panel-title">Notiser</div>
+                <p className="dashboard-dropdown-panel-placeholder">Du har inga nya notiser just nu.</p>
+              </div>
+            ) : null}
+          </div>
+          <div className="dashboard-popover-anchor" ref={dateAnchorRef}>
+            <button
+              type="button"
+              className="dashboard-date-filter-btn"
+              aria-expanded={isDateMenuOpen}
+              aria-haspopup="listbox"
+              onClick={() => {
+                setIsDateMenuOpen((v) => !v);
+                setIsNotificationOpen(false);
+              }}
+            >
+              {selectedPeriodLabel}
+              <DashboardChevronDownIcon />
+            </button>
+            {isDateMenuOpen ? (
+              <ul className="dashboard-dropdown-panel dashboard-dropdown-menu" role="listbox">
+                {DASHBOARD_PERIOD_OPTIONS.map((opt) => (
+                  <li key={opt.id} role="presentation">
+                    <button
+                      type="button"
+                      role="option"
+                      className="dashboard-dropdown-menu-item"
+                      aria-selected={selectedPeriod === opt.id}
+                      onClick={() => {
+                        setSelectedPeriod(opt.id);
+                        setIsDateMenuOpen(false);
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+          {showNewBookingButton ? (
+            <button type="button" className="dashboard-new-booking-btn" onClick={onNewBooking}>
+              + Ny bokning
+            </button>
+          ) : null}
+        </div>
+      </div>
 
-      <div className="stats-cards">
-        <div className="stat-card">
+      <div className="stats-cards dashboard-kpi-grid">
+        <div className="stat-card dashboard-kpi-card">
           <span className="stat-icon">📅</span>
           <div className="stat-info">
             <span className="stat-value">{stats.todayBookings}</span>
             <span className="stat-label">Bokningar idag</span>
           </div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card dashboard-kpi-card">
           <span className="stat-icon">📊</span>
           <div className="stat-info">
             <span className="stat-value">{stats.monthBookings}</span>
             <span className="stat-label">Denna månad</span>
           </div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card dashboard-kpi-card">
           <span className="stat-icon">💰</span>
           <div className="stat-info">
             <span className="stat-value">{fmtKr(stats.monthRevenue)}</span>
             <span className="stat-label">Omsättning (månad)</span>
           </div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card dashboard-kpi-card">
           <span className="stat-icon">👥</span>
           <div className="stat-info">
             <span className="stat-value">{stats.staffCount}</span>
@@ -208,69 +514,119 @@ function DashboardTab() {
       </div>
 
       {stats.upcomingBookings?.length > 0 && (
-        <div className="admin-card">
-          <h3>Kommande bokningar</h3>
-          <div className="booking-list">
-            {stats.upcomingBookings.map(b => (
-              <div key={b.id} className="booking-row">
-                <div className="booking-row-left">
-                  <span className="booking-date">{b.booking_date} kl {b.booking_time?.slice(0,5)}</span>
-                  <span className="booking-customer">{b.customer_name}</span>
+        <div className="admin-card dashboard-upcoming-card">
+          <h3 className="dashboard-upcoming-title">Kommande bokningar</h3>
+          <div className="booking-list dashboard-upcoming-list">
+            {stats.upcomingBookings.map((b) => {
+              const { timeStr, dateStr } = formatUpcomingBookingWhen(b.booking_date, b.booking_time);
+              const st = upcomingBookingStatusMeta(b.status);
+              return (
+                <div key={b.id} className="booking-row dashboard-upcoming-row">
+                  <div className="booking-row-left">
+                    <div className="booking-datetime">
+                      <span className="booking-time">{timeStr}</span>
+                      {dateStr ? <span className="booking-date-part">{dateStr}</span> : null}
+                    </div>
+                    <span className="booking-customer">{b.customer_name}</span>
+                  </div>
+                  <div className="booking-row-right">
+                    <div className="booking-service-row">
+                      <span className="booking-service">{b.services?.name}</span>
+                      <span
+                        className={`dashboard-status-badge dashboard-status-badge--${st.variant}`}
+                        title={st.label}
+                      >
+                        <span className="dashboard-status-dot" aria-hidden />
+                        <span className="dashboard-status-label">{st.label}</span>
+                      </span>
+                    </div>
+                    <span className="booking-stylist">{b.stylist?.name || 'Valfri'}</span>
+                  </div>
                 </div>
-                <div className="booking-row-right">
-                  <span className="booking-service">{b.services?.name}</span>
-                  <span className="booking-stylist">{b.stylist?.name || 'Valfri'}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* ── Charts ───────────────────────────────────────────── */}
       <div className="charts-grid">
-        <div className="admin-card chart-card">
-          <h3>Omsättning (Senaste 12 mån)</h3>
-          <div style={{ width: '100%', height: 250, marginTop: '20px' }}>
-            {monthlyStats.length > 0 ? (
-              <ResponsiveContainer>
-                <BarChart data={monthlyStats} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="month" stroke="#888" fontSize={12} tickFormatter={(v) => v.slice(5)} />
-                  <YAxis stroke="#888" fontSize={12} tickFormatter={(v) => `${v / 100} kr`} />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
-                    formatter={(val) => fmtKr(val)}
-                  />
-                  <Bar dataKey="revenue" fill="#A89483" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="admin-empty" style={{ paddingTop: '80px' }}>Inte tillräckligt med data ännu.</p>
-            )}
+        <div className="admin-card chart-card dashboard-chart-card">
+          <h3>{revenueChartYear ? `Omsättning (${revenueChartYear})` : 'Omsättning'}</h3>
+          <div className="dashboard-chart-wrap">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={revenueChartData} margin={{ top: 10, right: 8, left: 4, bottom: 4 }} barCategoryGap="12%">
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#d4d4d4"
+                  strokeWidth={1}
+                />
+                <XAxis
+                  dataKey="monthLabel"
+                  tick={CHART_AXIS_TICK}
+                  tickLine={CHART_AXIS_LINE}
+                  axisLine={CHART_AXIS_LINE}
+                />
+                <YAxis
+                  tick={CHART_AXIS_TICK}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => `${v / 100} kr`}
+                  width={48}
+                />
+                <Tooltip
+                  cursor={{ fill: 'rgba(23, 23, 23, 0.06)' }}
+                  content={<DashboardChartTooltip />}
+                />
+                <Bar dataKey="revenue" fill="#171717" radius={[4, 4, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="admin-card chart-card">
+        <div className="admin-card chart-card dashboard-chart-card">
           <h3>Toppstylister (Månad)</h3>
-          <div style={{ width: '100%', height: 250, marginTop: '20px' }}>
+          <div className="dashboard-chart-wrap">
             {topStylists.length > 0 ? (
-              <ResponsiveContainer>
-                <BarChart data={topStylists} layout="vertical" margin={{ top: 10, right: 10, left: 30, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis type="number" stroke="#888" fontSize={12} tickFormatter={(v) => `${v / 100} kr`} />
-                  <YAxis dataKey="name" type="category" stroke="#888" fontSize={12} width={80} />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
-                    formatter={(val) => fmtKr(val)}
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={topStylists}
+                  layout="vertical"
+                  margin={{ top: 10, right: 12, left: 4, bottom: 4 }}
+                  barCategoryGap="20%"
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    horizontal
+                    stroke="#d4d4d4"
+                    strokeWidth={1}
                   />
-                  <Bar dataKey="revenue" fill="#4f46e5" radius={[0, 4, 4, 0]} barSize={24} />
+                  <XAxis
+                    type="number"
+                    tick={CHART_AXIS_TICK}
+                    tickLine={false}
+                    axisLine={CHART_AXIS_LINE}
+                    tickFormatter={(v) => `${v / 100} kr`}
+                  />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    tick={CHART_AXIS_TICK}
+                    tickLine={false}
+                    axisLine={false}
+                    width={88}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(23, 23, 23, 0.06)' }}
+                    content={<DashboardChartTooltip />}
+                  />
+                  <Bar dataKey="revenue" fill="#171717" radius={[0, 4, 4, 0]} barSize={28} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <p className="admin-empty" style={{ paddingTop: '80px' }}>Laddar eller saknar data.</p>
+              <p className="admin-empty dashboard-chart-empty">Laddar eller saknar data.</p>
             )}
           </div>
         </div>
@@ -282,7 +638,7 @@ function DashboardTab() {
 // ─── Bookings Tab ────────────────────────────────────────────────────────────
 // ─── New Booking Modal (multi-step) ───────────────────────────────────────────
 function NewBookingModal({ onClose, onCreated }) {
-  const salonId = JSON.parse(localStorage.getItem('sb_salon') || '{}')?.id || '';
+  const salonId = getSalonIdForPublicApi();
   const [step, setStep] = useState(1);
   const [services, setServices] = useState([]);
   const [stylists, setStylists] = useState([]);
@@ -538,12 +894,11 @@ function NewBookingModal({ onClose, onCreated }) {
 }
 
 // ─── BookingsTab ────────────────────────────────────────────────────────────
-function BookingsTab() {
+function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('');
-  const [showNewBooking, setShowNewBooking] = useState(false);
 
   const loadBookings = useCallback((searchTerm, dateFrom) => {
     setLoading(true);
@@ -569,7 +924,7 @@ function BookingsTab() {
   };
 
   const handleCreated = () => {
-    setShowNewBooking(false);
+    setNewBookingOpen(false);
     loadBookings(search, dateFilter);
   };
 
@@ -577,7 +932,9 @@ function BookingsTab() {
     <div className="admin-section">
       <div className="admin-section-header">
         <h2 className="admin-section-title">Bokningar</h2>
-        <button className="btn-admin-primary" onClick={() => setShowNewBooking(true)}>+ Ny bokning</button>
+        <button type="button" className="btn-admin-primary" onClick={() => setNewBookingOpen(true)}>
+          + Ny bokning
+        </button>
       </div>
 
       <div className="admin-card" style={{ marginBottom: '1rem' }}>
@@ -648,9 +1005,9 @@ function BookingsTab() {
         </div>
       )}
 
-      {showNewBooking && (
+      {newBookingOpen && (
         <NewBookingModal
-          onClose={() => setShowNewBooking(false)}
+          onClose={() => setNewBookingOpen(false)}
           onCreated={handleCreated}
         />
       )}
@@ -668,27 +1025,43 @@ function StaffTab() {
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [loading, setLoading] = useState(true);
-  const salonId = JSON.parse(localStorage.getItem('sb_salon') || '{}')?.id || '';
+  const [loadError, setLoadError] = useState('');
+  const salonId = getSalonIdForPublicApi();
 
   const loadStaff = useCallback(() => {
+    setLoadError('');
+    if (!salonId) {
+      setStaff([]);
+      setLoading(false);
+      setLoadError('Saknar salong-ID. Välj "Öppna som salong" i Salonger eller logga in igen.');
+      return;
+    }
     setLoading(true);
-    fetch(`/api/staff?salon_id=${salonId}`, { headers: authHeaders() })
-      .then(r => r.json())
-      .then(d => {
-        const filtered = Array.isArray(d) ? d.filter(s => s.id !== 'any') : [];
+    fetch(`/api/staff?salon_id=${encodeURIComponent(salonId)}`, { headers: authHeaders() })
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          setStaff([]);
+          setLoadError(typeof d.error === 'string' ? d.error : `Kunde inte hämta personal (HTTP ${r.status}).`);
+          setLoading(false);
+          return;
+        }
+        const filtered = Array.isArray(d) ? d.filter((s) => s.id !== 'any') : [];
         setStaff(filtered);
         setLoading(false);
-        // Check calendar status for each staff member
-        filtered.forEach(s => {
-          fetch(`/api/calendar/busy?stylist_id=${s.id}&date=${new Date().toISOString().slice(0,10)}`)
-            .then(r => r.json())
-            .then(data => {
-              setCalendarStatus(prev => ({ ...prev, [s.id]: data.calendarConnected || false }));
+        filtered.forEach((s) => {
+          fetch(`/api/calendar/busy?stylist_id=${s.id}&date=${new Date().toISOString().slice(0, 10)}`)
+            .then((r2) => r2.json())
+            .then((data) => {
+              setCalendarStatus((prev) => ({ ...prev, [s.id]: data.calendarConnected || false }));
             })
             .catch(() => {});
         });
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setLoading(false);
+        setLoadError('Nätverksfel vid hämtning av personal.');
+      });
   }, [salonId]);
 
   useEffect(() => { loadStaff(); }, [loadStaff]);
@@ -765,7 +1138,18 @@ function StaffTab() {
         </div>
       )}
 
+      {loadError ? (
+        <p className="admin-hint" style={{ color: '#b91c1c', marginBottom: '1rem' }}>
+          {loadError}
+        </p>
+      ) : null}
+
       <div className="staff-grid-admin">
+        {!loading && staff.length === 0 && !loadError ? (
+          <p className="admin-empty" style={{ gridColumn: '1 / -1' }}>
+            Ingen personal listad. Bjud in med knappen ovan.
+          </p>
+        ) : null}
         {staff.map(s => (
           <div key={s.id} className="staff-card-admin">
             <div className="staff-card-left">
@@ -791,10 +1175,41 @@ function StaffTab() {
   );
 }
 
+/** Stjärnikon — SVG utan pointer-events så klick träffar alltid knappen (samma som kundvyns fallback: första 4 om inga is_popular). */
+function ServicePopularStarIcon({ filled }) {
+  return (
+    <svg
+      className="service-row-popular-star-svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      aria-hidden
+    >
+      {filled ? (
+        <path
+          fill="currentColor"
+          stroke="none"
+          d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+        />
+      ) : (
+        <path
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+          d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+        />
+      )}
+    </svg>
+  );
+}
+
 // ─── Services Tab ────────────────────────────────────────────────────────────
 function ServicesTab() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [toggleError, setToggleError] = useState('');
   const [editingService, setEditingService] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [confirmingDeleteCat, setConfirmingDeleteCat] = useState(null);
@@ -802,17 +1217,35 @@ function ServicesTab() {
   const [addForm, setAddForm] = useState({ name: '', price_label: '', price_amount: 0, duration: '', duration_minutes: 60 });
   const [addingCategory, setAddingCategory] = useState(false);
   const [addCatForm, setAddCatForm] = useState({ name: '', description: '' });
-  const salonId = JSON.parse(localStorage.getItem('sb_salon') || '{}')?.id || '';
 
   const loadServices = useCallback(() => {
     setLoading(true);
-    fetch(`/api/services?salon_id=${salonId}`)
-      .then(r => r.json())
-      .then(d => { setCategories(Array.isArray(d) ? d : []); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [salonId]);
+    setLoadError('');
+    const sid = getSalonIdForPublicApi();
+    if (!sid) {
+      setCategories([]);
+      setLoadError('Saknar salong-ID. Logga in igen.');
+      setLoading(false);
+      return;
+    }
+    fetch(`/api/services?salon_id=${encodeURIComponent(sid)}`)
+      .then((r) => {
+        if (!r.ok) return Promise.reject(new Error(`HTTP ${r.status}`));
+        return r.json();
+      })
+      .then((d) => {
+        setCategories(Array.isArray(d) ? d : []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoadError('Kunde inte ladda tjänster.');
+        setLoading(false);
+      });
+  }, []);
 
-  useEffect(() => { loadServices(); }, [loadServices]);
+  useEffect(() => {
+    loadServices();
+  }, [loadServices]);
 
   const handleEdit = (svc) => {
     setEditingService(svc.id);
@@ -885,11 +1318,70 @@ function ServicesTab() {
     }
   };
 
+  /** Endast DB-flaggor — inte kundvyns "första fyra"-fallback (annars ser stjärnor ut att sparas men laddas om). */
+  const serviceIsPopular = (svc) => Boolean(svc.is_popular ?? svc.isPopular);
+
+  const handleTogglePopular = async (svc, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const previous = serviceIsPopular(svc);
+    const next = !previous;
+
+    setCategories((cats) =>
+      cats.map((c) => ({
+        ...c,
+        services: c.services?.map((s) =>
+          s.id === svc.id ? { ...s, is_popular: next, isPopular: next } : s,
+        ),
+      })),
+    );
+
+    try {
+      const res = await fetch(`/api/services/${svc.id}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ is_popular: next }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+    } catch (err) {
+      setCategories((cats) =>
+        cats.map((c) => ({
+          ...c,
+          services: c.services?.map((s) =>
+            s.id === svc.id ? { ...s, is_popular: previous, isPopular: previous } : s,
+          ),
+        })),
+      );
+      console.error('Kunde inte växla populär-markering:', err);
+      const msg =
+        typeof err?.message === 'string' && err.message.trim()
+          ? err.message
+          : 'Kunde inte spara stjärnmarkering. Kontrollera nätverk eller logga in igen.';
+      setToggleError(msg);
+      window.setTimeout(() => setToggleError(''), 12000);
+    }
+  };
+
   if (loading) return <div className="admin-loading">Laddar tjänster...</div>;
 
   return (
     <div className="admin-section">
       <h2 className="admin-section-title">Tjänster</h2>
+      {toggleError ? (
+        <p className="admin-hint" style={{ color: '#b91c1c', marginBottom: '0.75rem' }}>
+          {toggleError}
+        </p>
+      ) : null}
+      {loadError ? (
+        <p className="admin-hint" style={{ color: '#b91c1c', marginBottom: '1rem' }}>
+          {loadError}
+        </p>
+      ) : null}
 
       {categories.map(cat => (
         <div key={cat.id} className="admin-card">
@@ -954,6 +1446,24 @@ function ServicesTab() {
                     </div>
                     <div className="service-row-right">
                       <span className="service-row-price">{svc.price_label}</span>
+                      <button
+                        type="button"
+                        className={`service-row-popular-btn ${serviceIsPopular(svc) ? 'service-row-popular-btn--on' : 'service-row-popular-btn--off'}`}
+                        title={
+                          serviceIsPopular(svc)
+                            ? 'Ta bort från populära'
+                            : 'Markera som populär'
+                        }
+                        aria-label={
+                          serviceIsPopular(svc)
+                            ? 'Ta bort från populära'
+                            : 'Markera som populär'
+                        }
+                        aria-pressed={serviceIsPopular(svc)}
+                        onClick={(ev) => handleTogglePopular(svc, ev)}
+                      >
+                        <ServicePopularStarIcon filled={serviceIsPopular(svc)} />
+                      </button>
                       <button className="btn-sm" onClick={() => handleEdit(svc)}>Ändra</button>
                       <button className="btn-sm btn-danger" onClick={() => handleDelete(svc.id)}>×</button>
                     </div>
@@ -1010,7 +1520,7 @@ function ServicesTab() {
       ))}
 
       {addingCategory ? (
-        <div className="admin-card" style={{ border: '2px dashed #A89483' }}>
+        <div className="admin-card" style={{ border: '2px dashed #a3a3a3' }}>
           <h3 className="admin-card-title">Ny huvudkategori</h3>
           <div className="service-edit-form" style={{ marginTop: '1rem' }}>
             <input
@@ -1032,7 +1542,7 @@ function ServicesTab() {
       ) : (
         <button 
           className="btn-admin-secondary" 
-          style={{ width: '100%', padding: '16px', borderStyle: 'dashed', borderColor: '#d4c7bd' }}
+          style={{ width: '100%', padding: '16px', borderStyle: 'dashed', borderColor: '#d4d4d4' }}
           onClick={() => setAddingCategory(true)}
         >
           + Lägg till ny Huvudkategori

@@ -2,6 +2,9 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import supabase from '../lib/supabase.js';
+import { DEFAULT_BOOKING_ACCENT_HEX } from '../lib/defaultBookingAccent.js';
+import { DEFAULT_PLATFORM_SALON_THEME } from '../lib/defaultSalonTheme.js';
+import { ensureSalonThemeAccent } from '../lib/ensureSalonThemeAccent.js';
 import { requireAuth, requireSuperAdmin } from '../lib/auth.js';
 
 const router = Router();
@@ -12,7 +15,7 @@ router.use(requireAuth, requireSuperAdmin);
 const THEME_PRESETS = {
   lux: {
     backgroundColor: '#1A1A1A',
-    primaryAccent: '#A89483',
+    primaryAccent: DEFAULT_BOOKING_ACCENT_HEX,
     secondaryColor: '#2A2A2A',
     textColor: '#FFFFFF',
     backgroundImageUrl: '',
@@ -71,12 +74,9 @@ const THEME_PRESETS = {
     textColor: '#F5F3FF',
     backgroundImageUrl: '',
   },
-  /** Colorisma — samma som demo i config.json */
+  /** Standardmall — plattformsstandard (samma som mobil-preview / DB-fallback) */
   colorisma: {
-    backgroundColor: '#FAFAFA',
-    primaryAccent: '#A89483',
-    secondaryColor: '#EBE8E3',
-    textColor: '#1A1A1A',
+    ...DEFAULT_PLATFORM_SALON_THEME,
     backgroundImageUrl: '',
   },
 };
@@ -117,13 +117,17 @@ async function salonEditable(id) {
   return enrichSalonRow(data);
 }
 
+function isNonSalonRow(s) {
+  if (!s || s.id === SYSTEM_SALON_ID) return null;
+  return s.plan === 'internal' || s.status === 'internal' ? null : s;
+}
+
 // GET /api/superadmin/salons
 router.get('/salons', async (_req, res) => {
   try {
     const { data, error } = await supabase
       .from('salons')
       .select('id, name, slug, subdomain, plan, status, created_at')
-      .neq('plan', 'internal')
       .order('created_at', { ascending: false });
 
     if (error && isColumnMissingError(error)) {
@@ -137,7 +141,7 @@ router.get('/salons', async (_req, res) => {
     }
 
     if (error) throw error;
-    const list = (data || []).filter((r) => r.id !== SYSTEM_SALON_ID);
+    const list = (data || []).map(isNonSalonRow).filter(Boolean);
     res.json(list.map(enrichSalonRow));
   } catch (err) {
     console.error('superadmin list salons:', err);
@@ -150,6 +154,7 @@ router.get('/salons/:id', async (req, res) => {
   try {
     const salon = await salonEditable(req.params.id);
     if (!salon) return res.status(404).json({ error: 'Salong hittades inte.' });
+    ensureSalonThemeAccent(salon);
     res.json(salon);
   } catch (err) {
     console.error('superadmin get salon:', err);
@@ -165,7 +170,7 @@ router.post('/salons', async (req, res) => {
     email,
     phone = '',
     address = '',
-    themePreset = 'lux',
+    themePreset = 'colorisma',
   } = req.body;
 
   if (!name || !email) {
@@ -173,7 +178,7 @@ router.post('/salons', async (req, res) => {
   }
 
   const subdomain = slugify(subIn || name);
-  const preset = THEME_PRESETS[themePreset] || THEME_PRESETS.lux;
+  const preset = THEME_PRESETS[themePreset] || THEME_PRESETS.colorisma;
   const theme = { ...preset };
   const trimmedName = name.trim();
 
@@ -274,6 +279,7 @@ router.post('/salons', async (req, res) => {
     });
     if (u2) throw u2;
 
+    ensureSalonThemeAccent(salon);
     res.status(201).json({
       salon: enrichSalonRow(salon),
       subdomain,
@@ -315,6 +321,7 @@ router.put('/salons/:id/theme', async (req, res) => {
       .single();
 
     if (error) throw error;
+    ensureSalonThemeAccent(data);
     res.json(data);
   } catch (err) {
     console.error('superadmin theme:', err);
@@ -330,7 +337,7 @@ router.get('/salons/:id/services', async (req, res) => {
 
     const { data, error } = await supabase
       .from('services')
-      .select('id, name, price_label, price_amount, duration, duration_minutes, category_id, sort_order')
+      .select('id, name, price_label, price_amount, duration, duration_minutes, category_id, sort_order, is_popular')
       .eq('salon_id', salon.id)
       .order('sort_order');
 
@@ -344,7 +351,7 @@ router.get('/salons/:id/services', async (req, res) => {
 
 // POST /api/superadmin/salons/:id/services
 router.post('/salons/:id/services', async (req, res) => {
-  const { name, price_amount, duration, duration_minutes, price_label, category_id } = req.body;
+  const { name, price_amount, duration, duration_minutes, price_label, category_id, is_popular } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Namn krävs.' });
 
@@ -382,6 +389,7 @@ router.post('/salons/:id/services', async (req, res) => {
         price_amount: price_amount ?? 0,
         duration: duration || '',
         duration_minutes: duration_minutes ?? 60,
+        is_popular: Boolean(is_popular),
       })
       .select()
       .single();
@@ -396,7 +404,7 @@ router.post('/salons/:id/services', async (req, res) => {
 
 // PUT /api/superadmin/salons/:id/services/:serviceId
 router.put('/salons/:id/services/:serviceId', async (req, res) => {
-  const { name, price_amount, duration, duration_minutes, price_label } = req.body;
+  const { name, price_amount, duration, duration_minutes, price_label, is_popular } = req.body;
 
   try {
     const salon = await salonEditable(req.params.id);
@@ -408,6 +416,7 @@ router.put('/salons/:id/services/:serviceId', async (req, res) => {
     if (duration !== undefined) updates.duration = duration;
     if (duration_minutes !== undefined) updates.duration_minutes = duration_minutes;
     if (price_label !== undefined) updates.price_label = price_label;
+    if (is_popular !== undefined) updates.is_popular = Boolean(is_popular);
 
     const { data, error } = await supabase
       .from('services')
@@ -559,9 +568,9 @@ router.delete('/salons/:id/staff/:userId', async (req, res) => {
   }
 });
 
-// PUT /api/superadmin/salons/:id/details — tagline, map_url, instagram (feed), contact (merge)
+// PUT /api/superadmin/salons/:id/details — tagline, map_url, instagram (feed), contact (merge), subdomain
 router.put('/salons/:id/details', async (req, res) => {
-  const { tagline, map_url, instagram } = req.body;
+  const { tagline, map_url, instagram, name, subdomain } = req.body;
   const contactPatch = req.body.contact;
 
   try {
@@ -578,6 +587,11 @@ router.put('/salons/:id/details', async (req, res) => {
         : prevContact;
 
     const updates = {};
+    if (name !== undefined) updates.name = String(name).trim();
+    if (subdomain !== undefined) {
+      const cleanSub = String(subdomain).trim();
+      updates.slug = cleanSub;
+    }
     if (tagline !== undefined) updates.tagline = tagline;
     if (map_url !== undefined) updates.map_url = map_url;
     if (instagram !== undefined) updates.instagram = instagram;
@@ -591,10 +605,12 @@ router.put('/salons/:id/details', async (req, res) => {
 
     if (error && isColumnMissingError(error)) {
       const fallback = { ...salon, ...updates, contact: mergedContact };
+      ensureSalonThemeAccent(fallback);
       return res.json(enrichSalonRow(fallback));
     }
 
     if (error) throw error;
+    ensureSalonThemeAccent(data);
     res.json(enrichSalonRow(data));
   } catch (err) {
     console.error('superadmin salon details:', err);
@@ -628,18 +644,19 @@ router.put('/salons/:id/billing', async (req, res) => {
       .single();
 
     if (error && isColumnMissingError(error)) {
-      return res.json(
-        enrichSalonRow({
-          ...salon,
-          plan: updates.plan ?? salon.plan ?? 'trial',
-          status: updates.status ?? salon.status ?? 'active',
-          billingNote: 'Värden visas här; kör migration 004 för att spara plan/status i databasen.',
-        })
-      );
+      const billingFallback = {
+        ...salon,
+        plan: updates.plan ?? salon.plan ?? 'trial',
+        status: updates.status ?? salon.status ?? 'active',
+        billingNote: 'Värden visas här; kör migration 004 för att spara plan/status i databasen.',
+      };
+      ensureSalonThemeAccent(billingFallback);
+      return res.json(enrichSalonRow(billingFallback));
     }
 
     if (error) throw error;
 
+    ensureSalonThemeAccent(data);
     res.json(enrichSalonRow(data));
   } catch (err) {
     console.error('superadmin billing:', err);

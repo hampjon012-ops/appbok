@@ -18,7 +18,10 @@ router.get('/', async (req, res) => {
   const { salon_id, slug } = req.query;
 
   try {
-    let salonId = salon_id;
+    let salonId = typeof salon_id === 'string' ? salon_id.trim() : salon_id;
+    if (!salonId && !slug) {
+      return res.status(400).json({ error: 'Ange salon_id eller slug.' });
+    }
     if (!salonId && slug) {
       const { data: salon } = await supabase.from('salons').select('id').eq('slug', slug).single();
       if (!salon) return res.status(404).json({ error: 'Salong ej hittad.' });

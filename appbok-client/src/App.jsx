@@ -1,7 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { applyThemeToDocument, fetchMergedSalonConfig } from './lib/salonPublicConfig';
+import {
+  applyThemeToDocument,
+  fetchMergedSalonConfig,
+  displaySalonName,
+  SALON_CONFIG_UPDATED,
+  SALON_CONFIG_STORAGE_KEY,
+  resolvePrimaryAccentHex,
+} from './lib/salonPublicConfig';
 import './App.css';
+import { usePreviewEmbedUi } from './hooks/usePreviewEmbedUi.js';
+import { useSalonCatalog } from './hooks/useSalonCatalog.js';
+import PreviewDeviceStatusBar from './components/PreviewDeviceStatusBar.jsx';
+import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
+
+function isPreviewEmbedClient() {
+  if (typeof window === 'undefined') return false;
+  try {
+    return new URLSearchParams(window.location.search).get('preview_embed') === '1';
+  } catch {
+    return false;
+  }
+}
 
 // ─── Helper: generate available dates (next 21 days, skip Sunday) ─────────────
 function getAvailableDates() {
@@ -18,9 +38,6 @@ function getAvailableDates() {
 const ALL_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 
 // ─── Helper: format date to Swedish ──────────────────────────────────────────
-function fmtDate(d) {
-  return d.toLocaleDateString('sv-SE', { weekday: 'short', month: 'short', day: 'numeric' });
-}
 function fmtDateLong(d) {
   return d.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
 }
@@ -28,136 +45,440 @@ function fmtPrice(öre) {
   return `${(öre / 100).toLocaleString('sv-SE')} kr`;
 }
 
+/** Startsida: kurerad meny om config saknar egna tjänster */
+const CURATED_FALLBACK_SERVICES = [
+  { id: 'curated-1', name: 'Klippning inkl. tvätt & fön', durationMinutes: 60, priceAmount: 75000, isPopular: true },
+  { id: 'curated-2', name: 'Klippning kort hår (Maskin/Sax)', durationMinutes: 45, priceAmount: 55000, isPopular: false },
+  { id: 'curated-3', name: 'Barnklippning (upp till 12 år)', durationMinutes: 30, priceAmount: 45000, isPopular: true },
+  { id: 'curated-4', name: 'Skägg & trimning', durationMinutes: 30, priceAmount: 35000, isPopular: true },
+];
+
+function normalizeHomeService(svc) {
+  const dm = svc.duration_minutes ?? svc.durationMinutes;
+  const duration =
+    (svc.duration && String(svc.duration).trim()) ||
+    (typeof dm === 'number' && dm > 0 ? `${dm} min` : '');
+  const pa = svc.price_amount ?? svc.priceAmount;
+  const price =
+    (svc.price && String(svc.price).trim()) ||
+    (typeof pa === 'number' && pa > 0
+      ? `Från ${(pa / 100).toLocaleString('sv-SE')} kr`
+      : '');
+  return {
+    id: svc.id,
+    name: (svc.name && String(svc.name).trim()) || 'Tjänst',
+    duration,
+    price,
+    photo_url: svc.photo_url || svc.photo || null,
+    isPopular: Boolean(svc.is_popular ?? svc.isPopular),
+  };
+}
+
+/** Matchar hem-tjänst mot kategorier (id först, sedan exakt namn). */
+function findCategoryAndServiceForPrefill(categories, prefill) {
+  if (!prefill || !Array.isArray(categories) || categories.length === 0) return null;
+  const idStr =
+    prefill.id != null && String(prefill.id).trim() !== '' ? String(prefill.id) : null;
+  const nameNorm = (prefill.name || '').trim().toLowerCase();
+  for (const cat of categories) {
+    for (const svc of cat.services || []) {
+      if (idStr && String(svc.id) === idStr) return { category: cat, service: svc };
+    }
+  }
+  if (nameNorm) {
+    for (const cat of categories) {
+      for (const svc of cat.services || []) {
+        if ((svc.name || '').trim().toLowerCase() === nameNorm) return { category: cat, service: svc };
+      }
+    }
+  }
+  return null;
+}
+
+function findStylistForPrefill(stylistList, prefill) {
+  if (!prefill || !Array.isArray(stylistList) || stylistList.length === 0) return null;
+  const idStr =
+    prefill.id != null && String(prefill.id).trim() !== '' ? String(prefill.id) : null;
+  const nameNorm = (prefill.name || '').trim().toLowerCase();
+  for (const st of stylistList) {
+    if (idStr && String(st.id) === idStr) return st;
+  }
+  if (nameNorm) {
+    for (const st of stylistList) {
+      if ((st.name || '').trim().toLowerCase() === nameNorm) return st;
+    }
+  }
+  return null;
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 function App() {
+  usePreviewEmbedUi();
   const [config, setConfig] = useState(null);
+  const [scrollY, setScrollY] = useState(0);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [bookingPrefill, setBookingPrefill] = useState(null);
+  const [bookingPrefillStylist, setBookingPrefillStylist] = useState(null);
 
-  useEffect(() => {
-    fetchMergedSalonConfig()
-      .then((merged) => {
-        setConfig(merged);
-        if (merged.theme) applyThemeToDocument(merged.theme);
-        document.title = `${merged.salonName} | Boka Tid`;
-      })
-      .catch((err) => console.error('Could not load config', err));
+  const clearBookingPrefill = useCallback(() => setBookingPrefill(null), []);
+  const clearBookingPrefillStylist = useCallback(() => setBookingPrefillStylist(null), []);
+
+  const catalogSalonId =
+    config && !config.tenantNotFound
+      ? config.salonId || 'a0000000-0000-0000-0000-000000000001'
+      : null;
+  const { categories, stylists, isLoadingCategories, isLoadingStylists } = useSalonCatalog(
+    catalogSalonId,
+    config,
+  );
+
+  /** homeService / homeStylist: ange null för att rensa respektive prefill */
+  const openBookingModal = useCallback((homeService = null, homeStylist = null) => {
+    setBookingPrefill(homeService ? { id: homeService.id, name: homeService.name } : null);
+    setBookingPrefillStylist(
+      homeStylist ? { id: homeStylist.id, name: homeStylist.name } : null,
+    );
+    setIsBookingModalOpen(true);
   }, []);
 
-  const scrollToBooking = () =>
-    document.getElementById('boka-nu').scrollIntoView({ behavior: 'smooth' });
+  const closeBookingModal = useCallback(() => {
+    setIsBookingModalOpen(false);
+    setBookingPrefill(null);
+    setBookingPrefillStylist(null);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const load = () => {
+      fetchMergedSalonConfig()
+        .then((merged) => {
+          setConfig(merged);
+          if (merged.tenantNotFound) {
+            document.title = 'Salongen hittades inte | Appbok';
+            return;
+          }
+          if (merged.theme) applyThemeToDocument(merged.theme);
+          document.title = `${displaySalonName(merged.salonName)} | Boka Tid`;
+        })
+        .catch((err) => console.error('Could not load config', err));
+    };
+
+    load();
+
+    const onVis = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    const onFocus = () => load();
+    const onSalonSavedElsewhere = () => load();
+    const onStorage = (e) => {
+      if (e.key === SALON_CONFIG_STORAGE_KEY) load();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener(SALON_CONFIG_UPDATED, onSalonSavedElsewhere);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener(SALON_CONFIG_UPDATED, onSalonSavedElsewhere);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  const accentColor = useMemo(() => resolvePrimaryAccentHex(config?.theme), [config?.theme]);
+  const previewEmbed = isPreviewEmbedClient();
 
   if (!config) return <div className="loading-screen">Laddar...</div>;
 
+  if (config.tenantNotFound) {
+    return <SalonTenantNotFoundView attemptedSlug={config.attemptedSlug} />;
+  }
+
   return (
     <div className="app-wrapper">
+      {previewEmbed ? <PreviewDeviceStatusBar /> : null}
+      {/* ── DESKTOP FIXED HEADER ── */}
+      <div className={`desktop-header ${scrollY > 50 ? 'desktop-header-scrolled' : ''}`}>
+        <div /> {/* spacer */}
+        <button
+          type="button"
+          onClick={() => openBookingModal(null)}
+          className="desktop-header-btn"
+          style={
+            scrollY > 50 ? { backgroundColor: accentColor, color: '#fff' } : undefined
+          }
+        >
+          Boka tid
+        </button>
+      </div>
+
+      {/* ── MOBILE STICKY TOP BAR ── */}
+      <div className={`sticky-top-bar ${scrollY > 350 ? 'visible' : ''}`}>
+        <h3>{displaySalonName(config.salonName)}</h3>
+      </div>
 
       {/* ── HERO ── */}
-      <header className="hero-minimal">
+      <header
+        className="hero-minimal"
+        style={
+          config.theme?.backgroundImageUrl?.trim()
+            ? { backgroundImage: `url(${config.theme.backgroundImageUrl.trim()})` }
+            : undefined
+        }
+      >
         <div className="hero-overlay"></div>
-        <div className="hero-content">
-          {config.logoUrl && (
-            <img src={config.logoUrl} alt={config.salonName} className="hero-logo-img"
-              onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
-          )}
-          <h1 className="hero-logo" style={{ display: config.logoUrl ? 'none' : 'block' }}>{config.salonName}</h1>
-          <p className="hero-tagline">{config.tagline}</p>
-          <button className="btn-hero" onClick={scrollToBooking}>Boka tid</button>
+        <div className="container hero-container" style={{ position: 'relative', zIndex: 10 }}>
+          <div className="hero-content">
+            {config.logoUrl && (
+              <img src={config.logoUrl} alt={displaySalonName(config.salonName)} className="hero-logo-img"
+                onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+            )}
+            <h1 className="hero-logo" style={{ display: config.logoUrl ? 'none' : 'block' }}>{displaySalonName(config.salonName)}</h1>
+            <p className="hero-tagline">{config.tagline}</p>
+          </div>
         </div>
       </header>
 
-      {/* ── INSTAGRAM ── */}
-      <section className="section">
-        <div className="container">
-          <div className="section-header">
-            <h2>
-              @{' '}
-              {config.contact?.instagramHandle &&
-              config.contact.instagramHandle !== '#'
-                ? String(config.contact.instagramHandle).replace(/^@/, '')
-                : config.salonName.replace(/\s+/g, '').toLowerCase()}
-            </h2>
-            <p>Följ oss på Instagram för daglig inspiration.</p>
-          </div>
-          <div className="insta-grid">
-            {config.instagram?.map((img, idx) => (
-              <div key={idx} className="insta-item">
-                <img src={img} alt="Instagram feed" />
-                <div className="insta-overlay"><span>❤️</span></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <main className="content-card">
 
-      {config.contact?.about ? (
-        <section className="section">
+        {/* ── 1. POPULÄRA TJÄNSTER ── */}
+        <section className="home-section">
           <div className="container">
-            <h2 className="contact-title">Om oss</h2>
-            <p className="about-text" style={{ maxWidth: '42rem', margin: '0 auto', lineHeight: 1.6 }}>
-              {config.contact.about}
-            </p>
+            <div className="home-section-header home-section-header--popular">
+              <h2 className="home-section-title">Våra mest populära tjänster</h2>
+            </div>
+            <div className="services-popular-list">
+              {(() => {
+                const allServices = (categories || []).flatMap((cat) =>
+                  (cat.services || []).map((svc) => ({
+                    ...svc,
+                    categoryName: cat.name,
+                    isPopular: Boolean(svc.is_popular ?? svc.isPopular),
+                  })),
+                );
+                const popularMarked = allServices.filter((s) => s.isPopular);
+                const raw =
+                  popularMarked.length > 0
+                    ? popularMarked.slice(0, 4)
+                    : allServices.length > 0
+                      ? allServices.slice(0, 4)
+                      : CURATED_FALLBACK_SERVICES.filter((s) => s.isPopular).length > 0
+                        ? CURATED_FALLBACK_SERVICES.filter((s) => s.isPopular)
+                        : CURATED_FALLBACK_SERVICES;
+                const rows = raw.slice(0, 4).map(normalizeHomeService);
+                return rows.map((svc, i) => {
+                  const metaParts = [svc.duration, svc.price].filter(Boolean);
+                  const metaLine = metaParts.join(' · ');
+                  return (
+                    <div
+                      key={svc.id || i}
+                      className="service-popular-row service-popular-row--interactive"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openBookingModal(svc)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          openBookingModal(svc);
+                        }
+                      }}
+                    >
+                      <div className="service-popular-text">
+                        <p className="service-popular-name">{svc.name}</p>
+                        {metaLine ? (
+                          <p className="service-popular-meta">{metaLine}</p>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        className="service-popular-btn"
+                        tabIndex={-1}
+                        style={{ backgroundColor: accentColor }}
+                      >
+                        Välj
+                      </button>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
           </div>
         </section>
-      ) : null}
 
-      {/* ── BOOKING ── */}
-      <BookingSection config={config} />
+        {/* ── 2. STYLISTER ── */}
+        {(() => {
+          const stylists = config.stylists || [];
+          const display = stylists.length > 0 ? stylists : [
+            { id: 1, name: 'Anna', title: 'Senior Stylist', photo: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=400&auto=format&fit=crop' },
+            { id: 2, name: 'Sofia', title: 'Top Stylist', photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400&auto=format&fit=crop' },
+            { id: 3, name: 'Emma', title: 'Color Specialist', photo: 'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=400&auto=format&fit=crop' },
+            { id: 4, name: 'Lina', title: 'Junior Stylist', photo: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=400&auto=format&fit=crop' },
+          ];
+          return (
+            <section className="home-section home-section-alt">
+              <div className="container">
+                <div className="home-section-header">
+                  <h2 className="home-section-title">Träffa vårt team</h2>
+                </div>
+                <div className="stylists-scroll-row">
+                  {display.map((st, i) => (
+                    <div
+                      key={st.id || i}
+                      role="button"
+                      tabIndex={0}
+                      className="stylist-card stylist-card--interactive"
+                      onClick={() => openBookingModal(null, st)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          openBookingModal(null, st);
+                        }
+                      }}
+                    >
+                      <div className="stylist-avatar">
+                        {(st.photo || st.photo_url) ? (
+                          <img src={st.photo || st.photo_url} alt={st.name} />
+                        ) : (
+                          <div className="stylist-avatar-fallback" aria-hidden />
+                        )}
+                      </div>
+                      <p className="stylist-name">{st.name}</p>
+                      <p className="stylist-title">{st.title || st.specialization || 'Stylist'}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          );
+        })()}
 
-      {/* ── CONTACT & MAP ── */}
-      <section id="kontakt" className="contact-section">
-        <div className="container">
-          <h2 className="contact-title">Kontakt</h2>
-          <div className="contact-grid-layout">
-            <div className="contact-info-list">
-              <div className="contact-info-item">
-                <div className="contact-icon">
-                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                  </svg>
-                </div>
-                <div><h4>Adress</h4><p>{config.contact?.address}</p></div>
+        {/* ── 3. INSTAGRAM ── */}
+        {(config.instagram && config.instagram.length > 0) && (
+          <section className="home-section">
+            <div className="container">
+              <div className="home-section-header" style={{ textAlign: 'center' }}>
+                <p className="insta-label">Hitta Inspiration på Instagram</p>
+                <h2 className="insta-handle">
+                  @{config.contact?.instagramHandle && config.contact.instagramHandle !== '#'
+                    ? String(config.contact.instagramHandle).replace(/^@/, '')
+                    : displaySalonName(config.salonName).replace(/\s+/g, '').toLowerCase()}
+                </h2>
+                <p className="insta-sub">Följ oss för daglig inspiration</p>
               </div>
-              <div className="contact-info-item">
-                <div className="contact-icon">
-                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                  </svg>
-                </div>
-                <div><h4>Telefon</h4><p>{config.contact?.phone}</p></div>
+              <div className="insta-grid">
+                {(config.instagram || []).map((img, idx) => (
+                  <div key={idx} className="insta-item">
+                    <img src={img} alt="Instagram feed" />
+                    <div className="insta-overlay"><span>❤️</span></div>
+                  </div>
+                ))}
               </div>
-              <div className="contact-info-item align-top">
-                <div className="contact-icon">
-                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                  </svg>
+            </div>
+          </section>
+        )}
+
+        {/* ── 4. KONTAKT & KARTA ── */}
+        {(config.contact?.address || config.contact?.phone || (config.contact?.hours && config.contact.hours.length > 0)) && (
+          <section id="kontakt" className="contact-section">
+            <div className="container">
+              <h2 className="contact-title">Kontakt</h2>
+              <div className="contact-grid-layout">
+                <div className="contact-info-list">
+                  {config.contact?.address && (
+                    <div className="contact-info-item">
+                      <div className="contact-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                        </svg>
+                      </div>
+                      <div><h4>Adress</h4><p>{config.contact.address}</p></div>
+                    </div>
+                  )}
+                  {config.contact?.phone && (
+                    <div className="contact-info-item">
+                      <div className="contact-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                        </svg>
+                      </div>
+                      <div><h4>Telefon</h4><p>{config.contact.phone}</p></div>
+                    </div>
+                  )}
+                  {config.contact?.hours && config.contact.hours.length > 0 && (
+                    <div className="contact-info-item align-top">
+                      <div className="contact-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <h4>Öppettider</h4>
+                        {config.contact.hours.map((l, i) => <p key={i}>{l}</p>)}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <h4>Öppettider</h4>
-                  {config.contact?.hours?.map((l, i) => <p key={i}>{l}</p>)}
+                <div className="contact-map-container">
+                  {config.mapUrl && config.mapUrl !== '#'
+                    ? <iframe src={config.mapUrl} width="100%" height="100%" style={{border:0}} allowFullScreen="" loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Karta"></iframe>
+                    : <div className="map-placeholder">Karta saknas — lägg in Google Maps embed-URL i admin.</div>}
                 </div>
               </div>
             </div>
-            <div className="contact-map-container">
-              {config.mapUrl && config.mapUrl !== '#'
-                ? <iframe src={config.mapUrl} width="100%" height="100%" style={{border:0}} allowFullScreen="" loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Karta"></iframe>
-                : <div className="map-placeholder">Karta saknas — lägg in Google Maps embed-URL i admin.</div>}
+          </section>
+        )}
+
+        {/* ── FOOTER ── */}
+        <footer className="footer-simple">
+          <div className="container footer-simple-content">
+            <p>© {new Date().getFullYear()} {displaySalonName(config.salonName)}. Alla rättigheter förbehållna.</p>
+            <div className="footer-links">
+              <a href="#">Integritetspolicy</a>
+              <a href="#">Villkor</a>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ── FOOTER ── */}
-      <footer className="footer-simple">
-        <div className="container footer-simple-content">
-          <p>© {new Date().getFullYear()} {config.salonName}. Alla rättigheter förbehållna.</p>
-          <div className="footer-links">
-            <a href="#">Integritetspolicy</a>
-            <a href="#">Villkor</a>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      </main>
 
       <div className="floating-action mobile-only">
-        <button className="btn-floating" onClick={scrollToBooking}>Boka Tid</button>
+        <button
+          type="button"
+          className="btn-floating"
+          style={{ backgroundColor: accentColor }}
+          onClick={() => openBookingModal(null)}
+        >
+          Boka Tid
+        </button>
+      </div>
+
+      {/* ── BOOKING MODAL (always mounted so data loads early) ── */}
+      <div
+        className="booking-modal-overlay"
+        style={{ display: isBookingModalOpen ? 'flex' : 'none' }}
+        onClick={closeBookingModal}
+      >
+        <div className="booking-modal-sheet" onClick={e => e.stopPropagation()}>
+          <BookingSection
+            config={config}
+            categories={categories}
+            stylists={stylists}
+            isLoadingCategories={isLoadingCategories}
+            isLoadingStylists={isLoadingStylists}
+            isModalOpen={isBookingModalOpen}
+            onClose={closeBookingModal}
+            prefillFromHome={bookingPrefill}
+            onPrefillApplied={clearBookingPrefill}
+            prefillStylistFromHome={bookingPrefillStylist}
+            onStylistPrefillApplied={clearBookingPrefillStylist}
+          />
+        </div>
       </div>
     </div>
   );
@@ -166,23 +487,33 @@ function App() {
 // ─── BookingSection ───────────────────────────────────────────────────────────
 const STEPS = ['service','stylist','time','details','checkout'];
 
-function BookingSection({ config }) {
+function BookingSection({
+  config,
+  categories,
+  stylists,
+  isLoadingCategories,
+  isLoadingStylists,
+  isModalOpen,
+  onClose,
+  prefillFromHome,
+  onPrefillApplied,
+  prefillStylistFromHome,
+  onStylistPrefillApplied,
+}) {
   const [step, setStep]                   = useState('category');
   const [selectedCategory, setCategory]   = useState(null);
   const [selectedService, setService]     = useState(null);
   const [selectedStylist, setStylist]     = useState(null);
+  /** True när stylist valts via team-kort: hoppa över stylist-steget och annorlunda bakåt från tid */
+  const [stylistPreChosenFromHome, setStylistPreChosenFromHome] = useState(false);
   const [selectedDate, setDate]           = useState(null);
   const [selectedTime, setTime]           = useState(null);
   const [form, setForm]                   = useState({ name:'', phone:'', email:'' });
   const [termsAccepted, setTerms]         = useState(false);
   const [loading, setLoading]             = useState(false);
   const [apiError, setApiError]           = useState('');
-
-  // Data from DB
-  const [dbCategories, setDbCategories]   = useState(null);
-  const [dbStylists, setDbStylists]       = useState(null);
-
-  const salonId = config.salonId || 'a0000000-0000-0000-0000-000000000001';
+  const [busySlots, setBusySlots]         = useState(new Set());
+  const [busyLoading, setBusyLoading]     = useState(false);
 
   /** DB returnerar price_amount / duration_minutes; config.json använder priceAmount / durationMinutes */
   const servicePriceÖre = (svc) => {
@@ -196,44 +527,66 @@ function BookingSection({ config }) {
     return typeof n === 'number' && n > 0 ? n : 60;
   };
 
-  // Fetch categories+services and stylists from DB
+  const prevModalOpenRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (isModalOpen && !prevModalOpenRef.current) {
+      setStep('category');
+      setCategory(null);
+      setService(null);
+      setStylist(null);
+      setDate(null);
+      setTime(null);
+      setBusySlots(new Set());
+      setStylistPreChosenFromHome(false);
+      setForm({ name: '', phone: '', email: '' });
+      setTerms(false);
+      setApiError('');
+      setLoading(false);
+    }
+    prevModalOpenRef.current = isModalOpen;
+  }, [isModalOpen]);
+
+  // Öppnad från ”populära tjänster”: hoppa till välj stylist när tjänsten finns i katalogen
   useEffect(() => {
-    fetch(`/api/services?salon_id=${salonId}`)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          // Map DB format to match existing JSX expectations
-          const mapped = data.map(cat => ({
-            ...cat,
-            services: (cat.services || []).map(svc => ({
-              ...svc,
-              price: svc.price_label || `Från ${(svc.price_amount / 100).toLocaleString('sv-SE')} kr`,
-            })),
-          }));
-          setDbCategories(mapped);
-        }
-      })
-      .catch(() => console.warn('Kunde inte hämta tjänster från DB, faller tillbaka på config'));
+    if (!isModalOpen || !prefillFromHome) return;
+    if (categories.length === 0) {
+      if (!isLoadingCategories) onPrefillApplied?.();
+      return;
+    }
+    const found = findCategoryAndServiceForPrefill(categories, prefillFromHome);
+    if (found) {
+      setCategory(found.category);
+      setService(found.service);
+      setStylist(null);
+      setStylistPreChosenFromHome(false);
+      setDate(null);
+      setTime(null);
+      setBusySlots(new Set());
+      setStep('stylist');
+    }
+    onPrefillApplied?.();
+  }, [isModalOpen, prefillFromHome, categories, isLoadingCategories, onPrefillApplied]);
 
-    fetch(`/api/staff?salon_id=${salonId}`)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          // Map photo_url → photo for existing JSX
-          const mapped = data.map(st => ({ ...st, photo: st.photo_url || '' }));
-          setDbStylists(mapped);
-        }
-      })
-      .catch(() => console.warn('Kunde inte hämta stylister från DB, faller tillbaka på config'));
-  }, [salonId]);
-
-  // Use DB data if available, otherwise fall back to config.json
-  const categories = dbCategories || config.categories || [];
-  const stylists   = dbStylists   || config.stylists   || [];
+  // Öppnad från team-kort: lås stylist, börja på kategori (körs efter tjänst-prefill så stylist inte nollas)
+  useEffect(() => {
+    if (!isModalOpen || !prefillStylistFromHome) return;
+    if (stylists.length === 0) {
+      if (!isLoadingStylists) onStylistPrefillApplied?.();
+      return;
+    }
+    const found = findStylistForPrefill(stylists, prefillStylistFromHome);
+    if (found) {
+      setStylist(found);
+      setStylistPreChosenFromHome(true);
+      setDate(null);
+      setTime(null);
+      setBusySlots(new Set());
+    }
+    onStylistPrefillApplied?.();
+  }, [isModalOpen, prefillStylistFromHome, stylists, isLoadingStylists, onStylistPrefillApplied]);
 
   const availableDates = getAvailableDates();
-  const [busySlots, setBusySlots] = useState(new Set());
-  const [busyLoading, setBusyLoading] = useState(false);
 
   // Fetch busy slots when date changes
   useEffect(() => {
@@ -279,15 +632,44 @@ function BookingSection({ config }) {
 
   // ── Navigation helpers ────────────────────────────────────────────────────
   const goBack = () => {
+    if (step === 'time' && stylistPreChosenFromHome) {
+      setStep('service');
+      return;
+    }
     const prev = { service:'category', stylist:'service', time:'stylist', details:'time', checkout:'details' };
     if (prev[step]) setStep(prev[step]);
   };
 
-  const handleSelectCategory = cat => { setCategory(cat); setService(null); setStylist(null); setStep('service'); };
-  const handleSelectService  = svc => { setService(svc);  setStylist(null); setStep('stylist'); };
-  const handleSelectStylist  = st  => {
+  const handleSelectCategory = (cat) => {
+    setCategory(cat);
+    setService(null);
+    setDate(null);
+    setTime(null);
+    if (!stylistPreChosenFromHome) {
+      setStylist(null);
+    }
+    setStep('service');
+  };
+
+  const handleSelectService = (svc) => {
+    setService(svc);
+    setDate(null);
+    setTime(null);
+    setBusySlots(new Set());
+    if (selectedStylist) {
+      setStep('time');
+    } else {
+      setStylist(null);
+      setStep('stylist');
+    }
+  };
+
+  const handleSelectStylist = (st) => {
     setStylist(st);
-    setDate(null); setTime(null); setBusySlots(new Set());
+    setStylistPreChosenFromHome(false);
+    setDate(null);
+    setTime(null);
+    setBusySlots(new Set());
     setStep('time');
   };
   const handleContinueTime   = ()  => setStep('details');
@@ -305,7 +687,7 @@ function BookingSection({ config }) {
           serviceName:   selectedService.name,
           priceAmount:   servicePriceÖre(selectedService),
           currency:      config.stripe?.currency || 'sek',
-          salonName:     config.salonName,
+          salonName:     displaySalonName(config.salonName),
           stylistName:   selectedStylist?.name || 'Valfri stylist',
           date:          selectedDate ? fmtDateLong(selectedDate) : '',
           time:          selectedTime,
@@ -365,12 +747,23 @@ function BookingSection({ config }) {
   );
 
   return (
-    <section id="boka-nu" className="section booking-bg">
-      <div className="container booking-container">
-        <div className="section-header">
-          <h2>Boka tid</h2>
-          <p>Välj tjänst, datum och tid för din bokning.</p>
+    <>
+      <div className="booking-modal-header">
+        <div className="booking-modal-header-text">
+          <h3 className="booking-modal-title">Boka tid</h3>
+          {selectedStylist ? (
+            <p className="booking-modal-stylist-hint">
+              Bokar med {selectedStylist.name}
+            </p>
+          ) : null}
         </div>
+        <button type="button" onClick={onClose} className="close-btn" aria-label="Stäng">
+          ✕
+        </button>
+      </div>
+      <div className="booking-modal-body">
+        <div id="boka-nu" className="booking-modal-inner">
+          <div className="container booking-container" style={{ padding: '1rem', paddingBottom: '2.5rem' }}>
 
         {/* Stepper */}
         <div className="stepper-nav">
@@ -385,17 +778,27 @@ function BookingSection({ config }) {
           {step === 'category' && (
             <>
               <h3 className="booking-step-title">Välj kategori</h3>
-              <div className="category-selection-list">
-                {categories.map(cat => (
-                  <button key={cat.id} className="category-selection-btn" onClick={() => handleSelectCategory(cat)}>
-                    <div className="cat-sel-info">
-                      <h4>{cat.name}</h4>
-                      <p>{cat.description}</p>
-                    </div>
-                    <div className="cat-sel-count">{cat.services.length} val</div>
-                  </button>
-                ))}
-              </div>
+              {isLoadingCategories ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+                  Laddar tjänster...
+                </div>
+              ) : categories.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+                  Inga tjänster tillgängliga än.
+                </div>
+              ) : (
+                <div className="category-selection-list">
+                  {categories.map(cat => (
+                    <button key={cat.id} className="category-selection-btn" onClick={() => handleSelectCategory(cat)}>
+                      <div className="cat-sel-info">
+                        <h4>{cat.name}</h4>
+                        <p>{cat.description}</p>
+                      </div>
+                      <div className="cat-sel-count">{cat.services.length} val</div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
@@ -661,8 +1064,10 @@ function BookingSection({ config }) {
           )}
 
         </div>
+          </div>
+        </div>
       </div>
-    </section>
+    </>
   );
 }
 

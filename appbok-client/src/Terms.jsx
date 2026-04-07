@@ -1,19 +1,39 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { applyThemeToDocument, fetchMergedSalonConfig } from './lib/salonPublicConfig';
+import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
 
 export default function Terms() {
   const [salonName, setSalonName] = useState('Colorisma');
+  const [pageState, setPageState] = useState('loading');
+  const [missingTenantSlug, setMissingTenantSlug] = useState(null);
 
   useEffect(() => {
     fetchMergedSalonConfig()
       .then((d) => {
+        if (d.tenantNotFound) {
+          document.title = 'Salongen hittades inte | Appbok';
+          setMissingTenantSlug(d.attemptedSlug ?? null);
+          setPageState('not_found');
+          return;
+        }
         setSalonName(d.salonName);
         document.title = `Bokningsvillkor – ${d.salonName}`;
         if (d.theme) applyThemeToDocument(d.theme);
+        setPageState('ready');
       })
-      .catch(() => {});
+      .catch(() => {
+        setPageState('ready');
+      });
   }, []);
+
+  if (pageState === 'loading') {
+    return <div className="loading-screen">Laddar...</div>;
+  }
+
+  if (pageState === 'not_found') {
+    return <SalonTenantNotFoundView attemptedSlug={missingTenantSlug} />;
+  }
 
   return (
     <div className="terms-page">

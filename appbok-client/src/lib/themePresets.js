@@ -1,10 +1,23 @@
+import { DEFAULT_BOOKING_ACCENT_HEX } from './defaultBookingAccent.js';
+
+/**
+ * Global plattformsstandard (mobil-preview / fallback när salong saknar tema i DB).
+ * Måste matcha `server/lib/defaultSalonTheme.js` → DEFAULT_PLATFORM_SALON_THEME.
+ */
+export const DEFAULT_PLATFORM_SALON_THEME = {
+  backgroundColor: '#F5F4F0',
+  primaryAccent: DEFAULT_BOOKING_ACCENT_HEX,
+  secondaryColor: '#EBE8E3',
+  textColor: '#383838',
+};
+
 /**
  * Tema-paletter (synkade med API `THEME_PRESETS` + förhandsvisning via URL).
  */
 export const THEME_PRESET_COLORS = {
   lux: {
     backgroundColor: '#1A1A1A',
-    primaryAccent: '#A89483',
+    primaryAccent: DEFAULT_BOOKING_ACCENT_HEX,
     secondaryColor: '#2A2A2A',
     textColor: '#FFFFFF',
   },
@@ -50,11 +63,6 @@ export const THEME_PRESET_COLORS = {
     secondaryColor: '#312E81',
     textColor: '#F5F3FF',
   },
-  /** Samma som demo i `public/config.json` (Colorisma) */
-  colorisma: {
-    backgroundColor: '#FAFAFA',
-    primaryAccent: '#A89483',
-    secondaryColor: '#EBE8E3',
-    textColor: '#1A1A1A',
-  },
+  /** Standardmall — plattformsstandard (preview + DB-fallback) */
+  colorisma: { ...DEFAULT_PLATFORM_SALON_THEME },
 };

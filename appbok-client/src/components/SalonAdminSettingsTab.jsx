@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import ThemeLivePreviewColumn from './ThemeLivePreviewColumn.jsx';
+import {
+  displaySalonName,
+  notifySalonConfigUpdated,
+  resolvePrimaryAccentHex,
+} from '../lib/salonPublicConfig.js';
+import { DEFAULT_PLATFORM_SALON_THEME } from '../lib/themePresets.js';
+import { adminApiHeaders as authHeaders } from '../lib/adminApiHeaders.js';
 
-function authHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${localStorage.getItem('sb_token')}`,
-  };
-}
+const DEFAULT_SALON_THEME = DEFAULT_PLATFORM_SALON_THEME;
 
 const SALON_ADMIN_TABS = [
   { id: 'theme', label: '🎨 Tema' },
@@ -16,6 +18,7 @@ const SALON_ADMIN_TABS = [
   { id: 'maps', label: '🗺️ Google Maps' },
   { id: 'texts', label: '✍️ Texter' },
   { id: 'calendar', label: '📅 Google Kalender' },
+  { id: 'payments', label: '💳 Betalningar' },
 ];
 
 function contactFromSalon(salon) {
@@ -27,10 +30,15 @@ function contactFromSalon(salon) {
 function SalonThemePanel({ salon, onSaved }) {
   const t = typeof salon.theme === 'object' && salon.theme ? salon.theme : {};
   const [logoUrl, setLogoUrl] = useState(salon.logo_url || '');
-  const [accent, setAccent] = useState(t.primaryAccent || '#A89483');
-  const [background, setBackground] = useState(t.backgroundColor || '#FAFAFA');
-  const [text, setText] = useState(t.textColor || '#1A1A1A');
-  const [secondary, setSecondary] = useState(t.secondaryColor || '#EBE8E3');
+  const [accent, setAccent] = useState(
+    resolvePrimaryAccentHex({
+      ...DEFAULT_SALON_THEME,
+      ...t,
+    }),
+  );
+  const [background, setBackground] = useState(t.backgroundColor || DEFAULT_SALON_THEME.backgroundColor);
+  const [text, setText] = useState(t.textColor || DEFAULT_SALON_THEME.textColor);
+  const [secondary, setSecondary] = useState(t.secondaryColor || DEFAULT_SALON_THEME.secondaryColor);
   const [bgImage, setBgImage] = useState(t.backgroundImageUrl || '');
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
@@ -38,12 +46,23 @@ function SalonThemePanel({ salon, onSaved }) {
   useEffect(() => {
     setLogoUrl(salon.logo_url || '');
     const th = typeof salon.theme === 'object' && salon.theme ? salon.theme : {};
-    setAccent(th.primaryAccent || '#A89483');
-    setBackground(th.backgroundColor || '#FAFAFA');
-    setText(th.textColor || '#1A1A1A');
-    setSecondary(th.secondaryColor || '#EBE8E3');
+    setAccent(resolvePrimaryAccentHex({ ...DEFAULT_SALON_THEME, ...th }));
+    setBackground(th.backgroundColor || DEFAULT_SALON_THEME.backgroundColor);
+    setText(th.textColor || DEFAULT_SALON_THEME.textColor);
+    setSecondary(th.secondaryColor || DEFAULT_SALON_THEME.secondaryColor);
     setBgImage(th.backgroundImageUrl || '');
   }, [salon]);
+
+  const themeControlsStyle = useMemo(
+    () => ({
+      '--panel-text': text,
+      '--panel-secondary': secondary,
+      '--panel-accent': accent,
+      backgroundColor: background,
+      color: text,
+    }),
+    [accent, background, secondary, text],
+  );
 
   const save = async (e) => {
     e.preventDefault();
@@ -76,33 +95,62 @@ function SalonThemePanel({ salon, onSaved }) {
 
   return (
     <div className="admin-card superadmin-theme-grid">
-      <form className="superadmin-theme-controls" onSubmit={save}>
+      <form
+        className="superadmin-theme-controls superadmin-theme-controls--themed"
+        style={themeControlsStyle}
+        onSubmit={save}
+      >
         <h3 className="admin-card-title">Kontroller</h3>
         <label>
-          Logo URL
-          <input className="admin-input" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
-        </label>
-        <label>
-          Accent-färg
-          <input type="color" className="admin-input color-input" value={accent} onChange={(e) => setAccent(e.target.value)} />
-        </label>
-        <label>
           Bakgrundsfärg
+          <span className="admin-hint admin-hint--field">
+            Yta bakom &quot;Våra mest populära tjänster&quot;, innehållskortet under hero och Instagram-rutnätet.
+          </span>
           <input type="color" className="admin-input color-input" value={background} onChange={(e) => setBackground(e.target.value)} />
         </label>
         <label>
-          Textfärg
-          <input type="color" className="admin-input color-input" value={text} onChange={(e) => setText(e.target.value)} />
-        </label>
-        <label>
           Sekundärfärg
+          <span className="admin-hint admin-hint--field">
+            Yta bakom &quot;Träffa vårt team&quot;, kontakt/karta, sidfot och ljusare paneler i bokningsfönstret.
+          </span>
           <input type="color" className="admin-input color-input" value={secondary} onChange={(e) => setSecondary(e.target.value)} />
         </label>
         <label>
+          Knappfärg
+          <span className="admin-hint admin-hint--field">
+            Färg på Boka tid, Välj vid tjänster, markerade steg i bokningsflödet och andra tydliga knappar/länkar.
+          </span>
+          <input type="color" className="admin-input color-input" value={accent} onChange={(e) => setAccent(e.target.value)} />
+        </label>
+        <label>
+          Textfärg
+          <span className="admin-hint admin-hint--field">
+            Huvudsaklig textfärg på bokningssidan: rubriker, brödtext och etiketter (inte hero-texten ovanför kortet).
+          </span>
+          <input type="color" className="admin-input color-input" value={text} onChange={(e) => setText(e.target.value)} />
+        </label>
+        <label>
+          Logo URL
+          <span className="admin-hint admin-hint--field">
+            Adress till er logotypbild som visas i hero (ovanför tagline). Lämna tom för att bara visa salongsnamn som text.
+          </span>
+          <input className="admin-input" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
+        </label>
+        <label>
           Bakgrundsbild URL
+          <span className="admin-hint admin-hint--field">
+            Bild som ligger bakom hero (överst på sidan). Om fältet är tomt används en standardbild. Använd https-länk eller relativ sökväg.
+          </span>
           <input className="admin-input" value={bgImage} onChange={(e) => setBgImage(e.target.value)} placeholder="https://..." />
         </label>
-        <button type="submit" className="btn-superadmin-gold" disabled={saving}>
+        <p className="admin-hint admin-hint--field superadmin-theme-save-hint">
+          Knappen Spara skriver alla värden ovan till er salong och uppdaterar bokningssidan för besökare (även andra flikar efter en kort stund).
+        </p>
+        <button
+          type="submit"
+          className="superadmin-theme-controls-save"
+          disabled={saving}
+        >
           {saving ? 'Sparar…' : 'Spara'}
         </button>
         {msg && <p className={msg === 'Sparat!' ? 'superadmin-success' : 'superadmin-error'}>{msg}</p>}
@@ -110,6 +158,7 @@ function SalonThemePanel({ salon, onSaved }) {
 
       <ThemeLivePreviewColumn
         salonName={salon.name}
+        tagline={salon.tagline || ''}
         logoUrl={logoUrl}
         accent={accent}
         secondary={secondary}
@@ -121,7 +170,7 @@ function SalonThemePanel({ salon, onSaved }) {
   );
 }
 
-function SalonContactPanel({ salon, onSaved }) {
+function SalonContactPanel({ salon, onSaved, onSalonNameLive }) {
   const c0 = contactFromSalon(salon);
   const [salonName, setSalonName] = useState(salon.name || '');
   const [address, setAddress] = useState(c0.address || '');
@@ -180,7 +229,16 @@ function SalonContactPanel({ salon, onSaved }) {
       <form className="superadmin-modal-form" onSubmit={save}>
         <label>
           Salongens namn
-          <input className="admin-input" value={salonName} onChange={(e) => setSalonName(e.target.value)} required />
+          <input
+            className="admin-input"
+            value={salonName}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSalonName(v);
+              onSalonNameLive?.(v);
+            }}
+            required
+          />
         </label>
         <label>
           Adress
@@ -385,8 +443,9 @@ function SalonMapsPanel({ salon, onSaved }) {
   );
 }
 
-function SalonTextsPanel({ salon, onSaved }) {
+function SalonTextsPanel({ salon, onSaved, onSalonNameLive }) {
   const c0 = contactFromSalon(salon);
+  const [salonName, setSalonName] = useState(salon.name || '');
   const [tagline, setTagline] = useState(salon.tagline || '');
   const [about, setAbout] = useState(c0.about || '');
   const [msg, setMsg] = useState('');
@@ -394,6 +453,7 @@ function SalonTextsPanel({ salon, onSaved }) {
 
   useEffect(() => {
     const c = contactFromSalon(salon);
+    setSalonName(salon.name || '');
     setTagline(salon.tagline || '');
     setAbout(c.about || '');
   }, [salon]);
@@ -407,6 +467,7 @@ function SalonTextsPanel({ salon, onSaved }) {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({
+          name: salonName.trim(),
           tagline: tagline.trim(),
           contact: { about: about.trim() },
         }),
@@ -414,6 +475,14 @@ function SalonTextsPanel({ salon, onSaved }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Kunde inte spara.');
       setMsg('Sparat!');
+      try {
+        const stored = JSON.parse(localStorage.getItem('sb_salon') || '{}');
+        localStorage.setItem('sb_salon', JSON.stringify({
+          ...stored,
+          name: data.name,
+          slug: data.slug ?? stored.slug,
+        }));
+      } catch (_) { /* ignore */ }
       onSaved?.(data);
       setTimeout(() => setMsg(''), 2500);
     } catch (x) {
@@ -428,6 +497,19 @@ function SalonTextsPanel({ salon, onSaved }) {
       <h3 className="admin-card-title">✍️ Texter</h3>
       <p className="admin-hint">Välkomsttext och kort presentation om er salong.</p>
       <form className="superadmin-modal-form" onSubmit={save}>
+        <label>
+          Salongens namn
+          <input
+            className="admin-input"
+            value={salonName}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSalonName(v);
+              onSalonNameLive?.(v);
+            }}
+            placeholder={displaySalonName('')}
+          />
+        </label>
         <label>
           Text på startsidan (välkomsttext)
           <input
@@ -533,23 +615,94 @@ function SalonCalendarPanel() {
   );
 }
 
+function StripeMark() {
+  return (
+    <svg className="salon-stripe-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden>
+      <path
+        fill="currentColor"
+        d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.662l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 3.343 2.086 4.768 5.763 6.051 1.996.688 2.715 1.269 2.715 2.152 0 .9-.697 1.389-1.986 1.389-1.857 0-4.601-1.011-6.62-2.351l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-3.344-2.116-4.956-6.591-6.305z"
+      />
+    </svg>
+  );
+}
+
+function SalonPaymentsPanel({ salon }) {
+  const stripeConnected = Boolean(salon?.stripe_account_id || salon?.contact?.stripe_connected);
+  const [requirePayment, setRequirePayment] = useState(false);
+
+  useEffect(() => {
+    if (!stripeConnected) {
+      setRequirePayment(false);
+      return;
+    }
+    const c = contactFromSalon(salon);
+    if (typeof c.require_payment_at_booking === 'boolean') {
+      setRequirePayment(c.require_payment_at_booking);
+    }
+  }, [salon, stripeConnected]);
+
+  const handleStripeConnect = () => {
+    // Stripe Connect onboarding kommer senare
+  };
+
+  return (
+    <div className="admin-card salon-payments-card">
+      <div className="salon-payments-title-row">
+        <h3 className="admin-card-title salon-payments-heading">Stripe-anslutning</h3>
+        <span
+          className={`salon-payments-status-badge ${stripeConnected ? 'salon-payments-status-badge--ok' : 'salon-payments-status-badge--inactive'}`}
+        >
+          {stripeConnected ? 'Aktiv' : 'Ej aktiv'}
+        </span>
+      </div>
+      <p className="admin-card-desc salon-payments-desc">
+        Aktivera kortbetalningar direkt vid bokning. Genom att ansluta ditt Stripe-konto betalas pengarna ut
+        automatiskt till ditt bankkonto. Inga extra serviceavgifter tillkommer från Appbok.
+      </p>
+
+      <button type="button" className="btn-stripe-connect" onClick={handleStripeConnect}>
+        <StripeMark />
+        <span>Anslut din salong med Stripe</span>
+      </button>
+
+      <label className={`salon-payment-toggle-row ${!stripeConnected ? 'salon-payment-toggle-row--disabled' : ''}`}>
+        <span className="salon-payment-toggle-label">Kräv betalning vid bokning</span>
+        <span className="salon-payment-switch-wrap">
+          <input
+            type="checkbox"
+            className="salon-payment-switch-input"
+            checked={requirePayment}
+            disabled={!stripeConnected}
+            onChange={(e) => setRequirePayment(e.target.checked)}
+          />
+          <span className="salon-payment-switch-track" aria-hidden />
+        </span>
+      </label>
+      {!stripeConnected && (
+        <p className="admin-hint salon-payment-toggle-hint">Anslut Stripe först för att aktivera detta val.</p>
+      )}
+    </div>
+  );
+}
+
 export default function SalonAdminSettingsTab() {
   const [salon, setSalon] = useState(null);
   const [tab, setTab] = useState('theme');
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    fetch('/api/salons', { headers: authHeaders() })
+  const load = useCallback((opts = {}) => {
+    const silent = Boolean(opts.silent);
+    if (!silent) setLoading(true);
+    return fetch('/api/salons', { headers: authHeaders(), cache: 'no-store' })
       .then((r) => r.json())
       .then((data) => {
         if (data && !Array.isArray(data)) setSalon(data);
         else setSalon(null);
-        setLoading(false);
+        if (!silent) setLoading(false);
       })
       .catch(() => {
         setSalon(null);
-        setLoading(false);
+        if (!silent) setLoading(false);
       });
   }, []);
 
@@ -557,13 +710,13 @@ export default function SalonAdminSettingsTab() {
     load();
   }, [load]);
 
-  const onSaved = useCallback(
-    (data) => {
-      if (data && data.id) setSalon(data);
-      else load();
-    },
-    [load]
-  );
+  const onSalonNameLive = useCallback((name) => {
+    setSalon((prev) => (prev ? { ...prev, name } : null));
+  }, []);
+
+  const onSaved = useCallback(() => {
+    load({ silent: true }).then(() => notifySalonConfigUpdated());
+  }, [load]);
 
   if (loading) {
     return <div className="admin-loading">Laddar inställningar…</div>;
@@ -576,7 +729,7 @@ export default function SalonAdminSettingsTab() {
   return (
     <div className="admin-section superadmin-section salon-admin-settings">
       <div className="superadmin-editor-top salon-admin-editor-top">
-        <h2 className="admin-section-title">Redigerar: {salon.name}</h2>
+        <h2 className="admin-section-title">Redigerar: {displaySalonName(salon.name)}</h2>
         <p className="admin-hint salon-admin-lead">
           Uppdatera er bokningssida, kontakt och kalender. Personal och tjänster hanterar du via menyn till vänster.
         </p>
@@ -596,12 +749,13 @@ export default function SalonAdminSettingsTab() {
       </div>
 
       {tab === 'theme' && <SalonThemePanel salon={salon} onSaved={onSaved} />}
-      {tab === 'contact' && <SalonContactPanel salon={salon} onSaved={onSaved} />}
+      {tab === 'contact' && <SalonContactPanel salon={salon} onSaved={onSaved} onSalonNameLive={onSalonNameLive} />}
       {tab === 'hours' && <SalonHoursPanel salon={salon} onSaved={onSaved} />}
       {tab === 'instagram' && <SalonInstagramPanel salon={salon} onSaved={onSaved} />}
       {tab === 'maps' && <SalonMapsPanel salon={salon} onSaved={onSaved} />}
-      {tab === 'texts' && <SalonTextsPanel salon={salon} onSaved={onSaved} />}
+      {tab === 'texts' && <SalonTextsPanel salon={salon} onSaved={onSaved} onSalonNameLive={onSalonNameLive} />}
       {tab === 'calendar' && <SalonCalendarPanel />}
+      {tab === 'payments' && <SalonPaymentsPanel salon={salon} />}
     </div>
   );
 }

@@ -10,22 +10,22 @@ function slugify(s) {
 
 const THEMES = [
   {
-    id: 'scandi',
-    label: 'Scandi',
-    desc: 'Vitt & grått — ren nordisk känsla',
-    colors: { bg: '#FAFAFA', accent: '#6B7280', secondary: '#F3F4F6', text: '#374151' },
+    id: 'colorisma',
+    label: 'Standard',
+    desc: 'Samma layout & färger som Appbok-demo',
+    colors: { bg: '#F5F4F0', accent: '#6f4e37', secondary: '#EBE8E3', text: '#383838' },
   },
   {
-    id: 'midnight',
-    label: 'Midnight',
-    desc: 'Mörk & elegant — djup kontrast',
-    colors: { bg: '#111827', accent: '#A89483', secondary: '#1F2937', text: '#F9FAFB' },
+    id: 'lux',
+    label: 'Lyx',
+    desc: 'Mörk & guld',
+    colors: { bg: '#1A1A1A', accent: '#6f4e37', secondary: '#2A2A2A', text: '#FFFFFF' },
   },
   {
-    id: 'earth',
-    label: 'Earth',
-    desc: 'Varma toner — naturliga nyanser',
-    colors: { bg: '#F5F0EB', accent: '#A89483', secondary: '#E8E0D5', text: '#3D3028' },
+    id: 'modern',
+    label: 'Modern',
+    desc: 'Vitt & rosa',
+    colors: { bg: '#FFF9F9', accent: '#E8B4B8', secondary: '#F5E6E8', text: '#1A1A1A' },
   },
 ];
 
@@ -94,7 +94,7 @@ function authHeaders() {
 export default function AddSalonModal({ onClose, onDone }) {
   const [name, setName] = useState('');
   const [subdomain, setSubdomain] = useState('');
-  const [themeId, setThemeId] = useState('scandi');
+  const [themeId, setThemeId] = useState('colorisma');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(null);

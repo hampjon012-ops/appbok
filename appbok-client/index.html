@@ -2,8 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Demosalong Colorisma: apex → colorisma.appbok.se (samma sträng som COLORISMA_PUBLIC_BOOKING_ORIGIN i src/lib/subdomain.js) -->
+    <script>
+      (function () {
+        var h = location.hostname.toLowerCase();
+        if (h !== 'appbok.se' && h !== 'www.appbok.se') return;
+        var path = location.pathname || '/';
+        if (path === '/admin' || path.indexOf('/admin/') === 0) {
+          location.replace('https://admin.appbok.se' + location.pathname + location.search + location.hash);
+          return;
+        }
+        var q = new URLSearchParams(location.search);
+        if (q.has('slug') || q.has('demo') || q.has('salon_id') || q.has('salonId')) return;
+        location.replace('https://colorisma.appbok.se' + location.pathname + location.search + location.hash);
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>appbok-client</title>
   </head>
   <body>

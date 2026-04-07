@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import supabase from '../lib/supabase.js';
 import { requireAuth, requireAdmin } from '../lib/auth.js';
+import { ensureSalonThemeAccent } from '../lib/ensureSalonThemeAccent.js';
 
 const router = Router();
 
@@ -11,19 +12,37 @@ router.get('/public', async (req, res) => {
     return res.status(400).json({ error: 'Ange salon_id eller slug.' });
   }
 
+  const selectCols = 'id, name, slug, tagline, logo_url, theme, contact, map_url, instagram';
+
   try {
-    let q = supabase
-      .from('salons')
-      .select('id, name, slug, tagline, logo_url, theme, contact, map_url, instagram');
+    let data;
+    let error;
 
-    if (salon_id) q = q.eq('id', salon_id);
-    else q = q.eq('slug', slug);
-
-    const { data, error } = await q.single();
+    if (salon_id) {
+      const r = await supabase.from('salons').select(selectCols).eq('id', salon_id).single();
+      data = r.data;
+      error = r.error;
+    } else {
+      const slugNorm = String(slug).trim();
+      let r = await supabase.from('salons').select(selectCols).eq('slug', slugNorm).maybeSingle();
+      if (r.error) throw r.error;
+      if (!r.data) {
+        r = await supabase.from('salons').select(selectCols).eq('slug', slugNorm.toLowerCase()).maybeSingle();
+      }
+      if (r.error) throw r.error;
+      if (!r.data) {
+        const sub = slugNorm.toLowerCase();
+        r = await supabase.from('salons').select(selectCols).eq('subdomain', sub).maybeSingle();
+      }
+      if (r.error) throw r.error;
+      data = r.data;
+    }
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Salong hittades inte.' });
 
+    ensureSalonThemeAccent(data);
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json(data);
   } catch (err) {
     console.error('Salon public get error:', err);
@@ -43,6 +62,7 @@ router.get('/', requireAuth, async (req, res) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Salong hittades inte.' });
 
+    ensureSalonThemeAccent(data);
     res.json(data);
   } catch (err) {
     console.error('Salon get error:', err);
@@ -143,6 +163,7 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
         .eq('id', req.user.salonId)
         .single();
       if (fullErr) throw fullErr;
+      ensureSalonThemeAccent(full);
       return res.json(full);
     }
 
@@ -156,6 +177,7 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Salong hittades inte.' });
 
+    ensureSalonThemeAccent(data);
     res.json(data);
   } catch (err) {
     console.error('Salon update error:', err);

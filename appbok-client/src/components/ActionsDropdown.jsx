@@ -107,16 +107,6 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLi
             type="button"
             className="sa-actions-item"
             role="menuitem"
-            onClick={() => { onEdit(); setOpen(false); }}
-          >
-            <EditIcon />
-            <span>Redigera inställningar</span>
-          </button>
-
-          <button
-            type="button"
-            className="sa-actions-item"
-            role="menuitem"
             onClick={() => { onImpersonate(); setOpen(false); }}
           >
             <UserIcon />
