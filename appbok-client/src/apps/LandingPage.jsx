@@ -6,12 +6,13 @@ import Terms from '../Terms.jsx';
 import Invite from '../pages/Invite.jsx';
 import LoginRoute from '../components/LoginRoute.jsx';
 import AdminApexRedirect from '../components/AdminApexRedirect.jsx';
+import MarketingLanding from '../pages/MarketingLanding.jsx';
 
 /**
  * Basdomän (appbok.se / www.appbok.se / localhost).
- * Visar antingen:
- *  • boknings-UI för demosalongen Colorisma (appbok.se → colorisma.appbok.se redirect i index.html)
- *  • eller en framtida marknadsföringslandningssida
+ * Visar:
+ *  • marknadsföringslandningssida på /
+ *  • boknings-UI för demosalongen Colorisma på /preview/mobile
  *
  * Routing: /, /preview/mobile, /tack, /villkor, /login, /admin → admin.appbok.se, /invite/:token
  */
@@ -19,7 +20,7 @@ export default function LandingPage() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<MobileBookingFrontend />} />
+        <Route path="/" element={<MarketingLanding />} />
         <Route path="/preview/mobile" element={<MobileBookingFrontend />} />
         <Route path="/tack" element={<ThankYou />} />
         <Route path="/villkor" element={<Terms />} />

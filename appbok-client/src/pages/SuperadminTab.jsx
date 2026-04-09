@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import ActionsDropdown from '../components/ActionsDropdown.jsx';
 import AddSalonModal from '../components/AddSalonModal.jsx';
+import { getLandingOriginForThemePreview } from '../lib/subdomain.js';
 
 
 function EditIcon(props) {
@@ -126,13 +127,14 @@ const PREVIEW_BOOKING_SLUG = 'colorisma';
 function CreateSalonLandingPreview({ salonName, themePreset }) {
   const bookingPreviewSrc = useMemo(() => {
     if (typeof window === 'undefined') return '';
-    const u = new URL('/', window.location.origin);
+    const origin = getLandingOriginForThemePreview();
+    const u = new URL('/preview/mobile', origin);
     u.searchParams.set('slug', PREVIEW_BOOKING_SLUG);
     u.searchParams.set('preview_embed', '1');
     const name = (salonName || '').trim();
     if (name) u.searchParams.set('preview_name', name);
     if (themePreset) u.searchParams.set('preview_theme', themePreset);
-    return u.pathname + u.search;
+    return u.toString();
   }, [salonName, themePreset]);
 
   return (

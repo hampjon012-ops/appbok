@@ -98,3 +98,26 @@ export function getImplicitHostSalonSlug() {
   const { kind, tenantSlug } = parseBookingHostname(window.location.hostname);
   return kind === 'tenant' && tenantSlug ? tenantSlug : null;
 }
+
+/**
+ * Origin för tema-live-preview (iframe). På admin.* måste preview laddas från basdomänen,
+ * där `/preview/mobile` finns i LandingPage — annars blir iframen tom (AdminApp hade ingen sådan route).
+ */
+export function getLandingOriginForThemePreview() {
+  if (typeof window === 'undefined') return '';
+  const hostname = window.location.hostname || '';
+  const { kind } = parseBookingHostname(hostname);
+  if (kind !== 'admin') return window.location.origin;
+
+  const { protocol, port } = window.location;
+  const portSuffix = port ? `:${port}` : '';
+
+  if (hostname.endsWith(BOOKING_TENANT_SUFFIX)) {
+    return `${protocol}//appbok.se${portSuffix}`;
+  }
+  if (hostname.endsWith(BOOKING_TENANT_SUFFIX_LOCAL)) {
+    return `${protocol}//localhost${portSuffix}`;
+  }
+
+  return window.location.origin;
+}

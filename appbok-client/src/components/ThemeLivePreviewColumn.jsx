@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { buildMobileThemePreviewPath } from '../lib/salonPublicConfig.js';
+import { getLandingOriginForThemePreview } from '../lib/subdomain.js';
 
 /** Logisk viewport — samma som iframe-intern bredd */
 const IFRAME_W = 390;
@@ -51,15 +52,20 @@ export default function ThemeLivePreviewColumn({
     [salonName, tagline, logoUrl, accent, background, text, secondary, bgImage],
   );
 
-  const [iframeSrc, setIframeSrc] = useState(livePath);
+  const liveUrl = useMemo(() => {
+    const origin = getLandingOriginForThemePreview();
+    return origin ? `${origin}${livePath}` : livePath;
+  }, [livePath]);
+
+  const [iframeSrc, setIframeSrc] = useState(liveUrl);
   const previewHasMounted = useRef(false);
 
   useEffect(() => {
     const delay = previewHasMounted.current ? PREVIEW_DEBOUNCE_MS : 0;
     previewHasMounted.current = true;
-    const t = window.setTimeout(() => setIframeSrc(livePath), delay);
+    const t = window.setTimeout(() => setIframeSrc(liveUrl), delay);
     return () => window.clearTimeout(t);
-  }, [livePath]);
+  }, [liveUrl]);
 
   return (
     <div
