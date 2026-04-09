@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Demosalong Colorisma: apex → colorisma.appbok.se (samma sträng som COLORISMA_PUBLIC_BOOKING_ORIGIN i src/lib/subdomain.js) -->
+    <!-- Apex (appbok.se / www): skicka bara admin och inloggning till admin-subdomänen. Övrigt (/, landningssida, /preview/mobile m.m.) stannar här. -->
     <script>
       (function () {
         var h = location.hostname.toLowerCase();
@@ -16,9 +16,6 @@
           location.replace('https://admin.appbok.se' + location.pathname + location.search + location.hash);
           return;
         }
-        var q = new URLSearchParams(location.search);
-        if (q.has('slug') || q.has('demo') || q.has('salon_id') || q.has('salonId')) return;
-        location.replace('https://colorisma.appbok.se' + location.pathname + location.search + location.hash);
       })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />

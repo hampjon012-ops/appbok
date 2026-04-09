@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useSearchParams } from 'react-router-dom';
 import MobileBookingFrontend from '../MobileBookingFrontend.jsx';
 import ThankYou from '../ThankYou.jsx';
 import Terms from '../Terms.jsx';
@@ -7,6 +7,18 @@ import Invite from '../pages/Invite.jsx';
 import LoginRoute from '../components/LoginRoute.jsx';
 import AdminApexRedirect from '../components/AdminApexRedirect.jsx';
 import MarketingLanding from '../pages/MarketingLanding.jsx';
+
+/** Apex / med ?slug= / ?salon_id= → boknings-UI (samma som tidigare index.html-läge). Annars marknadsföring. */
+function ApexHomeRoute() {
+  const [searchParams] = useSearchParams();
+  const hasSalonQuery =
+    searchParams.has('slug') ||
+    searchParams.has('demo') ||
+    searchParams.has('salon_id') ||
+    searchParams.has('salonId');
+  if (hasSalonQuery) return <MobileBookingFrontend />;
+  return <MarketingLanding />;
+}
 
 /**
  * Basdomän (appbok.se / www.appbok.se / localhost).
@@ -20,7 +32,7 @@ export default function LandingPage() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<MarketingLanding />} />
+        <Route path="/" element={<ApexHomeRoute />} />
         <Route path="/preview/mobile" element={<MobileBookingFrontend />} />
         <Route path="/tack" element={<ThankYou />} />
         <Route path="/villkor" element={<Terms />} />
