@@ -234,8 +234,9 @@ router.post('/current/go-live', requireAuth, requireAdmin, async (req, res) => {
     ensureSalonThemeAccent(data);
     res.json(data);
   } catch (err) {
-    console.error('Go-live error:', err);
-    res.status(500).json({ error: 'Kunde inte gå live.' });
+    console.error('[go-live] Full error:', err);
+    const msg = err?.error?.message || err?.message || err?.details || String(err);
+    res.status(500).json({ error: `Kunde inte gå live: ${msg}` });
   }
 });
 
