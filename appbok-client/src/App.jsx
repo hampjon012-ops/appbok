@@ -202,23 +202,46 @@ function App() {
   }
 
   const isDemo = config.salonStatus === 'demo';
+  const isTrial = config.salonStatus === 'trial';
 
   return (
     <div className="app-wrapper">
       {previewEmbed ? <PreviewDeviceStatusBar /> : null}
-      {/* ── DEMO STATUS BANNER ── */}
-      {isDemo && !previewEmbed && (
-        <div className="demo-status-banner">
-          <span className="demo-status-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" stroke="#92400E" strokeWidth="2"/>
-              <line x1="12" y1="8" x2="12" y2="13" stroke="#92400E" strokeWidth="2" strokeLinecap="round"/>
-              <circle cx="12" cy="16.5" r="1" fill="#92400E"/>
-            </svg>
-          </span>
-          <span className="demo-status-text">
-            <strong>Förhandsvisning</strong> — Din sajt är under utveckling. Boka-knappen är inaktiverad tills du startar din testperiod.
-          </span>
+      {/* ── STATUS BANNER (demo ELLER trial) ── */}
+      {(isDemo || isTrial) && !previewEmbed && (
+        <div className={isTrial ? 'trial-status-banner' : 'demo-status-banner'}>
+          {isTrial && config.trialEndsAt ? (
+            <>
+              <span className="demo-status-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="#92400E" strokeWidth="2"/>
+                  <line x1="12" y1="8" x2="12" y2="13" stroke="#92400E" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="12" cy="16.5" r="1" fill="#92400E"/>
+                </svg>
+              </span>
+              <span className="demo-status-text">
+                {(() => {
+                  const left = Math.ceil((new Date(config.trialEndsAt) - new Date()) / 86400000);
+                  return left > 0
+                    ? <><strong>Testperiod:</strong> {left} dagar kvar — din bokningssida är fullt aktiv.</>
+                    : <><strong>Testperioden har gått ut.</strong> Kontakta oss för att fortsätta.</>;
+                })()}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="demo-status-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="#92400E" strokeWidth="2"/>
+                  <line x1="12" y1="8" x2="12" y2="13" stroke="#92400E" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="12" cy="16.5" r="1" fill="#92400E"/>
+                </svg>
+              </span>
+              <span className="demo-status-text">
+                <strong>Förhandsvisning</strong> — Din sajt är under utveckling. Boka-knappen är inaktiverad tills du startar din testperiod.
+              </span>
+            </>
+          )}
         </div>
       )}
 

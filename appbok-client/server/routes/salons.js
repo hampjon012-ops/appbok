@@ -12,7 +12,7 @@ router.get('/public', async (req, res) => {
     return res.status(400).json({ error: 'Ange salon_id eller slug.' });
   }
 
-  const selectCols = 'id, name, slug, tagline, logo_url, theme, contact, map_url, instagram';
+  const selectCols = 'id, name, slug, tagline, logo_url, theme, contact, map_url, instagram, status, plan, trial_ends_at';
 
   try {
     let data;
@@ -183,6 +183,98 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
     console.error('Salon update error:', err);
     const msg = err?.message || err?.details || 'Kunde inte uppdatera salong.';
     res.status(500).json({ error: msg });
+  }
+});
+
+// POST /api/salons/current/go-live — Gå live (kräver Stripe)
+router.post('/current/go-live', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { data: current, error: fetchErr } = await supabase
+      .from('salons')
+      .select('id, status, stripe_account_id, contact, name, slug')
+      .eq('id', req.user.salonId)
+      .single();
+
+    if (fetchErr) throw fetchErr;
+    if (!current) return res.status(404).json({ error: 'Salong hittades inte.' });
+
+    if (current.status === 'live') {
+      return res.status(400).json({ error: 'Salongen är redan live.' });
+    }
+
+    const stripeConnected = Boolean(
+      current.stripe_account_id || (current.contact && typeof current.contact === 'object' && current.contact.stripe_connected),
+    );
+
+    if (!stripeConnected) {
+      return res.status(400).json({ error: 'Koppla Stripe först innan du kan gå live.' });
+    }
+
+    const { data, error } = await supabase
+      .from('salons')
+      .update({ status: 'live' })
+      .eq('id', req.user.salonId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Skicka go-live bekräftelsemail asynkront (non-blocking)
+    const liveUrl = `https://${current.slug || ''}.appbok.se/`.replace('https://.appbok.se/', 'https://appbok.se/');
+    import('../lib/email.js')
+      .then(({ sendGoLiveEmail }) => {
+        const adminEmail = req.user?.email;
+        if (adminEmail) {
+          sendGoLiveEmail({ to: adminEmail, salonName: current.name || 'Din salong', liveUrl })
+            .catch((e) => console.warn('[go-live] Email failed:', e.message));
+        }
+      })
+      .catch((e) => console.warn('[go-live] Could not import email module:', e.message));
+
+    ensureSalonThemeAccent(data);
+    res.json(data);
+  } catch (err) {
+    console.error('Go-live error:', err);
+    res.status(500).json({ error: 'Kunde inte gå live.' });
+  }
+});
+
+// POST /api/salons/current/trial — Starta 14 dagars testperiod
+router.post('/current/trial', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { data: current, error: fetchErr } = await supabase
+      .from('salons')
+      .select('status')
+      .eq('id', req.user.salonId)
+      .single();
+
+    if (fetchErr) throw fetchErr;
+    if (!current) return res.status(404).json({ error: 'Salong hittades inte.' });
+
+    if (current.status === 'trial') {
+      return res.status(400).json({ error: 'Trial-period är redan aktiv.' });
+    }
+    if (current.status === 'live') {
+      return res.status(400).json({ error: 'Salongen är redan live.' });
+    }
+
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+
+    const { data, error } = await supabase
+      .from('salons')
+      .update({ status: 'trial', trial_ends_at: trialEndsAt.toISOString() })
+      .eq('id', req.user.salonId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    ensureSalonThemeAccent(data);
+    res.json(data);
+  } catch (err) {
+    console.error('[trial] start error:', err);
+    const msg = err?.error?.message || err?.message || err?.details || String(err);
+    res.status(500).json({ error: `Kunde inte starta trial-period: ${msg}` });
   }
 });
 

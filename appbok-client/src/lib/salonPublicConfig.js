@@ -130,6 +130,7 @@ export function mergePublicSalon(base, api) {
     instagram: api.instagram ?? base.instagram,
     salonStatus: api.status ?? 'active',
     salonPlan: api.plan ?? 'trial',
+    trialEndsAt: api.trial_ends_at ?? null,
     contact: {
       ...base.contact,
       address: c.address ?? base.contact?.address,

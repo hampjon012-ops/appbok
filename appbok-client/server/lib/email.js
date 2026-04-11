@@ -530,3 +530,88 @@ export async function sendStylistNotificationEmail({ to, stylistName, customerNa
     return { success: false, error: err.message };
   }
 }
+
+// ─── Go-Live bekräftelsemail ─────────────────────────────────────────────────
+
+function buildGoLiveHtml({ salonName, liveUrl }) {
+  return `
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden;">
+          <tr>
+            <td style="background-color:#16a34a; padding:30px 40px; text-align:center;">
+              <h1 style="margin:0; color:#ffffff; font-size:24px; font-weight:600;">🎉 Välkommen till Appbok, ${salonName}!</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 20px; color:#333333; font-size:20px;">Din sajt är nu live!</h2>
+              <p style="margin:0 0 16px; color:#555555; font-size:16px; line-height:1.5;">
+                Grattis, <strong>${salonName}</strong>! Din bokningssida är nu officiellt lanserad och synlig för kunder.
+              </p>
+              <p style="margin:0 0 24px; color:#555555; font-size:16px; line-height:1.5;">
+                Allt är redo — kunder kan nu boka tjänster direkt på er sida med betalning via Stripe.
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+                <tr>
+                  <td style="background-color:#16a34a; border-radius:6px;">
+                    <a href="${liveUrl}" target="_blank" rel="noopener noreferrer"
+                       style="display:inline-block; padding:14px 32px; color:#ffffff; text-decoration:none; font-size:16px; font-weight:600;">
+                      Öppna er bokningssida
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:24px 0 0; color:#999999; font-size:13px; line-height:1.5; text-align:center;">
+                Direktlänk: <a href="${liveUrl}" style="color:#16a34a;">${liveUrl}</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#f9f9f9; padding:20px 40px; text-align:center; border-top:1px solid #eeeeee;">
+              <p style="margin:0; color:#aaaaaa; font-size:12px;">
+                Detta mail skickades från Appbok.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Skicka go-live bekräftelse till salongsägaren.
+ * @param {{ to: string, salonName: string, liveUrl: string }} options
+ * @returns {Promise<{ success: boolean, error?: string }>}
+ */
+export async function sendGoLiveEmail({ to, salonName, liveUrl }) {
+  if (!transporter) {
+    console.warn('[email] SMTP not configured — skipping go-live email to', to);
+    return { success: false, error: 'SMTP not configured' };
+  }
+
+  try {
+    await transporter.sendMail({
+      from: SMTP_FROM,
+      to,
+      subject: `🎉 ${salonName} är nu live på Appbok!`,
+      html: buildGoLiveHtml({ salonName, liveUrl }),
+    });
+    console.log('[email] Go-live email sent to', to);
+    return { success: true };
+  } catch (err) {
+    console.error('[email] Failed to send go-live email to', to, ':', err.message);
+    return { success: false, error: err.message };
+  }
+}

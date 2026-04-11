@@ -84,3 +84,64 @@ export function replaceWithAdminDashboard() {
   if (typeof window === 'undefined') return;
   window.location.replace(getAdminDashboardUrl());
 }
+
+/** Normaliserar slug/subdomän för URL. */
+function normalizeSalonSlug(salon) {
+  const raw = String(salon?.slug || salon?.subdomain || '').trim().toLowerCase();
+  return raw.replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Publik bokningssida / förhandsvisning (kundvy).
+ * Prod: https://{slug}.appbok.se/
+ * Lokal: http://{slug}.localhost:{port}/
+ * Vercel-preview: {origin}/?slug={slug}
+ */
+export function getSalonPublicBookingPreviewUrl(salon) {
+  const slug = normalizeSalonSlug(salon);
+  if (!slug) return '';
+  if (typeof window === 'undefined') {
+    return `https://${slug}.appbok.se/`;
+  }
+  const h = window.location.hostname.toLowerCase();
+  const port = window.location.port ? `:${window.location.port}` : '';
+
+  if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.localhost')) {
+    return `http://${slug}.localhost${port}/`;
+  }
+
+  if (h.endsWith('.vercel.app')) {
+    return `${window.location.origin}/?slug=${encodeURIComponent(slug)}`;
+  }
+
+  if (h.endsWith('.appbok.se') || h === 'appbok.se') {
+    return `https://${slug}.appbok.se/`;
+  }
+
+  return `https://${slug}.appbok.se/`;
+}
+
+/** Kopiera text till urklipp (clipboard API med fallback). */
+export async function copyTextToClipboard(text) {
+  const s = String(text || '');
+  if (!s) return false;
+  try {
+    await navigator.clipboard.writeText(s);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = s;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}

@@ -7,7 +7,12 @@ import SalonAdminSettingsTab from '../components/SalonAdminSettingsTab.jsx';
 import ServiceImportModal from '../components/ServiceImportModal.jsx';
 import SidebarRoleBadge from '../components/SidebarRoleBadge.jsx';
 import { adminApiHeaders as authHeaders, getSalonIdForPublicApi } from '../lib/adminApiHeaders.js';
-import { replaceWithAdminLogin } from '../lib/adminUrls.js';
+import { notifySalonConfigUpdated } from '../lib/salonPublicConfig.js';
+import {
+  replaceWithAdminLogin,
+  getSalonPublicBookingPreviewUrl,
+  copyTextToClipboard,
+} from '../lib/adminUrls.js';
 
 // ── Auth helper ──────────────────────────────────────────────────────────────
 function getAuth() {
@@ -299,6 +304,15 @@ export default function Admin() {
         {activeTab === 'dashboard' && (
           <DashboardTab
             showNewBookingButton={canOpenBookingsModal}
+            showSalonLifecycleBanner={!isSuperAdmin && user?.role === 'admin'}
+            onGoToSalonPaymentsSettings={() => {
+              try {
+                sessionStorage.setItem('salonAdminInitialTab', 'payments');
+              } catch (_) {
+                /* ignore */
+              }
+              setActiveTab('settings');
+            }}
             onNewBooking={() => {
               setActiveTab('bookings');
               setNewBookingOpen(true);
@@ -328,12 +342,23 @@ export default function Admin() {
 }
 
 // ─── Dashboard Tab ───────────────────────────────────────────────────────────
-function DashboardTab({ onNewBooking, showNewBookingButton }) {
+function DashboardTab({
+  onNewBooking,
+  showNewBookingButton,
+  showSalonLifecycleBanner,
+  onGoToSalonPaymentsSettings,
+}) {
   const [stats, setStats] = useState(null);
   const [monthlyStats, setMonthlyStats] = useState([]);
   const [topStylists, setTopStylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statsError, setStatsError] = useState('');
+  const [lifecycleSalon, setLifecycleSalon] = useState(null);
+  const [trialBusy, setTrialBusy] = useState(false);
+  const [trialMsg, setTrialMsg] = useState('');
+  const [goLiveBusy, setGoLiveBusy] = useState(false);
+  const [goLiveMsg, setGoLiveMsg] = useState('');
+  const [previewLinkCopied, setPreviewLinkCopied] = useState(false);
 
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
@@ -377,6 +402,16 @@ function DashboardTab({ onNewBooking, showNewBookingButton }) {
   }, [isDateMenuOpen, isNotificationOpen]);
 
   useEffect(() => {
+    if (!showSalonLifecycleBanner) return;
+    fetch('/api/salons', { headers: authHeaders(), cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && !Array.isArray(data)) setLifecycleSalon(data);
+      })
+      .catch(() => setLifecycleSalon(null));
+  }, [showSalonLifecycleBanner]);
+
+  useEffect(() => {
     const parse = async (r) => {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || `Fel ${r.status}`);
@@ -405,8 +440,292 @@ function DashboardTab({ onNewBooking, showNewBookingButton }) {
   if (statsError) return <div className="admin-empty">{statsError}</div>;
   if (!stats) return <div className="admin-empty">Kunde inte hämta statistik.</div>;
 
+  const ls = lifecycleSalon;
+  const isDraftSalon = ls?.status === 'draft';
+  const isDemoSalon = ls?.status === 'demo';
+  const isActiveSalon = ls?.status === 'active';
+  const isTrialSalon = ls?.status === 'trial';
+  const isLiveSalon = ls?.status === 'live';
+  const isPreTrialSalon = isDraftSalon || isDemoSalon || isActiveSalon;
+  const knownLifecycle = isPreTrialSalon || isTrialSalon || isLiveSalon;
+  const previewBookingUrl = ls ? getSalonPublicBookingPreviewUrl(ls) : '';
+
+  const handleGoLive = async () => {
+    if (
+      !confirm(
+        'Gå live nu? Din bokningssida blir synlig för alla och Stripe-betalningar aktiveras.',
+      )
+    ) {
+      return;
+    }
+    setGoLiveBusy(true);
+    setGoLiveMsg('');
+    try {
+      const res = await fetch('/api/salons/current/go-live', {
+        method: 'POST',
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Kunde inte gå live.');
+      setLifecycleSalon(data);
+      try {
+        localStorage.setItem('sb_salon', JSON.stringify(data));
+      } catch (_) {
+        /* ignore */
+      }
+      notifySalonConfigUpdated();
+      setGoLiveMsg('✓ Grattis! Er sajt är nu live.');
+    } catch (err) {
+      setGoLiveMsg(`✗ ${err.message}`);
+    } finally {
+      setGoLiveBusy(false);
+    }
+  };
+
+  const handleCopyPreviewLink = async () => {
+    if (!previewBookingUrl) return;
+    const ok = await copyTextToClipboard(previewBookingUrl);
+    setPreviewLinkCopied(ok);
+    window.setTimeout(() => setPreviewLinkCopied(false), 2500);
+  };
+
+  const handleDashboardStartTrial = async () => {
+    if (
+      !confirm(
+        'Starta 14 dagars testperiod? Efter 14 dagar behöver du koppla Stripe för att fortsätta.',
+      )
+    ) {
+      return;
+    }
+    setTrialBusy(true);
+    setTrialMsg('');
+    try {
+      const res = await fetch('/api/salons/current/trial', {
+        method: 'POST',
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Kunde inte starta trial.');
+      setLifecycleSalon(data);
+      try {
+        localStorage.setItem('sb_salon', JSON.stringify(data));
+      } catch (_) {
+        /* ignore */
+      }
+      notifySalonConfigUpdated();
+      setTrialMsg('✓ Testperiod startad — er bokningssida kan nu ta emot bokningar.');
+    } catch (err) {
+      setTrialMsg(`✗ ${err.message}`);
+    } finally {
+      setTrialBusy(false);
+    }
+  };
+
   return (
     <div className="admin-section dashboard-section">
+      {/* ── DEMO-BANNER ── */}
+      {showSalonLifecycleBanner && ls && isPreTrialSalon && (
+        <div style={{
+          marginBottom: '1.25rem',
+          background: '#FFFFFF',
+          borderRadius: '12px',
+          padding: '0.5rem 1rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          gap: '0.75rem',
+        }}>
+          {/* ── Vänster: Badge + Text ── */}
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.6rem', flexShrink: 1, minWidth: 0 }}>
+            <span style={{
+              background: '#FFF7ED',
+              color: '#9A3412',
+              fontWeight: 700,
+              fontSize: '0.7rem',
+              letterSpacing: '0.05em',
+              padding: '0.2rem 0.55rem',
+              borderRadius: '9999px',
+              border: '1px solid #FED7AA',
+              flexShrink: 0,
+            }}>DEMOLÄGE</span>
+            <span style={{ fontSize: '0.8rem', color: '#4B5563', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Din sida är i förhandsgranskningsläge. Kunder kan inte boka förrän du startar din testperiod.
+            </span>
+          </div>
+
+          {/* ── Höger: Knappar ── */}
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+            {previewBookingUrl && (
+              <button
+                type="button"
+                onClick={handleCopyPreviewLink}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  background: '#F3F4F6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '7px',
+                  padding: '0.35rem 0.75rem',
+                  fontSize: '0.78rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#E5E7EB'}
+                onMouseLeave={e => e.currentTarget.style.background = '#F3F4F6'}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                {previewLinkCopied ? 'Länk kopierad!' : 'Kopiera länk'}
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={trialBusy}
+              onClick={handleDashboardStartTrial}
+              style={{
+                background: '#171717',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '7px',
+                padding: '0.4rem 1rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                opacity: trialBusy ? 0.6 : 1,
+              }}
+            >
+              {trialBusy ? 'Startar...' : 'Starta 14 dagars testperiod'}
+            </button>
+          </div>
+          {trialMsg && (
+            <p style={{ margin: 0, fontSize: '0.75rem', color: trialMsg.startsWith('✓') ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
+              {trialMsg}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── TRIAL-BANNER ── */}
+      {showSalonLifecycleBanner && ls && isTrialSalon && (
+        <div style={{
+          marginBottom: '1.25rem',
+          background: '#FFFFFF',
+          borderRadius: '12px',
+          padding: '0.5rem 1rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          gap: '0.75rem',
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.6rem', flexShrink: 1, minWidth: 0 }}>
+            <span style={{
+              background: '#FEF9C3',
+              color: '#92400E',
+              fontWeight: 700,
+              fontSize: '0.7rem',
+              letterSpacing: '0.05em',
+              padding: '0.2rem 0.55rem',
+              borderRadius: '9999px',
+              border: '1px solid #FDE68A',
+              flexShrink: 0,
+            }}>TRIAL</span>
+            <span style={{ fontSize: '0.8rem', color: '#4B5563', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {ls.trial_ends_at
+                ? (() => {
+                    const left = Math.ceil((new Date(ls.trial_ends_at) - new Date()) / 86400000);
+                    return left > 0
+                      ? `Testperiod: ${left} dagar kvar — din bokningssida är aktiv.`
+                      : 'Testperioden har gått ut.';
+                  })()
+                : 'Din testperiod är aktiv.'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+            <button
+              type="button"
+              disabled={goLiveBusy}
+              onClick={handleGoLive}
+              style={{
+                background: '#16a34a',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '7px',
+                padding: '0.4rem 1rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                opacity: goLiveBusy ? 0.6 : 1,
+              }}
+            >
+              {goLiveBusy ? 'Startar...' : 'Gå Live'}
+            </button>
+          </div>
+          {goLiveMsg && (
+            <p style={{ margin: 0, fontSize: '0.75rem', color: goLiveMsg.startsWith('✓') ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
+              {goLiveMsg}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── LIVE-BANNER ── */}
+      {showSalonLifecycleBanner && ls && isLiveSalon && (
+        <div style={{
+          marginBottom: '1.25rem',
+          background: '#FFFFFF',
+          borderRadius: '12px',
+          padding: '0.5rem 1rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: '0.6rem',
+        }}>
+          <span style={{
+            background: '#DCFCE7',
+            color: '#166534',
+            fontWeight: 700,
+            fontSize: '0.7rem',
+            letterSpacing: '0.05em',
+            padding: '0.2rem 0.55rem',
+            borderRadius: '9999px',
+            border: '1px solid #86EFAC',
+            flexShrink: 0,
+          }}>LIVE</span>
+          <span style={{ fontSize: '0.8rem', color: '#4B5563' }}>
+            Er bokningssida är live! Kunder kan nu boka och betala direkt.
+          </span>
+        </div>
+      )}
+
+      {/* ── UNKNOWN STATUS BANNER ── */}
+      {showSalonLifecycleBanner && ls && !knownLifecycle && (
+        <div style={{
+          marginBottom: '1.25rem',
+          background: '#FFFFFF',
+          borderRadius: '12px',
+          padding: '0.5rem 1rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: '0.6rem',
+        }}>
+          <span style={{ fontSize: '0.8rem', color: '#6B7280' }}>
+            Salongstatus: <strong>{ls.status || '—'}</strong> — Vid problem, kontakta support.
+          </span>
+        </div>
+      )}
       <div className="dashboard-action-bar">
         <h1 className="dashboard-overview-title">Översikt</h1>
         <div className="dashboard-action-tools">

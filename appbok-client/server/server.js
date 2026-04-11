@@ -204,3 +204,25 @@ if (!process.env.VERCEL) {
     console.log(`   GET  /api/superadmin/salons (superadmin)\n`);
   });
 }
+
+// ── TEMP MIGRATION ROUTE ────────────────────────────────────────────────
+app.post('/api/admin/migrate-trial-ends', async (req, res) => {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) return res.status(500).json({ error: 'No service role key' });
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseAdmin = createClient(
+      process.env.SUPABASE_URL || '',
+      key,
+      { db: { schema: 'public' } }
+    );
+    const { error } = await supabaseAdmin.rpc('exec', {
+      query: 'ALTER TABLE salons ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;'
+    });
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[migrate-trial-ends]', err);
+    res.status(500).json({ error: err.message });
+  }
+});

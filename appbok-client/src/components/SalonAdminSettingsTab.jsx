@@ -7,6 +7,7 @@ import {
 } from '../lib/salonPublicConfig.js';
 import { DEFAULT_PLATFORM_SALON_THEME } from '../lib/themePresets.js';
 import { adminApiHeaders as authHeaders } from '../lib/adminApiHeaders.js';
+import { getSalonPublicBookingPreviewUrl, copyTextToClipboard } from '../lib/adminUrls.js';
 
 const DEFAULT_SALON_THEME = DEFAULT_PLATFORM_SALON_THEME;
 
@@ -626,9 +627,14 @@ function StripeMark() {
   );
 }
 
-function SalonPaymentsPanel({ salon }) {
+function SalonPaymentsPanel({ salon, onTrialStarted }) {
   const stripeConnected = Boolean(salon?.stripe_account_id || salon?.contact?.stripe_connected);
   const [requirePayment, setRequirePayment] = useState(false);
+  const [startingTrial, setStartingTrial] = useState(false);
+  const [trialMsg, setTrialMsg] = useState('');
+  const [goLiveBusy, setGoLiveBusy] = useState(false);
+  const [goLiveMsg, setGoLiveMsg] = useState('');
+  const [previewLinkCopied, setPreviewLinkCopied] = useState(false);
 
   useEffect(() => {
     if (!stripeConnected) {
@@ -645,8 +651,155 @@ function SalonPaymentsPanel({ salon }) {
     // Stripe Connect onboarding kommer senare
   };
 
+  const handleStartTrial = async () => {
+    if (!confirm('Starta 14 dagars testperiod? Efter 14 dagar behöver du koppla Stripe för att fortsätta.')) return;
+    setStartingTrial(true);
+    setTrialMsg('');
+    try {
+      const res = await fetch('/api/salons/current/trial', {
+        method: 'POST',
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Kunde inte starta trial.');
+      setTrialMsg('✓ Trial-period startad! Nu har du 14 dagar att prova plattformen.');
+      // Notify parent to reload salon data
+      if (typeof onTrialStarted === 'function') onTrialStarted(data);
+    } catch (err) {
+      setTrialMsg('✗ ' + err.message);
+    } finally {
+      setStartingTrial(false);
+    }
+  };
+
+  const salonStatus = salon?.status;
+  const isDraft = salonStatus === 'draft';
+  const isDemo = salonStatus === 'demo';
+  const isActive = salonStatus === 'active';
+  const isTrial = salonStatus === 'trial';
+  const isLive = salonStatus === 'live';
+  const isPreTrial = isDraft || isDemo || isActive;
+  const knownLifecycle = isPreTrial || isTrial || isLive;
+  const previewBookingUrl = getSalonPublicBookingPreviewUrl(salon);
+
+  const handleGoLive = async () => {
+    if (
+      !confirm(
+        'Gå live nu? Din bokningssida blir synlig för alla och Stripe-betalningar aktiveras. Du kan alltid avsluta när du vill.',
+      )
+    ) {
+      return;
+    }
+    setGoLiveBusy(true);
+    setGoLiveMsg('');
+    try {
+      const res = await fetch('/api/salons/current/go-live', {
+        method: 'POST',
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Kunde inte gå live.');
+      setTrialMsg(''); // clear any old trial msg
+      // Update parent state
+      if (typeof onTrialStarted === 'function') {
+        onTrialStarted(data);
+      }
+      setGoLiveMsg('✓ Grattis! Er sajt är nu live.');
+    } catch (err) {
+      setGoLiveMsg('✗ ' + err.message);
+    } finally {
+      setGoLiveBusy(false);
+    }
+  };
+
+  const handleCopyPreviewLink = async () => {
+    if (!previewBookingUrl) return;
+    const ok = await copyTextToClipboard(previewBookingUrl);
+    setPreviewLinkCopied(ok);
+    window.setTimeout(() => setPreviewLinkCopied(false), 2500);
+  };
+
   return (
     <div className="admin-card salon-payments-card">
+      {/* Trial / Status Banner */}
+      <div style={{
+        padding: '1rem',
+        borderRadius: '10px',
+        marginBottom: '1.25rem',
+        background: isLive ? '#DCFCE7' : isTrial ? '#FEF9C3' : isPreTrial ? '#F3F4F6' : '#FAFAFA',
+        border: `1px solid ${isLive ? '#86EFAC' : isTrial ? '#FDE047' : isPreTrial ? '#D1D5DB' : '#E5E5E5'}`,
+      }}>
+        <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.25rem', color: '#1F2937' }}>
+          Status:{' '}
+          {isLive
+            ? 'Live'
+            : isTrial
+            ? 'Trial'
+            : isPreTrial
+            ? 'Demo'
+            : salonStatus || '—'}
+        </div>
+        {!knownLifecycle && (
+          <p className="admin-hint" style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem' }}>
+            Provperiod startas bara när salongen har status <strong>demo</strong>. Kontakta support om du vill att vi
+            sätter om status.
+          </p>
+        )}
+        {isTrial && salon?.trial_ends_at && (
+          <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: '#92400E' }}>
+            {(() => {
+              const left = Math.ceil((new Date(salon.trial_ends_at) - new Date()) / 86400000);
+              return left > 0 ? `${left} dagar kvar av testperioden.` : 'Testperioden har gått ut.';
+            })()}
+          </p>
+        )}
+        {isPreTrial && previewBookingUrl ? (
+          <div
+            style={{
+              marginBottom: '0.75rem',
+              padding: '0.55rem 0.65rem',
+              borderRadius: '8px',
+              background: '#fff',
+              border: '1px solid #E5E5E5',
+              fontSize: '0.78rem',
+              wordBreak: 'break-all',
+              fontFamily: 'ui-monospace, monospace',
+              color: '#374151',
+            }}
+          >
+            {previewBookingUrl}
+          </div>
+        ) : null}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+          {isPreTrial && (
+            <button
+              type="button"
+              className="btn-admin-primary"
+              style={{ fontSize: '0.9rem', padding: '0.55rem 1.1rem' }}
+              disabled={startingTrial}
+              onClick={handleStartTrial}
+            >
+              {startingTrial ? 'Startar...' : 'Starta 14 dagars testperiod'}
+            </button>
+          )}
+          {isPreTrial && previewBookingUrl ? (
+            <button
+              type="button"
+              className="btn-admin-secondary"
+              style={{ fontSize: '0.9rem', padding: '0.55rem 1.1rem' }}
+              onClick={handleCopyPreviewLink}
+            >
+              {previewLinkCopied ? 'Länk kopierad' : 'Dela länk för förhandsvisning'}
+            </button>
+          ) : null}
+        </div>
+        {trialMsg && (
+          <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: trialMsg.startsWith('✓') ? '#166534' : '#991B1B' }}>
+            {trialMsg}
+          </p>
+        )}
+      </div>
+
       <div className="salon-payments-title-row">
         <h3 className="admin-card-title salon-payments-heading">Stripe-anslutning</h3>
         <span
@@ -681,6 +834,30 @@ function SalonPaymentsPanel({ salon }) {
       {!stripeConnected && (
         <p className="admin-hint salon-payment-toggle-hint">Anslut Stripe först för att aktivera detta val.</p>
       )}
+
+      {/* ── GÅ LIVE ── */}
+      {isTrial && (
+        <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #E5E5E5' }}>
+          <button
+            type="button"
+            className="btn-admin-primary"
+            style={{ width: '100%', justifyContent: 'center', fontSize: '0.95rem', padding: '0.75rem', background: '#16a34a' }}
+            disabled={goLiveBusy}
+            onClick={handleGoLive}
+          >
+            {goLiveBusy ? 'Startar...' : 'Gå Live'}
+          </button>
+          {goLiveMsg ? (
+            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: goLiveMsg.startsWith('✓') ? '#166534' : '#991B1B', textAlign: 'center' }}>
+              {goLiveMsg}
+            </p>
+          ) : (
+            <p className="admin-hint" style={{ margin: '0.5rem 0 0 0', textAlign: 'center' }}>
+              Vid live: Stripe måste vara ansluten. Dina kunder kan boka och betala direkt.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -709,6 +886,19 @@ export default function SalonAdminSettingsTab() {
   useEffect(() => {
     load();
   }, [load]);
+
+  /** Öppna rätt underruta när användaren kommer från t.ex. Översikt → "Inställningar → Betalningar". */
+  useEffect(() => {
+    try {
+      const t = sessionStorage.getItem('salonAdminInitialTab');
+      if (t && SALON_ADMIN_TABS.some((x) => x.id === t)) {
+        setTab(t);
+      }
+      sessionStorage.removeItem('salonAdminInitialTab');
+    } catch (_) {
+      /* ignore */
+    }
+  }, []);
 
   const onSalonNameLive = useCallback((name) => {
     setSalon((prev) => (prev ? { ...prev, name } : null));
@@ -755,7 +945,20 @@ export default function SalonAdminSettingsTab() {
       {tab === 'maps' && <SalonMapsPanel salon={salon} onSaved={onSaved} />}
       {tab === 'texts' && <SalonTextsPanel salon={salon} onSaved={onSaved} onSalonNameLive={onSalonNameLive} />}
       {tab === 'calendar' && <SalonCalendarPanel />}
-      {tab === 'payments' && <SalonPaymentsPanel salon={salon} />}
+      {tab === 'payments' && (
+        <SalonPaymentsPanel
+          salon={salon}
+          onTrialStarted={(updatedSalon) => {
+            setSalon(updatedSalon);
+            try {
+              localStorage.setItem('sb_salon', JSON.stringify(updatedSalon));
+            } catch (_) {
+              /* ignore */
+            }
+            notifySalonConfigUpdated();
+          }}
+        />
+      )}
     </div>
   );
 }
