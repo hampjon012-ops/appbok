@@ -201,21 +201,44 @@ function App() {
     return <SalonTenantNotFoundView attemptedSlug={config.attemptedSlug} />;
   }
 
+  const isDemo = config.salonStatus === 'demo';
+
   return (
     <div className="app-wrapper">
       {previewEmbed ? <PreviewDeviceStatusBar /> : null}
+      {/* ── DEMO STATUS BANNER ── */}
+      {isDemo && !previewEmbed && (
+        <div className="demo-status-banner">
+          <span className="demo-status-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" stroke="#92400E" strokeWidth="2"/>
+              <line x1="12" y1="8" x2="12" y2="13" stroke="#92400E" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="12" cy="16.5" r="1" fill="#92400E"/>
+            </svg>
+          </span>
+          <span className="demo-status-text">
+            <strong>Förhandsvisning</strong> — Din sajt är under utveckling. Boka-knappen är inaktiverad tills du startar din testperiod.
+          </span>
+        </div>
+      )}
+
       {/* ── DESKTOP FIXED HEADER ── */}
       <div className={`desktop-header ${scrollY > 50 ? 'desktop-header-scrolled' : ''}`}>
         <div /> {/* spacer */}
         <button
           type="button"
-          onClick={() => openBookingModal(null)}
+          onClick={isDemo ? undefined : () => openBookingModal(null)}
+          disabled={isDemo}
           className="desktop-header-btn"
           style={
-            scrollY > 50 ? { backgroundColor: accentColor, color: '#fff' } : undefined
+            isDemo
+              ? { opacity: 0.5, cursor: 'not-allowed', pointerEvents: 'none' }
+              : scrollY > 50
+              ? { backgroundColor: accentColor, color: '#fff' }
+              : undefined
           }
         >
-          Boka tid
+          {isDemo ? 'Boka (inaktiverad)' : 'Boka tid'}
         </button>
       </div>
 
@@ -279,16 +302,17 @@ function App() {
                   return (
                     <div
                       key={svc.id || i}
-                      className="service-popular-row service-popular-row--interactive"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => openBookingModal(svc)}
-                      onKeyDown={(e) => {
+                      className={`service-popular-row service-popular-row--interactive${isDemo ? ' service-popular-row--demo' : ''}`}
+                      role={isDemo ? 'presentation' : 'button'}
+                      tabIndex={isDemo ? -1 : 0}
+                      onClick={isDemo ? undefined : () => openBookingModal(svc)}
+                      onKeyDown={isDemo ? undefined : (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
                           openBookingModal(svc);
                         }
                       }}
+                      style={isDemo ? { opacity: 0.6, cursor: 'default' } : undefined}
                     >
                       <div className="service-popular-text">
                         <p className="service-popular-name">{svc.name}</p>
@@ -300,9 +324,10 @@ function App() {
                         type="button"
                         className="service-popular-btn"
                         tabIndex={-1}
-                        style={{ backgroundColor: accentColor }}
+                        disabled={isDemo}
+                        style={isDemo ? { opacity: 0.5, cursor: 'not-allowed' } : { backgroundColor: accentColor }}
                       >
-                        Välj
+                        {isDemo ? 'Låst' : 'Välj'}
                       </button>
                     </div>
                   );
@@ -451,10 +476,11 @@ function App() {
         <button
           type="button"
           className="btn-floating"
-          style={{ backgroundColor: accentColor }}
-          onClick={() => openBookingModal(null)}
+          disabled={isDemo}
+          style={isDemo ? { opacity: 0.5, cursor: 'not-allowed', backgroundColor: '#9CA3AF' } : { backgroundColor: accentColor }}
+          onClick={isDemo ? undefined : () => openBookingModal(null)}
         >
-          Boka Tid
+          {isDemo ? 'Boka (inaktiverad)' : 'Boka Tid'}
         </button>
       </div>
 

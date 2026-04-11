@@ -9,16 +9,42 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
+        configure(proxy) {
+          proxy.on('error', (_err, _req, res) => {
+            if (res && !res.headersSent && typeof res.writeHead === 'function') {
+              res.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8' });
+              res.end(
+                JSON.stringify({
+                  error:
+                    'Utvecklings-API svarar inte (port 3001). Stoppa gamla processer (Ctrl+C), kör sedan npm run dev i mappen appbok-client.',
+                })
+              );
+            }
+          });
+        },
       },
     },
   },
   preview: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
+        configure(proxy) {
+          proxy.on('error', (_err, _req, res) => {
+            if (res && !res.headersSent && typeof res.writeHead === 'function') {
+              res.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8' });
+              res.end(
+                JSON.stringify({
+                  error:
+                    'Utvecklings-API svarar inte (port 3001). Kör npm run dev i appbok-client (API + Vite).',
+                })
+              );
+            }
+          });
+        },
       },
     },
   },

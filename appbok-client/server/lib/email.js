@@ -129,6 +129,91 @@ export async function sendInviteEmail({ to, salonName, inviteUrl }) {
   }
 }
 
+// ─── Välkomstmail ───────────────────────────────────────────────────────────
+
+function buildWelcomeHtml({ salonName, adminUrl, demoUrl }) {
+  return `
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden;">
+          <tr>
+            <td style="background-color:#A89483; padding:30px 40px; text-align:center;">
+              <h1 style="margin:0; color:#ffffff; font-size:24px; font-weight:600;">Appbok</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 20px; color:#333333; font-size:20px;">Välkommen till Appbok, ${salonName}!</h2>
+              <p style="margin:0 0 16px; color:#555555; font-size:16px; line-height:1.5;">
+                Din salongsida är nu skapad och redo att användas. Börja med att utforska och anpassa utseendet.
+              </p>
+              <p style="margin:0 0 24px; color:#555555; font-size:16px; line-height:1.5;">
+                Just nu visas din sida i <strong>demoläge</strong> — det betyder att dina kunder kan se sidan, men Boka-knpen är inaktiverad tills du startar din testperiod.
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+                <tr>
+                  <td style="background-color:#A89483; border-radius:6px;">
+                    <a href="${adminUrl}" target="_blank" rel="noopener noreferrer"
+                       style="display:inline-block; padding:14px 32px; color:#ffffff; text-decoration:none; font-size:16px; font-weight:600;">
+                      Öppna din adminpanel
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:24px 0 0; color:#999999; font-size:13px; line-height:1.5; text-align:center;">
+                Dina bokningssida: <a href="${demoUrl}" style="color:#A89483;">${demoUrl}</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#f9f9f9; padding:20px 40px; text-align:center; border-top:1px solid #eeeeee;">
+              <p style="margin:0; color:#aaaaaa; font-size:12px;">
+                Detta mail skickades från Appbok.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Skicka välkomstmail till ny registrerad salongsägare.
+ * @param {{ to: string, salonName: string, adminUrl: string, demoUrl: string }} options
+ * @returns {Promise<{ success: boolean, error?: string }>}
+ */
+export async function sendWelcomeEmail({ to, salonName, adminUrl, demoUrl }) {
+  if (!transporter) {
+    console.warn('[email] SMTP not configured — skipping welcome email to', to);
+    return { success: false, error: 'SMTP not configured' };
+  }
+
+  try {
+    await transporter.sendMail({
+      from: SMTP_FROM,
+      to,
+      subject: `Välkommen till Appbok, ${salonName}!`,
+      html: buildWelcomeHtml({ salonName, adminUrl, demoUrl }),
+    });
+    console.log('[email] Welcome email sent to', to);
+    return { success: true };
+  } catch (err) {
+    console.error('[email] Failed to send welcome email to', to, ':', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 // ─── Bokningsemail-funktioner ────────────────────────────────────────────────
 
 function fmtDateSwedish(dateStr) {

@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "api": "node server/server.js",
-    "dev": "vite",
-    "dev:all": "concurrently -k -n api,vite -c cyan,magenta \"npm run api\" \"vite\"",
+    "dev": "concurrently -k -n api,vite -c cyan,magenta \"npm run api\" \"wait-on -t 120000 http-get://127.0.0.1:3001/api/health && vite\"",
+    "dev:vite": "vite",
+    "dev:all": "npm run dev",
     "promote:superadmin": "node server/scripts/promote-superadmin.js",
     "bootstrap:superadmin": "node server/scripts/ensure-superadmin-user.js",
     "seed:ulf-bookings": "node server/scripts/apply-ulf-and-demo-bookings.js",
@@ -25,6 +26,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1",
     "bcryptjs": "^3.0.3",
+    "cheerio": "^1.2.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
@@ -49,7 +51,8 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "vercel": "^50.38.2",
-    "vite": "^8.0.1"
+    "vite": "^8.0.1",
+    "wait-on": "^9.0.5"
   },
   "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
   "main": "eslint.config.js",

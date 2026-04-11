@@ -128,6 +128,8 @@ export function mergePublicSalon(base, api) {
     logoUrl: api.logo_url || base.logoUrl,
     mapUrl: api.map_url ?? base.mapUrl,
     instagram: api.instagram ?? base.instagram,
+    salonStatus: api.status ?? 'active',
+    salonPlan: api.plan ?? 'trial',
     contact: {
       ...base.contact,
       address: c.address ?? base.contact?.address,

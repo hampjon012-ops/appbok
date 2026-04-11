@@ -457,6 +457,96 @@ router.delete('/salons/:id/services/:serviceId', async (req, res) => {
   }
 });
 
+// POST /api/superadmin/salons/:id/import-services
+// Body: { services: [{ name, price_amount, duration, duration_minutes, price_label, category_name? }] }
+router.post('/salons/:id/import-services', async (req, res) => {
+  const { services } = req.body;
+
+  if (!Array.isArray(services) || services.length === 0) {
+    return res.status(400).json({ error: 'Inga tjänster att importera.' });
+  }
+
+  try {
+    const salon = await salonEditable(req.params.id);
+    if (!salon) return res.status(404).json({ error: 'Salong hittades inte.' });
+
+    // Bygg kategori-map: namn → id (skapa vid behov)
+    const categoryCache = {};
+
+    async function getOrCreateCategory(name) {
+      const key = String(name || 'Tjänster').trim();
+      if (categoryCache[key]) return categoryCache[key];
+
+      const trimmed = key || 'Tjänster';
+
+      // Försök hitta befintlig
+      const { data: existing } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('salon_id', salon.id)
+        .ilike('name', trimmed)
+        .maybeSingle();
+
+      if (existing) {
+        categoryCache[key] = existing.id;
+        return existing.id;
+      }
+
+      // Skapa ny
+      const { data: created, error } = await supabase
+        .from('categories')
+        .insert({ salon_id: salon.id, name: trimmed, description: '', sort_order: 999 })
+        .select()
+        .single();
+
+      if (error) throw error;
+      categoryCache[key] = created.id;
+      return created.id;
+    }
+
+    // Importera varje tjänst
+    const created = [];
+    for (const svc of services) {
+      if (!svc.name || !svc.name.trim()) continue;
+
+      const catName = svc.category_name || 'Tjänster';
+      const catId = await getOrCreateCategory(catName);
+
+      const defaultPriceLabel = svc.price_amount
+        ? `${(svc.price_amount / 100).toLocaleString('sv-SE')} kr`
+        : svc.price_label || '';
+      const defaultDuration = svc.duration_minutes ? `${svc.duration_minutes} min` : svc.duration || '';
+
+      const { data, error } = await supabase
+        .from('services')
+        .insert({
+          salon_id: salon.id,
+          category_id: catId,
+          name: String(svc.name).trim(),
+          price_amount: svc.price_amount ?? 0,
+          price_label: svc.price_label || defaultPriceLabel,
+          duration: svc.duration || defaultDuration,
+          duration_minutes: svc.duration_minutes || 60,
+          sort_order: 999,
+          active: true,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.warn('Import service error:', error.message);
+        continue;
+      }
+      created.push(data);
+    }
+
+    res.status(201).json({ imported: created.length, services: created });
+  } catch (err) {
+    console.error('superadmin import-services:', err);
+    res.status(500).json({ error: 'Kunde inte importera tjänster.' });
+  }
+});
+
 // GET /api/superadmin/salons/:id/staff
 router.get('/salons/:id/staff', async (req, res) => {
   try {

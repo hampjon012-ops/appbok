@@ -14,6 +14,7 @@ import statsRoutes from './routes/stats.js';
 import calendarRoutes from './routes/calendar.js';
 import salonsRoutes from './routes/salons.js';
 import superadminRoutes from './routes/superadmin.js';
+import { scrapeBokadirekt, prepareForImport } from './lib/bokadirektScraper.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '.env') });
@@ -88,6 +89,24 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/salons', salonsRoutes);
 app.use('/api/superadmin', superadminRoutes);
+
+// ── Bokadirekt scraper ──────────────────────────────────────────────────────
+app.get('/api/scrape/bokadirekt', async (req, res) => {
+  const { url } = req.query;
+
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'Ange en bokadirekt.se-URL som ?url=…' });
+  }
+
+  try {
+    const data = await scrapeBokadirekt(url);
+    const services = prepareForImport(data);
+    res.json({ ...data, services });
+  } catch (err) {
+    console.error('[scrape/bokadirekt]', err.message);
+    res.status(422).json({ error: err.message || 'Kunde inte hämta tjänster från Bokadirekt.' });
+  }
+});
 
 // ── Stripe Checkout (kept for backward compat) ──────────────────────────────
 app.post('/api/create-checkout-session', async (req, res) => {

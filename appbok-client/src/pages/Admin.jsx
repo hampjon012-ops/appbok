@@ -4,6 +4,7 @@ import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
 import SuperadminTab from './SuperadminTab.jsx';
 import SuperadminSettingsTab from '../components/SuperadminSettingsTab.jsx';
 import SalonAdminSettingsTab from '../components/SalonAdminSettingsTab.jsx';
+import ServiceImportModal from '../components/ServiceImportModal.jsx';
 import SidebarRoleBadge from '../components/SidebarRoleBadge.jsx';
 import { adminApiHeaders as authHeaders, getSalonIdForPublicApi } from '../lib/adminApiHeaders.js';
 import { replaceWithAdminLogin } from '../lib/adminUrls.js';
@@ -1219,6 +1220,7 @@ function ServicesTab() {
   const [addForm, setAddForm] = useState({ name: '', price_label: '', price_amount: 0, duration: '', duration_minutes: 60 });
   const [addingCategory, setAddingCategory] = useState(false);
   const [addCatForm, setAddCatForm] = useState({ name: '', description: '' });
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const loadServices = useCallback(() => {
     setLoading(true);
@@ -1373,7 +1375,16 @@ function ServicesTab() {
 
   return (
     <div className="admin-section">
-      <h2 className="admin-section-title">Tjänster</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+        <h2 className="admin-section-title" style={{ margin: 0 }}>Tjänster</h2>
+        <button
+          className="btn-admin-secondary"
+          style={{ fontSize: '0.85rem', padding: '0.45rem 1rem' }}
+          onClick={() => setShowImportModal(true)}
+        >
+          Importera från Bokadirekt
+        </button>
+      </div>
       {toggleError ? (
         <p className="admin-hint" style={{ color: '#b91c1c', marginBottom: '0.75rem' }}>
           {toggleError}
@@ -1549,6 +1560,14 @@ function ServicesTab() {
         >
           + Lägg till ny Huvudkategori
         </button>
+      )}
+
+      {showImportModal && (
+        <ServiceImportModal
+          salonId={getSalonIdForPublicApi()}
+          onClose={() => setShowImportModal(false)}
+          onImported={() => { setShowImportModal(false); loadServices(); }}
+        />
       )}
     </div>
   );
