@@ -40,7 +40,7 @@ export default function MarketingLanding() {
             fontSize: '0.95rem',
             transition: 'color 0.2s'
           }}>Logga in</Link>
-          <Link to="/admin" style={{ 
+          <Link to="/onboarding" style={{ 
             background: '#171717', 
             color: '#FFFFFF', 
             padding: '0.65rem 1.25rem', 
@@ -84,7 +84,7 @@ export default function MarketingLanding() {
               margin: '0 0 1.5rem 0',
               color: '#171717'
             }}>
-              Den moderna plattformen för din salong
+              Den moderna plattformen för din verksamhet
             </h1>
             <p style={{ 
               fontSize: '1.15rem', 
@@ -97,28 +97,31 @@ export default function MarketingLanding() {
               Appbok ger dig allt du behöver för att driva din verksamhet. Bokningssida i världsklass, 
               sömlösa betalningar med Stripe och automatisk kalendersynk.
             </p>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link to="/admin" style={{ 
-                background: '#171717', 
-                color: '#FFFFFF', 
-                padding: '0.85rem 2rem', 
-                borderRadius: '12px', 
-                textDecoration: 'none', 
-                fontWeight: '600',
-                fontSize: '1.05rem',
-                boxShadow: '0 4px 14px rgba(0,0,0,0.15)'
-              }}>Skapa din salong</Link>
-              <a href="#features" style={{ 
-                background: '#FFFFFF', 
-                color: '#171717', 
-                border: '1.5px solid #E5E5E5',
-                padding: '0.85rem 2rem', 
-                borderRadius: '12px', 
-                textDecoration: 'none', 
-                fontWeight: '600',
-                fontSize: '1.05rem',
-                transition: 'background 0.2s, border-color 0.2s'
-              }}>Se funktioner</a>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Link to="/onboarding" style={{ 
+                  background: '#171717', 
+                  color: '#FFFFFF', 
+                  padding: '0.85rem 2rem', 
+                  borderRadius: '12px', 
+                  textDecoration: 'none', 
+                  fontWeight: '600',
+                  fontSize: '1.05rem',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.15)'
+                }}>Skapa din salong</Link>
+                <a href="#features" style={{ 
+                  background: '#FFFFFF', 
+                  color: '#171717', 
+                  border: '1.5px solid #E5E5E5',
+                  padding: '0.85rem 2rem', 
+                  borderRadius: '12px', 
+                  textDecoration: 'none', 
+                  fontWeight: '600',
+                  fontSize: '1.05rem',
+                  transition: 'background 0.2s, border-color 0.2s'
+                }}>Se funktioner</a>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#737373' }}>14 dagar gratis – inget kreditkort krävs</p>
             </div>
           </div>
           
@@ -194,6 +197,116 @@ export default function MarketingLanding() {
           </div>
         </section>
 
+        {/* Pricing */}
+        <section id="priser" style={{ padding: '6rem 2rem', background: '#FFFFFF', borderTop: '1px solid #E5E5E5' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+              <h2 style={{ fontSize: '2.2rem', fontWeight: '700', letterSpacing: '-0.5px', marginBottom: '1rem', color: '#171717' }}>
+                Enkel, transparent prissättning
+              </h2>
+              <p style={{ color: '#737373', fontSize: '1.1rem', maxWidth: '480px', margin: '0 auto' }}>
+                Ett pris. Allt inkluderat. Prova gratis i 14 dagar — inget kreditkort krävs.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <div style={{
+                background: '#171717',
+                borderRadius: '24px',
+                padding: '3rem',
+                maxWidth: '480px',
+                width: '100%',
+                position: 'relative',
+                overflow: 'hidden',
+              }}>
+                {/* Glow accent */}
+                <div style={{
+                  position: 'absolute', top: '-40px', right: '-40px',
+                  width: '200px', height: '200px',
+                  background: 'radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%)',
+                  borderRadius: '50%',
+                  pointerEvents: 'none',
+                }} />
+
+                {/* Badge */}
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: '#FFFFFF',
+                  padding: '0.35rem 0.9rem',
+                  borderRadius: '50px',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  letterSpacing: '0.5px',
+                  marginBottom: '2rem',
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} />
+                  14 DAGARS GRATIS PROVPERIOD
+                </div>
+
+                {/* Price */}
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '3.5rem', fontWeight: '800', color: '#FFFFFF', letterSpacing: '-2px', lineHeight: 1 }}>
+                    1 990
+                  </span>
+                  <span style={{ fontSize: '1.1rem', color: '#A3A3A3', marginLeft: '6px', fontWeight: '500' }}>
+                    kr / mån
+                  </span>
+                </div>
+                <p style={{ color: '#737373', fontSize: '0.9rem', marginBottom: '2.5rem', margin: '0 0 2.5rem 0' }}>
+                  Exkl. moms · Faktureras månadsvis · Avsluta när som helst
+                </p>
+
+                {/* Features list */}
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2.5rem 0', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                  {[
+                    'Obegränsade bokningar',
+                    'White-label bokningssida med eget tema',
+                    'Stripe-betalningar & förskottsbetalning',
+                    'Google Kalender-synkronisering',
+                    'Obegränsad personal & roller',
+                    'E-postbekräftelser till kunder',
+                    'Admin-dashboard med statistik',
+                    'Prioriterad support via e-post',
+                  ].map((feat) => (
+                    <li key={feat} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#D4D4D4', fontSize: '0.95rem' }}>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                        <circle cx="8" cy="8" r="8" fill="rgba(255,255,255,0.1)" />
+                        <path d="M4.5 8l2.5 2.5 4-5" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      {feat}
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA */}
+                <Link to="/onboarding" style={{
+                  display: 'block',
+                  background: '#FFFFFF',
+                  color: '#171717',
+                  padding: '1rem',
+                  borderRadius: '12px',
+                  textDecoration: 'none',
+                  fontWeight: '700',
+                  fontSize: '1rem',
+                  textAlign: 'center',
+                  boxShadow: '0 4px 20px rgba(255,255,255,0.15)',
+                  transition: 'opacity 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                >
+                  Starta din 14-dagars provperiod →
+                </Link>
+                <p style={{ color: '#525252', fontSize: '0.8rem', textAlign: 'center', marginTop: '1rem', marginBottom: 0 }}>
+                  Inget kreditkort krävs vid registrering
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* CTA */}
         <section style={{ 
           padding: '6rem 2rem', 
@@ -206,10 +319,10 @@ export default function MarketingLanding() {
               Redo att ta din salong till nästa nivå?
             </h2>
             <p style={{ color: '#A3A3A3', fontSize: '1.1rem', marginBottom: '2.5rem' }}>
-              Skapa ett konto och sätt upp din bokningssida på under 5 minuter. 
-              Du kan prova plattformen helt kostnadsfritt.
+              Sätt upp din bokningssida på under 5 minuter.
+              Prova gratis i 14 dagar — inget kreditkort krävs.
             </p>
-            <Link to="/admin" style={{ 
+            <Link to="/onboarding" style={{ 
               display: 'inline-block',
               background: '#FFFFFF', 
               color: '#171717', 
@@ -219,7 +332,7 @@ export default function MarketingLanding() {
               fontWeight: '600',
               fontSize: '1.1rem',
               boxShadow: '0 4px 14px rgba(255,255,255,0.1)'
-            }}>Skapa konto</Link>
+            }}>Starta gratis i 14 dagar</Link>
           </div>
         </section>
       </main>
