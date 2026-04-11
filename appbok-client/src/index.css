@@ -4926,25 +4926,6 @@ textarea.admin-input {
 }
 
 /* =========================================
-   TRIAL STATUS BANNER
-   ========================================= */
-.trial-status-banner {
-  position: sticky;
-  top: 0;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.5rem 1.5rem;
-  background: #FEF3C7;
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  border-bottom: 1px solid #FDE68A;
-}
-
-/* =========================================
    FLOATING BOKA TID (btn-floating override)
    ========================================= */
 .btn-floating {
