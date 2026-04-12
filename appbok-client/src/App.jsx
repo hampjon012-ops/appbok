@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import {
   applyThemeToDocument,
@@ -152,8 +152,34 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
     }
   };
 
+  const handleExpressConfirm = async () => {
+    await handleConfirmPayment();
+  };
+
   return (
     <div className="embedded-payment-shell">
+      <div className="express-checkout-wrap">
+        <ExpressCheckoutElement
+          onConfirm={handleExpressConfirm}
+          options={{
+            paymentMethods: {
+              applePay: 'auto',
+              googlePay: 'auto',
+            },
+            buttonTheme: {
+              applePay: 'black',
+              googlePay: 'black',
+            },
+            buttonType: {
+              applePay: 'buy',
+              googlePay: 'buy',
+            },
+          }}
+        />
+      </div>
+      <div className="payment-divider">
+        <span>eller betala med kort</span>
+      </div>
       <PaymentElement />
       <button
         type="button"

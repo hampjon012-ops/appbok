@@ -1359,6 +1359,29 @@ html.preview-embed-mode [role='button'] {
   flex-direction: column;
   gap: 0.85rem;
 }
+.express-checkout-wrap {
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  background: #FCFCFD;
+  padding: 0.7rem;
+}
+.payment-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: #6B7280;
+  font-size: 0.78rem;
+}
+.payment-divider::before,
+.payment-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #E5E7EB;
+}
+.payment-divider span {
+  white-space: nowrap;
+}
 .payment-element-loading {
   margin: 0 0 0.8rem 0;
   border-radius: 10px;
