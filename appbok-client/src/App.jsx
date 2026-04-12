@@ -117,6 +117,7 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
   const stripe = useStripe();
   const elements = useElements();
   const [confirming, setConfirming] = useState(false);
+  const [expressReady, setExpressReady] = useState(false);
 
   const handleConfirmPayment = async () => {
     if (!stripe || !elements || disabled || confirming) return;
@@ -158,9 +159,13 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
 
   return (
     <div className="embedded-payment-shell">
-      <div className="express-checkout-wrap">
+      <div className="express-checkout-wrap" style={expressReady ? undefined : { display: 'none' }}>
         <ExpressCheckoutElement
           onConfirm={handleExpressConfirm}
+          onReady={({ availablePaymentMethods }) => {
+            const hasWallet = availablePaymentMethods?.applePay || availablePaymentMethods?.googlePay;
+            setExpressReady(Boolean(hasWallet));
+          }}
           options={{
             paymentMethods: {
               applePay: 'always',
@@ -178,9 +183,11 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
           }}
         />
       </div>
-      <div className="payment-divider">
-        <span>eller betala med kort</span>
-      </div>
+      {expressReady && (
+        <div className="payment-divider">
+          <span>eller betala med kort</span>
+        </div>
+      )}
       <PaymentElement />
       <button
         type="button"
