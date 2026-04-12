@@ -19,9 +19,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "vercel": "vercel",
-    "deploy": "vercel",
-    "deploy:prod": "vercel --prod"
+    "vercel": "cd .. && ./appbok-client/node_modules/.bin/vercel",
+    "deploy": "cd .. && ./appbok-client/node_modules/.bin/vercel",
+    "deploy:prod": "cd .. && ./appbok-client/node_modules/.bin/vercel deploy --prod --yes"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1",
