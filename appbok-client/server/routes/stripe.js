@@ -199,7 +199,7 @@ router.post('/create-payment-intent', async (req, res) => {
       {
         amount: amountInt,
         currency: 'sek',
-        payment_method_types: ['card'],
+        automatic_payment_methods: { enabled: true },
         receipt_email: customerEmail || undefined,
         metadata: {
           salonId: salonIdStr,
