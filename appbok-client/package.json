@@ -24,6 +24,8 @@
     "deploy:prod": "cd .. && ./appbok-client/node_modules/.bin/vercel deploy --prod --yes"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^6.1.0",
+    "@stripe/stripe-js": "^9.1.0",
     "@supabase/supabase-js": "^2.100.1",
     "bcryptjs": "^3.0.3",
     "cheerio": "^1.2.0",

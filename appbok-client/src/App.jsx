@@ -1,5 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import {
   applyThemeToDocument,
   fetchMergedSalonConfig,
@@ -109,6 +111,60 @@ function findStylistForPrefill(stylistList, prefill) {
     }
   }
   return null;
+}
+
+function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [confirming, setConfirming] = useState(false);
+
+  const handleConfirmPayment = async () => {
+    if (!stripe || !elements || disabled || confirming) return;
+    setConfirming(true);
+    onError?.('');
+    try {
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/tack`,
+        },
+        redirect: 'if_required',
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Kunde inte bekräfta betalningen.');
+      }
+
+      if (!paymentIntent) {
+        throw new Error('Ingen betalning returnerades från Stripe.');
+      }
+
+      const okStatus = paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing';
+      if (!okStatus) {
+        throw new Error(`Betalningen kunde inte slutföras (${paymentIntent.status}).`);
+      }
+
+      await onConfirm?.(paymentIntent.id);
+    } catch (err) {
+      onError?.(err.message || 'Betalningen misslyckades.');
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  return (
+    <div className="embedded-payment-shell">
+      <PaymentElement />
+      <button
+        type="button"
+        className="btn-pay"
+        disabled={disabled || !stripe || confirming}
+        onClick={handleConfirmPayment}
+      >
+        {confirming ? 'Bekräftar betalning...' : `Bekräfta och betala (${payLabel})`}
+      </button>
+    </div>
+  );
 }
 
 // ─── App ──────────────────────────────────────────────────────────────────────
@@ -544,6 +600,13 @@ function BookingSection({
   const [apiError, setApiError]           = useState('');
   const [busySlots, setBusySlots]         = useState(new Set());
   const [busyLoading, setBusyLoading]     = useState(false);
+  const allowPayOnSite = config?.allowPayOnSite !== false;
+  const [paymentChoice, setPaymentChoice] = useState('swish');
+  const [intentLoading, setIntentLoading] = useState(false);
+  const [clientSecret, setClientSecret] = useState('');
+  const [stripePromise, setStripePromise] = useState(null);
+  const [paymentIntentId, setPaymentIntentId] = useState('');
+  const [intentRequested, setIntentRequested] = useState(false);
 
   /** DB returnerar price_amount / duration_minutes; config.json använder priceAmount / durationMinutes */
   const servicePriceÖre = (svc) => {
@@ -573,9 +636,19 @@ function BookingSection({
       setTerms(false);
       setApiError('');
       setLoading(false);
+      setPaymentChoice('swish');
+      setIntentLoading(false);
+      setClientSecret('');
+      setStripePromise(null);
+      setPaymentIntentId('');
+      setIntentRequested(false);
     }
     prevModalOpenRef.current = isModalOpen;
   }, [isModalOpen]);
+
+  useEffect(() => {
+    if (!allowPayOnSite) setPaymentChoice('swish');
+  }, [allowPayOnSite]);
 
   // Öppnad från ”populära tjänster”: hoppa till välj stylist när tjänsten finns i katalogen
   useEffect(() => {
@@ -617,6 +690,7 @@ function BookingSection({
   }, [isModalOpen, prefillStylistFromHome, stylists, isLoadingStylists, onStylistPrefillApplied]);
 
   const availableDates = getAvailableDates();
+  const selectedDateKey = selectedDate ? selectedDate.toISOString().slice(0, 10) : '';
 
   // Fetch busy slots when date changes
   useEffect(() => {
@@ -705,65 +779,146 @@ function BookingSection({
   const handleContinueTime   = ()  => setStep('details');
   const handleContinueDetails= ()  => setStep('checkout');
 
-  // ── Stripe checkout ───────────────────────────────────────────────────────
-  const handlePay = async () => {
-    setLoading(true);
+  const priceAmount = servicePriceÖre(selectedService);
+
+  useEffect(() => {
+    setClientSecret('');
+    setPaymentIntentId('');
+    setStripePromise(null);
+    setIntentRequested(false);
+  }, [selectedService?.id, selectedDateKey, selectedTime, form.email, config?.salonId]);
+
+  const elementsOptions = useMemo(() => {
+    if (!clientSecret) return null;
+    return {
+      clientSecret,
+      appearance: {
+        theme: 'stripe',
+        variables: {
+          colorPrimary: resolvePrimaryAccentHex(config?.theme),
+          borderRadius: '12px',
+        },
+      },
+    };
+  }, [clientSecret, config?.theme]);
+
+  const createBooking = useCallback(async ({ amountPaid, stripeSessionId }) => {
+    const payload = {
+      salon_id: config.salonId,
+      service_id: selectedService.id,
+      stylist_id: selectedStylist?.id || 'any',
+      customer_name: form.name,
+      customer_email: form.email,
+      customer_phone: form.phone,
+      booking_date: selectedDate.toISOString().slice(0, 10),
+      booking_time: selectedTime,
+      duration_minutes: serviceDurationMin(selectedService),
+      amount_paid: amountPaid,
+      stripe_session_id: stripeSessionId || null,
+    };
+    const bookRes = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!bookRes.ok) {
+      const bd = await bookRes.json().catch(() => ({}));
+      throw new Error(bd.error || 'Kunde inte skapa bokning.');
+    }
+    return bookRes.json();
+  }, [config?.salonId, form.email, form.name, form.phone, selectedDate, selectedService, selectedStylist, selectedTime]);
+
+  const fetchPaymentIntent = useCallback(async () => {
+    if (!selectedService || !selectedDate || !selectedTime) return;
+    if (clientSecret || intentLoading || intentRequested) return;
+
+    setIntentRequested(true);
+    setIntentLoading(true);
     setApiError('');
+
     try {
-      const res = await fetch('/api/create-checkout-session', {
+      const res = await fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          serviceName:   selectedService.name,
-          priceAmount:   servicePriceÖre(selectedService),
-          currency:      config.stripe?.currency || 'sek',
-          salonName:     displaySalonName(config.salonName),
-          stylistName:   selectedStylist?.name || 'Valfri stylist',
-          date:          selectedDate ? fmtDateLong(selectedDate) : '',
-          time:          selectedTime,
-          customerName:  form.name,
+          salonId: config.salonId,
+          amount: priceAmount,
+          serviceName: selectedService.name,
+          stylistName: selectedStylist?.name || 'Valfri stylist',
+          date: selectedDate ? fmtDateLong(selectedDate) : '',
+          time: selectedTime,
+          customerName: form.name,
           customerEmail: form.email,
         }),
       });
-      const data = await res.json();
-      
-      // Fallback behavior: If Stripe isn't configured, book directly
-      if (res.status === 503) {
-        setApiError('Stripe är ej konfigurerat. Simulerar en lyckad bokning istället...');
-        const bookRes = await fetch('/api/bookings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            salon_id: config.salonId,
-            service_id: selectedService.id,
-            stylist_id: selectedStylist?.id || 'any',
-            customer_name: form.name,
-            customer_email: form.email,
-            customer_phone: form.phone,
-            booking_date: selectedDate.toISOString().slice(0, 10),
-            booking_time: selectedTime,
-            duration_minutes: serviceDurationMin(selectedService),
-            amount_paid: servicePriceÖre(selectedService),
-            stripe_session_id: 'test_session_bypass'
-          })
-        });
-        if (bookRes.ok) {
-          window.location.href = '/tack';
-          return;
-        } else {
-          const bd = await bookRes.json();
-          throw new Error(bd.error || 'Databasfel vid simulering.');
-        }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Kunde inte initiera onlinebetalning.');
       }
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        setApiError(data.error || 'Något gick fel. Försök igen.');
-        setLoading(false);
+      if (!data.clientSecret) {
+        throw new Error('Stripe returnerade ingen clientSecret.');
       }
+      if (!data.publishableKey) {
+        throw new Error('STRIPE_PUBLISHABLE_KEY saknas på servern.');
+      }
+      setClientSecret(data.clientSecret);
+      setPaymentIntentId(data.paymentIntentId || '');
+      setStripePromise(
+        loadStripe(
+          data.publishableKey,
+          data.stripeAccountId ? { stripeAccount: data.stripeAccountId } : undefined,
+        ),
+      );
     } catch (err) {
       setApiError(err.message || 'Kan inte nå betalservern.');
+    } finally {
+      setIntentLoading(false);
+    }
+  }, [
+    clientSecret,
+    config?.salonId,
+    form.email,
+    form.name,
+    intentLoading,
+    priceAmount,
+    selectedDate,
+    selectedService,
+    selectedStylist?.name,
+    selectedTime,
+    intentRequested,
+  ]);
+
+  useEffect(() => {
+    if (step !== 'checkout') return;
+    if (paymentChoice !== 'swish') return;
+    if (intentRequested) return;
+    fetchPaymentIntent();
+  }, [fetchPaymentIntent, intentRequested, paymentChoice, step]);
+
+  const handleBookPayOnSite = async () => {
+    setLoading(true);
+    setApiError('');
+    try {
+      await createBooking({ amountPaid: 0, stripeSessionId: 'pay_on_site' });
+      window.location.href = '/tack';
+    } catch (err) {
+      setApiError(err.message || 'Kunde inte skapa bokningen.');
+      setLoading(false);
+    }
+  };
+
+  const handleSwishConfirmed = async (confirmedPaymentIntentId) => {
+    setLoading(true);
+    setApiError('');
+    try {
+      await createBooking({
+        amountPaid: priceAmount,
+        stripeSessionId: confirmedPaymentIntentId || paymentIntentId || null,
+      });
+      const sid = encodeURIComponent(confirmedPaymentIntentId || paymentIntentId || '');
+      window.location.href = sid ? `/tack?session_id=${sid}` : '/tack';
+    } catch (err) {
+      setApiError(err.message || 'Kunde inte skapa bokningen efter betalning.');
       setLoading(false);
     }
   };
@@ -1066,30 +1221,91 @@ function BookingSection({
                   <p>Genom att boka godkänner du:</p>
                   <ul>
                     <li>Avbokning senare än 24 timmar före tid medför 50% avgift</li>
-                    <li>Betalning via Swish är förbetalning och är icke‑återbetalbar om du inte avbokar inom 24 timmar</li>
+                    <li>Förskottsbetalning online är icke‑återbetalbar om du inte avbokar inom 24 timmar</li>
                     <li>Försenad ankomst kan leda till avbokning utan återbetalning</li>
                   </ul>
                 </div>
               </div>
 
+              <div className="payment-choice-section">
+                <h4 className="payment-choice-title">Betalningssätt</h4>
+                {allowPayOnSite ? (
+                  <div className="payment-choice-grid">
+                    <button
+                      type="button"
+                      className={`payment-choice-card ${paymentChoice === 'swish' ? 'payment-choice-card--active' : ''}`}
+                      onClick={() => {
+                        setPaymentChoice('swish');
+                        setApiError('');
+                      }}
+                    >
+                      <span className="payment-choice-heading">Betala online</span>
+                      <span className="payment-choice-copy">Kort, Apple Pay och Google Pay via säker Stripe-ruta.</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`payment-choice-card ${paymentChoice === 'on_site' ? 'payment-choice-card--active' : ''}`}
+                      onClick={() => {
+                        setPaymentChoice('on_site');
+                        setApiError('');
+                      }}
+                    >
+                      <span className="payment-choice-heading">Betala på plats</span>
+                      <span className="payment-choice-copy">Ingen förbetalning. Betala hela beloppet i salongen.</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="payment-choice-forced">
+                    Onlinebetalning är obligatorisk för denna salong.
+                  </div>
+                )}
+              </div>
+
               {apiError && <p className="api-error">{apiError}</p>}
 
-              <div className="step-cta">
-                <button
-                  className="btn-pay"
-                  disabled={!termsAccepted || loading}
-                  onClick={handlePay}
-                >
-                  {loading
-                    ? <span className="pay-spinner">⏳ Bearbetar...</span>
-                    : <>Fortsätt till betalning ({selectedService ? fmtPrice(servicePriceÖre(selectedService)) : ''})</>
-                  }
-                </button>
-                <p className="stripe-note">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  Säker betalning via Stripe · Kort, Apple Pay, Google Pay
-                </p>
-              </div>
+              {paymentChoice === 'swish' ? (
+                <>
+                  {intentLoading && <p className="payment-element-loading">Initierar onlinebetalning...</p>}
+                  {!intentLoading && !clientSecret && apiError ? (
+                    <div className="step-cta">
+                      <button
+                        type="button"
+                        className="btn-continue"
+                        onClick={() => {
+                          setIntentRequested(false);
+                          fetchPaymentIntent();
+                        }}
+                      >
+                        Försök igen
+                      </button>
+                    </div>
+                  ) : null}
+                  {!intentLoading && clientSecret && stripePromise && elementsOptions ? (
+                    <Elements stripe={stripePromise} options={elementsOptions}>
+                      <SwishPaymentForm
+                        disabled={!termsAccepted || loading}
+                        payLabel={fmtPrice(priceAmount)}
+                        onError={(msg) => setApiError(msg)}
+                        onConfirm={handleSwishConfirmed}
+                      />
+                    </Elements>
+                  ) : null}
+                  <p className="stripe-note">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Säker inbäddad betalning via Stripe
+                  </p>
+                </>
+              ) : (
+                <div className="step-cta">
+                  <button
+                    className="btn-pay"
+                    disabled={!termsAccepted || loading}
+                    onClick={handleBookPayOnSite}
+                  >
+                    {loading ? 'Skapar bokning...' : 'Bekräfta bokning (betala på plats)'}
+                  </button>
+                </div>
+              )}
             </>
           )}
 

@@ -131,6 +131,8 @@ export function mergePublicSalon(base, api) {
     salonStatus: api.status ?? 'active',
     salonPlan: api.plan ?? 'trial',
     trialEndsAt: api.trial_ends_at ?? null,
+    allowPayOnSite: api.allow_pay_on_site !== false,
+    stripeAccountId: api.stripe_account_id ?? null,
     contact: {
       ...base.contact,
       address: c.address ?? base.contact?.address,

@@ -120,7 +120,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
     });
   }
 
-  const stripe = new Stripe(stripeKey, { apiVersion: '2024-04-10' });
+  const stripe = new Stripe(stripeKey, { apiVersion: '2026-01-28.clover' });
 
   const {
     serviceName,

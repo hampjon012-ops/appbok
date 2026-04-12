@@ -8,7 +8,13 @@ const router = Router();
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key || key.includes('PLACEHOLDER')) return null;
-  return new Stripe(key, { apiVersion: '2024-04-10' });
+  return new Stripe(key, { apiVersion: '2026-01-28.clover' });
+}
+
+function getPublishableKey() {
+  const key = process.env.STRIPE_PUBLISHABLE_KEY;
+  if (!key || key.includes('PLACEHOLDER')) return null;
+  return key;
 }
 
 function apiOrigin(req) {
@@ -129,6 +135,94 @@ router.get('/status', requireAuth, requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('[stripe/status]', err);
     return res.status(500).json({ error: err.message || 'Kunde inte läsa Stripe-status.' });
+  }
+});
+
+// POST /api/stripe/create-payment-intent — public, used by embedded PaymentElement
+router.post('/create-payment-intent', async (req, res) => {
+  const stripe = getStripe();
+  const publishableKey = getPublishableKey();
+
+  if (!stripe) {
+    return res.status(503).json({ error: 'Stripe ej konfigurerat.' });
+  }
+  if (!publishableKey) {
+    return res.status(503).json({ error: 'STRIPE_PUBLISHABLE_KEY saknas i server/.env.' });
+  }
+
+  const {
+    salonId,
+    serviceName,
+    customerName,
+    customerEmail,
+    stylistName,
+    date,
+    time,
+    amount,
+  } = req.body || {};
+
+  const amountInt = Number(amount);
+  if (!Number.isInteger(amountInt) || amountInt <= 0) {
+    return res.status(400).json({ error: 'Ogiltigt belopp för betalning.' });
+  }
+
+  try {
+    const salonIdStr = salonId ? String(salonId) : '';
+    if (!salonIdStr) {
+      return res.status(400).json({ error: 'salonId saknas.' });
+    }
+
+    const supabase = getSupabaseAdmin();
+    const { data: salon, error: salonErr } = await supabase
+      .from('salons')
+      .select('stripe_account_id')
+      .eq('id', salonIdStr)
+      .maybeSingle();
+
+    if (salonErr) throw salonErr;
+
+    const connectedAccountId = salon?.stripe_account_id || null;
+    if (!connectedAccountId) {
+      return res.status(400).json({ error: 'Salongen har inte anslutit Stripe ännu.' });
+    }
+
+    const connectedAccount = await stripe.accounts.retrieve(connectedAccountId);
+    if (!connectedAccount.details_submitted || !connectedAccount.charges_enabled) {
+      return res.status(400).json({
+        error:
+          'Stripe-kontot är anslutet men inte färdigaktiverat för betalningar ännu. Slutför konto-onboarding i Stripe Dashboard för detta konto.',
+        stripeAccountId: connectedAccountId,
+      });
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create(
+      {
+        amount: amountInt,
+        currency: 'sek',
+        payment_method_types: ['card'],
+        receipt_email: customerEmail || undefined,
+        metadata: {
+          salonId: salonIdStr,
+          serviceName: serviceName ? String(serviceName) : '',
+          stylistName: stylistName ? String(stylistName) : '',
+          date: date ? String(date) : '',
+          time: time ? String(time) : '',
+          customerName: customerName ? String(customerName) : '',
+          customerEmail: customerEmail ? String(customerEmail) : '',
+        },
+      },
+      { stripeAccount: connectedAccountId },
+    );
+
+    return res.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      publishableKey,
+      stripeAccountId: connectedAccountId,
+    });
+  } catch (err) {
+    console.error('[stripe/create-payment-intent]', err);
+    return res.status(500).json({ error: err.message || 'Kunde inte skapa PaymentIntent.' });
   }
 });
 
