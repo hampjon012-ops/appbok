@@ -14,6 +14,7 @@ import statsRoutes from './routes/stats.js';
 import calendarRoutes from './routes/calendar.js';
 import salonsRoutes from './routes/salons.js';
 import superadminRoutes from './routes/superadmin.js';
+import stripeRoutes from './routes/stripe.js';
 import { scrapeBokadirekt, prepareForImport } from './lib/bokadirektScraper.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -89,6 +90,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/salons', salonsRoutes);
 app.use('/api/superadmin', superadminRoutes);
+app.use('/api/stripe', stripeRoutes);
 
 // ── Bokadirekt scraper ──────────────────────────────────────────────────────
 app.get('/api/scrape/bokadirekt', async (req, res) => {
@@ -201,7 +203,10 @@ if (!process.env.VERCEL) {
     console.log(`   GET  /api/calendar/connect`);
     console.log(`   GET  /api/calendar/busy`);
     console.log(`   POST /api/create-checkout-session`);
-    console.log(`   GET  /api/superadmin/salons (superadmin)\n`);
+    console.log(`   GET  /api/superadmin/salons (superadmin)`);
+    console.log(`   GET  /api/stripe/connect (admin)`);
+    console.log(`   GET  /api/stripe/callback (admin)`);
+    console.log(`   GET  /api/stripe/status (admin)\n`);
   });
 }
 

@@ -647,9 +647,36 @@ function SalonPaymentsPanel({ salon, onTrialStarted }) {
     }
   }, [salon, stripeConnected]);
 
-  const handleStripeConnect = () => {
-    // Stripe Connect onboarding kommer senare
+  const handleStripeConnect = async () => {
+    try {
+      const res = await fetch('/api/stripe/connect', { headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Kunde inte starta Stripe-anslutning.');
+      window.location.href = data.url;
+    } catch (err) {
+      alert('Stripe-anslutning misslyckades: ' + err.message);
+    }
   };
+
+  // Refresh stripeConnected when returning from Stripe callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('stripe_connected') === '1') {
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+      // Reload salon data so stripeConnected badge updates
+      if (typeof onTrialStarted === 'function') {
+        fetch('/api/salons', { headers: authHeaders() })
+          .then(r => r.json())
+          .then(data => { if (data && !Array.isArray(data)) onTrialStarted(data); })
+          .catch(() => {});
+      }
+    }
+    if (params.get('stripe_error')) {
+      window.history.replaceState({}, '', window.location.pathname);
+      alert('Stripe-anslutning misslyckades: ' + params.get('stripe_error'));
+    }
+  }, []);
 
   const handleStartTrial = async () => {
     if (!confirm('Starta 14 dagars testperiod? Efter 14 dagar behöver du koppla Stripe för att fortsätta.')) return;
