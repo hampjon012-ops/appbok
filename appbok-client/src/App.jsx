@@ -163,8 +163,9 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
           onConfirm={handleExpressConfirm}
           options={{
             paymentMethods: {
-              applePay: 'auto',
-              googlePay: 'auto',
+              applePay: 'always',
+              googlePay: 'always',
+              link: 'never',
             },
             buttonTheme: {
               applePay: 'black',
