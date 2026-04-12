@@ -10,6 +10,9 @@ node_modules/
 dist/
 **/dist/
 
+# Vercel
+.vercel/
+
 # OS & editor
 .DS_Store
 .cursor/
