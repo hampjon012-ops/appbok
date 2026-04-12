@@ -630,6 +630,7 @@ function StripeMark() {
 function SalonPaymentsPanel({ salon, onTrialStarted }) {
   const stripeConnected = Boolean(salon?.stripe_account_id || salon?.contact?.stripe_connected);
   const [requirePayment, setRequirePayment] = useState(false);
+  const [allowPayOnSite, setAllowPayOnSite] = useState(salon?.allow_pay_on_site !== false);
   const [startingTrial, setStartingTrial] = useState(false);
   const [trialMsg, setTrialMsg] = useState('');
   const [goLiveBusy, setGoLiveBusy] = useState(false);
@@ -646,6 +647,38 @@ function SalonPaymentsPanel({ salon, onTrialStarted }) {
       setRequirePayment(c.require_payment_at_booking);
     }
   }, [salon, stripeConnected]);
+
+  // Sync allow_pay_on_site from salon prop (only on mount / salon change)
+  useEffect(() => {
+    if (typeof salon?.allow_pay_on_site === 'boolean') {
+      setAllowPayOnSite(salon.allow_pay_on_site);
+    }
+  }, [salon?.allow_pay_on_site]);
+
+  const saveAllowPayOnSite = async (value) => {
+    setAllowPayOnSite(value);
+    try {
+      const res = await fetch('/api/salons', {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ allow_pay_on_site: value }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Kunde inte spara.');
+      }
+      // Refresh parent
+      if (typeof onTrialStarted === 'function') {
+        const updated = await res.json().catch(() => null);
+        if (updated) onTrialStarted(updated);
+      }
+    } catch (err) {
+      console.error('[allowPayOnSite]', err);
+      // Revert on error
+      setAllowPayOnSite(!value);
+      alert('Kunde inte spara: ' + err.message);
+    }
+  };
 
   const handleStripeConnect = async () => {
     try {
@@ -861,6 +894,27 @@ function SalonPaymentsPanel({ salon, onTrialStarted }) {
       {!stripeConnected && (
         <p className="admin-hint salon-payment-toggle-hint">Anslut Stripe först för att aktivera detta val.</p>
       )}
+
+      {/* ── BETALNING PÅ PLATS ── */}
+      <div style={{ marginTop: '1.75rem', paddingTop: '1.5rem', borderTop: '1px solid #E5E5E5' }}>
+        <label className="salon-payment-toggle-row">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            <span className="salon-payment-toggle-label">Tillåt kunder att betala på plats</span>
+            <span className="admin-hint" style={{ margin: 0, maxWidth: '28rem', fontSize: '0.8rem', color: '#6B7280' }}>
+              Om denna är avstängd måste kunden betala hela beloppet via Stripe vid bokningstillfället.
+            </span>
+          </div>
+          <span className="salon-payment-switch-wrap">
+            <input
+              type="checkbox"
+              className="salon-payment-switch-input"
+              checked={allowPayOnSite}
+              onChange={(e) => saveAllowPayOnSite(e.target.checked)}
+            />
+            <span className="salon-payment-switch-track" aria-hidden />
+          </span>
+        </label>
+      </div>
 
       {/* ── GÅ LIVE ── */}
       {isTrial && (

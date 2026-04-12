@@ -4,6 +4,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    /** Lyssna på alla gränssnitt så localhost / 127.0.0.1 / LAN fungerar konsekvent */
+    host: true,
+    port: 5173,
+    strictPort: false,
     headers: {
       'Cache-Control': 'no-store',
     },

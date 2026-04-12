@@ -12,7 +12,7 @@ router.get('/public', async (req, res) => {
     return res.status(400).json({ error: 'Ange salon_id eller slug.' });
   }
 
-  const selectCols = 'id, name, slug, tagline, logo_url, theme, contact, map_url, instagram, status, plan, trial_ends_at';
+  const selectCols = 'id, name, slug, tagline, logo_url, theme, contact, map_url, instagram, status, plan, trial_ends_at, allow_pay_on_site, stripe_account_id';
 
   try {
     let data;
@@ -87,6 +87,7 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
     tagline,
     map_url,
     instagram,
+    allow_pay_on_site,
     contact: contactMerge,
   } = req.body;
 
@@ -155,6 +156,8 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
     }
 
     if (logo_url !== undefined) updates.logo_url = logo_url;
+
+    if (allow_pay_on_site !== undefined) updates.allow_pay_on_site = Boolean(allow_pay_on_site);
 
     if (Object.keys(updates).length === 0) {
       const { data: full, error: fullErr } = await supabase

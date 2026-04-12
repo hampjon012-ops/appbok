@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "api": "node server/server.js",
-    "dev": "concurrently -k -n api,vite -c cyan,magenta \"npm run api\" \"wait-on -t 120000 http-get://127.0.0.1:3001/api/health && vite\"",
+    "dev": "concurrently -k -n api,vite -c cyan,magenta \"npm run api\" \"vite\"",
     "dev:vite": "vite",
     "dev:all": "npm run dev",
     "promote:superadmin": "node server/scripts/promote-superadmin.js",
