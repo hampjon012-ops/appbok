@@ -162,10 +162,6 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
       <div className="express-checkout-wrap" style={expressReady ? undefined : { position: 'absolute', opacity: 0, pointerEvents: 'none' }}>
         <ExpressCheckoutElement
           onConfirm={handleExpressConfirm}
-          onCancel={() => {
-            // When user cancels Apple Pay/Google Pay, the PaymentElement beneath
-            // remains visible and usable — no extra action needed.
-          }}
           onReady={({ availablePaymentMethods }) => {
             const hasWallet = availablePaymentMethods?.applePay || availablePaymentMethods?.googlePay;
             setExpressReady(Boolean(hasWallet));
@@ -174,7 +170,6 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
             paymentMethods: {
               applePay: 'always',
               googlePay: 'always',
-              link: 'never',
             },
             buttonTheme: {
               applePay: 'black',
