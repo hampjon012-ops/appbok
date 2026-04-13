@@ -3,6 +3,7 @@ import supabase from '../lib/supabase.js';
 import { requireAuth } from '../lib/auth.js';
 import { createCalendarEvent, deleteCalendarEvent } from '../lib/google.js';
 import { sendBookingConfirmationEmail, sendCancellationEmail, sendStylistNotificationEmail } from '../lib/email.js';
+import { sendBookingSMS } from '../lib/sms.js';
 
 const router = Router();
 
@@ -242,6 +243,19 @@ router.post('/', async (req, res) => {
     } catch (emailErr) {
       // Email errors are non-blocking — booking should still succeed
       console.warn('[bookings] Email notification failed (non-blocking):', emailErr.message);
+    }
+
+    // ── Skicka SMS-bekräftelse ────────────────────────────────────────────────
+    if (customer_phone) {
+      sendBookingSMS({
+        to: customer_phone,
+        customerName: customer_name,
+        salonName,
+        date: booking_date,
+        time: booking_time,
+      }).catch(smsErr => {
+        console.warn('[bookings] SMS notification failed (non-blocking):', smsErr?.message);
+      });
     }
 
     res.status(201).json(data);

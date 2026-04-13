@@ -15,6 +15,7 @@ import calendarRoutes from './routes/calendar.js';
 import salonsRoutes from './routes/salons.js';
 import superadminRoutes from './routes/superadmin.js';
 import stripeRoutes from './routes/stripe.js';
+import cronRemindersRoutes from './routes/cronReminders.js';
 import { scrapeBokadirekt, prepareForImport } from './lib/bokadirektScraper.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -91,6 +92,7 @@ app.use('/api/calendar', calendarRoutes);
 app.use('/api/salons', salonsRoutes);
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/stripe', stripeRoutes);
+app.use('/api/cron/reminders', cronRemindersRoutes);
 
 // ── Bokadirekt scraper ──────────────────────────────────────────────────────
 app.get('/api/scrape/bokadirekt', async (req, res) => {

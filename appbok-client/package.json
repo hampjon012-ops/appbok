@@ -40,7 +40,8 @@
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.2",
     "recharts": "^3.8.1",
-    "stripe": "^21.0.1"
+    "stripe": "^21.0.1",
+    "twilio": "^5.13.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
