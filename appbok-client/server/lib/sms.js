@@ -1,0 +1,114 @@
+import Twilio from 'twilio';
+
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+/** E.164 nummer (+46…), Messaging Service SID (MG…), eller Twilio Phone Number SID (PN…) */
+const senderId = process.env.TWILIO_SENDER_ID;
+
+/** Cache: PN… → uppslaget nummer, MG…/+/text som sig */
+let cachedFromAddress = null;
+
+function getClient() {
+  if (!accountSid || !authToken || accountSid.includes('PLACEHOLDER')) {
+    return null;
+  }
+  return Twilio(accountSid, authToken);
+}
+
+/**
+ * Twilio kräver `from` som E.164 (+4670…), Messaging Service (MG…), inte raw Phone Number SID (PN…).
+ */
+async function resolveFromAddress(client) {
+  const raw = senderId?.trim();
+  if (!raw) return null;
+  if (cachedFromAddress) return cachedFromAddress;
+
+  if (raw.startsWith('MG')) {
+    cachedFromAddress = raw;
+    return cachedFromAddress;
+  }
+  if (raw.startsWith('+')) {
+    cachedFromAddress = raw;
+    return cachedFromAddress;
+  }
+  // Twilio "Incoming Phone Number" resource SID → phoneNumber (E.164)
+  if (raw.startsWith('PN')) {
+    try {
+      const res = await client.incomingPhoneNumbers(raw).fetch();
+      if (res?.phoneNumber) {
+        cachedFromAddress = res.phoneNumber;
+        console.log('[sms] Resolved TWILIO_SENDER_ID (PN…) to', cachedFromAddress);
+        return cachedFromAddress;
+      }
+    } catch (err) {
+      console.error('[sms] Could not resolve Phone Number SID — use E.164 or MG… in TWILIO_SENDER_ID:', err?.message || err);
+      return null;
+    }
+  }
+  cachedFromAddress = raw;
+  return cachedFromAddress;
+}
+
+/**
+ * Försök göra svenska mobilnummer till E.164 (+46…).
+ */
+export function normalizeToE164(to) {
+  if (to == null) return '';
+  let s = String(to).trim().replace(/[\s-]/g, '');
+  if (!s) return '';
+  if (s.startsWith('+')) return s;
+  if (s.startsWith('00')) return `+${s.slice(2)}`;
+  if (s.startsWith('0') && /^0[1-9]\d{7,9}$/.test(s)) {
+    return `+46${s.slice(1)}`;
+  }
+  if (s.startsWith('46') && s.length >= 11) {
+    return `+${s}`;
+  }
+  return s;
+}
+
+/**
+ * @param to  Telefon (gärna E.164; vi normaliserar 07… → +46…)
+ */
+export async function sendSMS(to, message) {
+  const client = getClient();
+  if (!client) {
+    console.warn('[sms] Twilio not configured — skipping SMS');
+    return null;
+  }
+
+  const from = await resolveFromAddress(client);
+  if (!from) {
+    console.warn('[sms] TWILIO_SENDER_ID could not be resolved — skipping SMS');
+    return null;
+  }
+
+  const toE164 = normalizeToE164(to);
+  if (!toE164.startsWith('+')) {
+    console.error('[sms] Invalid destination number (need E.164 or Swedish 0…):', to);
+    return null;
+  }
+
+  try {
+    const result = await client.messages.create({
+      body: message.slice(0, 1600),
+      from,
+      to: toE164,
+    });
+    console.log(`[sms] Sent to ${toE164}, SID: ${result.sid}`);
+    return result.sid;
+  } catch (err) {
+    console.error('[sms] Failed to send SMS:', err?.message || err, err?.code != null ? `code=${err.code}` : '');
+    return null;
+  }
+}
+
+export async function sendBookingSMS({ to, customerName, salonName, date, time }) {
+  const msg = `Hej ${customerName}! Din bokning hos ${salonName} den ${date} kl ${time} är nu bekräftad. Välkommen!`;
+  return sendSMS(to, msg);
+}
+
+export async function sendReminderSMS({ to, salonName, time }) {
+  const msg = `Påminnelse: Du har en tid hos ${salonName} imorgon kl ${time}. Vi ses!`;
+  return sendSMS(to, msg);
+}
