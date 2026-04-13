@@ -50,21 +50,32 @@ async function resolveFromAddress(client) {
 }
 
 /**
- * Försök göra svenska mobilnummer till E.164 (+46…).
+ * Gör mobilnummer till E.164 (+46…). Hanterar mellanslag, parenteser, bindestreck.
  */
 export function normalizeToE164(to) {
   if (to == null) return '';
-  let s = String(to).trim().replace(/[\s-]/g, '');
-  if (!s) return '';
-  if (s.startsWith('+')) return s;
-  if (s.startsWith('00')) return `+${s.slice(2)}`;
-  if (s.startsWith('0') && /^0[1-9]\d{7,9}$/.test(s)) {
-    return `+46${s.slice(1)}`;
+  const raw = String(to).trim();
+  if (!raw) return '';
+
+  if (raw.startsWith('+')) {
+    const digits = raw.slice(1).replace(/\D/g, '');
+    return digits ? `+${digits}` : '';
   }
-  if (s.startsWith('46') && s.length >= 11) {
-    return `+${s}`;
+
+  const digitsOnly = raw.replace(/\D/g, '');
+  if (!digitsOnly) return '';
+
+  if (digitsOnly.startsWith('0') && digitsOnly.length >= 9 && digitsOnly.length <= 11) {
+    return `+46${digitsOnly.slice(1)}`;
   }
-  return s;
+  if (digitsOnly.startsWith('46') && digitsOnly.length >= 11) {
+    return `+${digitsOnly}`;
+  }
+  if (digitsOnly.startsWith('00')) {
+    return `+${digitsOnly.slice(2)}`;
+  }
+
+  return `+${digitsOnly}`;
 }
 
 /**

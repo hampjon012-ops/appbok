@@ -246,16 +246,19 @@ router.post('/', async (req, res) => {
     }
 
     // ── Skicka SMS-bekräftelse ────────────────────────────────────────────────
-    if (customer_phone) {
-      sendBookingSMS({
-        to: customer_phone,
-        customerName: customer_name,
-        salonName,
-        date: booking_date,
-        time: booking_time,
-      }).catch(smsErr => {
+    // Viktigt: await på Vercel — annars avslutas funktionen när svaret skickats och SMS hinner aldrig skickas.
+    if (customer_phone && String(customer_phone).trim()) {
+      try {
+        await sendBookingSMS({
+          to: customer_phone,
+          customerName: customer_name,
+          salonName,
+          date: booking_date,
+          time: booking_time,
+        });
+      } catch (smsErr) {
         console.warn('[bookings] SMS notification failed (non-blocking):', smsErr?.message);
-      });
+      }
     }
 
     res.status(201).json(data);
