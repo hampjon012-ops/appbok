@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchMergedSalonConfig, displaySalonName } from '../lib/salonPublicConfig.js';
+import { fetchMergedSalonConfig, displaySalonName } from './lib/salonPublicConfig.js';
 
 function fmtDateLong(dateStr) {
   if (!dateStr) return '';
