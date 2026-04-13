@@ -49,7 +49,9 @@ export default function ThankYou() {
         </div>
 
         <h1 className="ty-heading">Tack för din bokning!</h1>
-        <p className="ty-sub">Betalningen gick igenom. Du får en bekräftelse via e-post inom kort.</p>
+        <p className="ty-sub">
+          Betalningen gick igenom. Du får en bekräftelse via e-post och SMS inom kort.
+        </p>
 
         {sessionId && (
           <p className="ty-session">Boknings-ID: <code>{sessionId.slice(-8).toUpperCase()}</code></p>
@@ -63,6 +65,10 @@ export default function ThankYou() {
           <div className="ty-detail-row">
             <span>📧</span>
             <span>Bekräftelse skickas till din e-postadress</span>
+          </div>
+          <div className="ty-detail-row">
+            <span>💬</span>
+            <span>SMS-bekräftelse skickas till ditt telefonnummer</span>
           </div>
           <div className="ty-detail-row">
             <span>⏰</span>
