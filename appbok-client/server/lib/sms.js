@@ -115,10 +115,9 @@ export async function sendSMS(to, message) {
 }
 
 export async function sendBookingSMS({ to, customerName, salonName, date, time, bookingId }) {
-  // APP_URL pekar på basplattformen (t.ex. https://appbok.se) – cancel-länken
-  // fungerar oavsett vilken salong kunden bokat hos.
-  const baseUrl = (process.env.APP_URL || process.env.PUBLIC_APP_URL || 'https://appbok.se').replace(/\/$/, '');
-  const cancelUrl = `${baseUrl}/cancel/${bookingId || ''}`;
+  // Cancel-länken är ALLTID på huvudplattformen — den är inte på salongens subdomän.
+  const cancelUrl = `https://appbok.se/cancel/${bookingId || ''}`;
+  console.log('[sms] Booking SMS — cancelUrl:', cancelUrl);
   const msg = `Hej ${customerName}! Din bokning hos ${salonName} den ${date} kl ${time} är nu bekräftad. Välkommen!\n\nAvboka din tid här: ${cancelUrl}`;
   return sendSMS(to, msg);
 }
