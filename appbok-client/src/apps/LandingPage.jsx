@@ -8,6 +8,7 @@ import LoginRoute from '../components/LoginRoute.jsx';
 import AdminApexRedirect from '../components/AdminApexRedirect.jsx';
 import MarketingLanding from '../pages/MarketingLanding.jsx';
 import SignupPage from '../pages/SignupPage.jsx';
+import BookingCancel from '../BookingCancel.jsx';
 
 /** Apex / med ?slug= / ?salon_id= → boknings-UI (samma som tidigare index.html-läge). Annars marknadsföring. */
 function ApexHomeRoute() {
@@ -27,7 +28,7 @@ function ApexHomeRoute() {
  *  • marknadsföringslandningssida på /
  *  • boknings-UI för demosalongen Colorisma på /preview/mobile
  *
- * Routing: /, /preview/mobile, /tack, /villkor, /login, /admin → admin.appbok.se, /invite/:token
+ * Routing: /, /preview/mobile, /tack, /villkor, /login, /admin → admin.appbok.se, /invite/:token, /cancel/:id
  */
 export default function LandingPage() {
   return (
@@ -41,6 +42,7 @@ export default function LandingPage() {
         <Route path="/onboarding" element={<SignupPage />} />
         <Route path="/signup" element={<Navigate to="/onboarding" replace />} />
         <Route path="/admin" element={<AdminApexRedirect />} />
+        <Route path="/cancel/:id" element={<BookingCancel />} />
         <Route path="/invite/:token" element={<Invite />} />
       </Routes>
     </BrowserRouter>
