@@ -6,6 +6,7 @@ import Terms from '../Terms.jsx';
 import Invite from '../pages/Invite.jsx';
 import LoginRoute from '../components/LoginRoute.jsx';
 import AdminDashboardRedirect from '../components/AdminDashboardRedirect.jsx';
+import BookingCancel from '../BookingCancel.jsx';
 
 /**
  * Salongs-subdomän (t.ex. colorisma.appbok.se / colorisma.localhost).
@@ -31,6 +32,7 @@ export default function TenantBookingApp() {
         <Route path="/villkor" element={<Terms />} />
         <Route path="/login" element={<LoginRoute />} />
         <Route path="/admin" element={<AdminDashboardRedirect />} />
+        <Route path="/cancel/:id" element={<BookingCancel />} />
         <Route path="/invite/:token" element={<Invite />} />
       </Routes>
     </BrowserRouter>

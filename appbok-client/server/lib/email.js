@@ -615,3 +615,53 @@ export async function sendGoLiveEmail({ to, salonName, liveUrl }) {
     return { success: false, error: err.message };
   }
 }
+
+/**
+ * Send cancellation notification email to the salon.
+ */
+export async function sendCancellationNotificationEmail({
+  to,
+  customerName,
+  serviceName,
+  date,
+  time,
+  salonName,
+}) {
+  if (!transporter) {
+    console.warn('[email] SMTP not configured — skipping cancellation notification email to', to);
+    return { success: false, error: 'SMTP not configured' };
+  }
+
+  try {
+    await transporter.sendMail({
+      from: SMTP_FROM,
+      to,
+      subject: `Avbokning: ${serviceName} den ${date} kl ${time}`,
+      text: `En kund har avbokat.\n\nKund: ${customerName}\nTid: ${date} kl ${time}.\n\nBokningen är borttagen från systemet och kunden har återbetalats.`,
+      html: `
+<!DOCTYPE html>
+<html lang="sv">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0; padding:0; background:#f4f4f4; font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4; padding:40px 0;">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:white; border-radius:12px; padding:32px;">
+        <tr><td style="font-size:24px; font-weight:bold; margin-bottom:16px;">Avbokning</td></tr>
+        <tr><td style="color:#666; font-size:15px; line-height:1.6;">
+          <p><strong>En kund har avbokat</strong></p>
+          <p>Kund: ${customerName}<br>Tid: ${date} kl ${time}<br>Tjänst: ${serviceName}</p>
+          <p>Bokningen är borttagen från systemet och kunden har återbetalats.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+    });
+    console.log('[email] Cancellation notification sent to', to);
+    return { success: true };
+  } catch (err) {
+    console.error('[email] Failed to send cancellation notification to', to, ':', err.message);
+    return { success: false, error: err.message };
+  }
+}

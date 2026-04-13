@@ -1561,6 +1561,150 @@ html.preview-embed-mode [role='button'] {
 }
 
 /* =========================================
+   CANCEL PAGE  (/cancel/:id)
+   ========================================= */
+.cancel-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-color, #EDE9E3);
+  padding: 2rem 1rem;
+}
+.cancel-card {
+  background: white;
+  border-radius: 24px;
+  padding: 3rem 2.5rem;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.06);
+  animation: fadeUp 0.5s ease forwards;
+}
+.cancel-heading {
+  font-family: var(--font-serif, serif);
+  font-size: 1.9rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  color: var(--text-color, #1A1A1A);
+}
+.cancel-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 0;
+}
+.cancel-icon--success { color: #16a34a; background: #dcfce7; }
+.cancel-icon--error   { color: #dc2626; background: #fee2e2; }
+
+.cancel-message {
+  color: var(--text-muted, #666);
+  font-size: 0.95rem;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.cancel-summary {
+  background: var(--bg-light, #EBE8E3);
+  border-radius: 14px;
+  padding: 1.2rem 1.4rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.cancel-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+  gap: 1rem;
+}
+.cancel-row--price {
+  font-weight: 600;
+  font-size: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-color, #E7E5E4);
+}
+.cancel-label {
+  color: var(--text-muted, #666);
+}
+.cancel-value {
+  color: var(--text-color, #1A1A1A);
+  font-weight: 500;
+  text-align: right;
+}
+
+.cancel-policy {
+  font-size: 0.82rem;
+  color: var(--text-muted, #666);
+  margin-bottom: 1.2rem;
+  line-height: 1.5;
+}
+.btn-cancel-booking {
+  width: 100%;
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 1.1rem 2rem;
+  border-radius: 50px;
+  font-family: var(--font-sans, sans-serif);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  margin-bottom: 1rem;
+}
+.btn-cancel-booking:hover { background: #b91c1c; transform: translateY(-1px); }
+.btn-cancel-booking:active { transform: translateY(0); }
+.btn-cancel-booking:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.cancel-late-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+  color: #92400e;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.cancel-late-notice svg { flex-shrink: 0; margin-top: 1px; }
+.cancel-late-notice p { margin: 0; }
+
+.cancel-error {
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #fee2e2;
+  border-radius: 8px;
+}
+.btn-back-home {
+  display: inline-block;
+  background: var(--text-color, #1A1A1A);
+  color: white;
+  text-decoration: none;
+  padding: 0.85rem 2rem;
+  border-radius: 50px;
+  font-family: var(--font-sans, sans-serif);
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s;
+}
+.btn-back-home:hover { background: #333; }
+
+/* =========================================
    FULL TERMS PAGE  (/villkor)
    ========================================= */
 .terms-page {

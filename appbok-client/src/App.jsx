@@ -837,7 +837,7 @@ function BookingSection({
     };
   }, [clientSecret, config?.theme]);
 
-  const createBooking = useCallback(async ({ amountPaid, stripeSessionId }) => {
+  const createBooking = useCallback(async ({ amountPaid, stripeSessionId, paymentIntentId }) => {
     const payload = {
       salon_id: config.salonId,
       service_id: selectedService.id,
@@ -850,6 +850,7 @@ function BookingSection({
       duration_minutes: serviceDurationMin(selectedService),
       amount_paid: amountPaid,
       stripe_session_id: stripeSessionId || null,
+      stripe_payment_intent_id: paymentIntentId || null,
     };
     const bookRes = await fetch('/api/bookings', {
       method: 'POST',
@@ -949,6 +950,7 @@ function BookingSection({
       await createBooking({
         amountPaid: priceAmount,
         stripeSessionId: confirmedPaymentIntentId || paymentIntentId || null,
+        paymentIntentId: confirmedPaymentIntentId || paymentIntentId || null,
       });
       const sid = encodeURIComponent(confirmedPaymentIntentId || paymentIntentId || '');
       window.location.href = sid ? `/tack?session_id=${sid}` : '/tack';

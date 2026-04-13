@@ -114,12 +114,20 @@ export async function sendSMS(to, message) {
   }
 }
 
-export async function sendBookingSMS({ to, customerName, salonName, date, time }) {
-  const msg = `Hej ${customerName}! Din bokning hos ${salonName} den ${date} kl ${time} är nu bekräftad. Välkommen!`;
+export async function sendBookingSMS({ to, customerName, salonName, date, time, bookingId }) {
+  const cancelUrl = process.env.PUBLIC_APP_URL
+    ? `${process.env.PUBLIC_APP_URL.replace(/\/$/, '')}/cancel/${bookingId || ''}`
+    : `https://appbok.se/cancel/${bookingId || ''}`;
+  const msg = `Hej ${customerName}! Din bokning hos ${salonName} den ${date} kl ${time} är nu bekräftad. Välkommen!\n\nAvboka din tid här: ${cancelUrl}`;
   return sendSMS(to, msg);
 }
 
 export async function sendReminderSMS({ to, salonName, time }) {
   const msg = `Påminnelse: Du har en tid hos ${salonName} imorgon kl ${time}. Vi ses!`;
+  return sendSMS(to, msg);
+}
+
+export async function sendCancellationSMS({ to, salonName }) {
+  const msg = `Din tid hos ${salonName} är avbokad. Beloppet återbetalas till ditt kort inom 3–5 bankdagar.`;
   return sendSMS(to, msg);
 }

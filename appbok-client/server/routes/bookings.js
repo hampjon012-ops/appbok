@@ -1,9 +1,10 @@
 import { Router } from 'express';
+import Stripe from 'stripe';
 import supabase from '../lib/supabase.js';
 import { requireAuth } from '../lib/auth.js';
 import { createCalendarEvent, deleteCalendarEvent } from '../lib/google.js';
-import { sendBookingConfirmationEmail, sendCancellationEmail, sendStylistNotificationEmail } from '../lib/email.js';
-import { sendBookingSMS } from '../lib/sms.js';
+import { sendBookingConfirmationEmail, sendCancellationEmail, sendCancellationNotificationEmail, sendStylistNotificationEmail } from '../lib/email.js';
+import { sendBookingSMS, sendCancellationSMS } from '../lib/sms.js';
 
 const router = Router();
 
@@ -103,6 +104,7 @@ router.post('/', async (req, res) => {
     duration_minutes,
     amount_paid,
     stripe_session_id,
+    stripe_payment_intent_id,
   } = req.body;
 
   if (!salon_id || !service_id || !customer_name || !booking_date || !booking_time) {
@@ -138,6 +140,7 @@ router.post('/', async (req, res) => {
         duration_minutes: duration_minutes || 60,
         amount_paid: amount_paid || 0,
         stripe_session_id: stripe_session_id || null,
+        stripe_payment_intent_id: stripe_payment_intent_id || null,
         status: 'confirmed',
       })
       .select()
@@ -255,6 +258,7 @@ router.post('/', async (req, res) => {
           salonName,
           date: booking_date,
           time: booking_time,
+          bookingId: data.id,
         });
       } catch (smsErr) {
         console.warn('[bookings] SMS notification failed (non-blocking):', smsErr?.message);
@@ -268,7 +272,149 @@ router.post('/', async (req, res) => {
   }
 });
 
-// ── PATCH /api/bookings/:id/cancel — Avboka ─────────────────────────────────
+// ── GET /api/bookings/public — Publik: hämta bokning för avbokningssida ─────────
+// Ingen auth krävs — boknings-ID är UUID så det går inte att gissa/bruteforca.
+router.get('/public', async (req, res) => {
+  const { id } = req.query;
+  if (!id) return res.status(400).json({ error: 'id required' });
+
+  try {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('id, customer_name, customer_phone, customer_email, booking_date, booking_time, amount_paid, status, salon_id, stripe_payment_intent_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Bokningen hittades inte.' });
+
+    // Hämta tjänst + salongnamn
+    let serviceName = '';
+    let salonName = '';
+    if (data.service_id) {
+      const { data: svc } = await supabase.from('services').select('name').eq('id', data.service_id).single();
+      serviceName = svc?.name || '';
+    }
+    if (data.salon_id) {
+      const { data: s } = await supabase.from('salons').select('name').eq('id', data.salon_id).single();
+      salonName = s?.name || '';
+    }
+
+    return res.json({
+      ...data,
+      service: { name: serviceName },
+      salonName,
+    });
+  } catch (err) {
+    console.error('[bookings/public] error:', err);
+    return res.status(500).json({ error: 'Kunde inte hämta bokningen.' });
+  }
+});
+
+// ── POST /api/bookings/:id/cancel — Publk avbokning via SMS-länk ────────────
+router.post('/:id/cancel', async (req, res) => {
+  try {
+    // 1. Hämta bokningen
+    const { data: booking, error: fetchErr } = await supabase
+      .from('bookings')
+      .select('*, services(name), salons(name, stripe_account_id)')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    if (fetchErr) throw fetchErr;
+    if (!booking) return res.status(404).json({ error: 'Bokningen hittades inte.' });
+    if (booking.status === 'cancelled') return res.status(409).json({ error: 'Bokningen är redan avbokad.' });
+
+    // 2. Säkerhetscheck: > 24 timmar kvar
+    const [h, m] = (booking.booking_time || '').split(':').map(Number);
+    const bookingDate = new Date(`${booking.booking_date}T00:00:00`);
+    bookingDate.setHours(h || 0, m || 0, 0, 0);
+    const hoursLeft = (bookingDate.getTime() - Date.now()) / (1000 * 60 * 60);
+    if (hoursLeft <= 24) {
+      return res.status(422).json({
+        error: 'Tiden för fri avbokning online har passerat. Kontakta salongen direkt.',
+      });
+    }
+
+    const salonName = booking.salons?.name || 'Salongen';
+    const stripeAccountId = booking.salons?.stripe_account_id;
+
+    // 3. Återbetala via Stripe om det finns payment_intent
+    if (booking.stripe_payment_intent_id && stripeAccountId) {
+      try {
+        const stripeKey = process.env.STRIPE_SECRET_KEY;
+        if (stripeKey && !stripeKey.includes('PLACEHOLDER')) {
+          const stripe = new Stripe(stripeKey, { apiVersion: '2026-01-28.clover' });
+          await stripe.refunds.create(
+            { payment_intent: booking.stripe_payment_intent_id },
+            { stripeAccount: stripeAccountId },
+          );
+          console.log('[bookings/cancel] Refund issued for payment intent:', booking.stripe_payment_intent_id);
+        }
+      } catch (refundErr) {
+        console.error('[bookings/cancel] Refund failed (non-blocking):', refundErr?.message);
+      }
+    }
+
+    // 4. Uppdatera databas
+    const { error: updateErr } = await supabase
+      .from('bookings')
+      .update({ status: 'cancelled' })
+      .eq('id', req.params.id);
+    if (updateErr) throw updateErr;
+
+    // 5. Radera Google Calendar-event
+    if (booking.google_event_id && booking.stylist_id) {
+      try {
+        const { data: tokens } = await supabase
+          .from('calendar_tokens')
+          .select('*')
+          .eq('user_id', booking.stylist_id)
+          .single();
+        if (tokens) await deleteCalendarEvent(tokens, booking.google_event_id);
+      } catch (calErr) {
+        console.warn('[bookings/cancel] Calendar delete failed (non-blocking):', calErr.message);
+      }
+    }
+
+    // 6. SMS till kund
+    if (booking.customer_phone) {
+      sendCancellationSMS({ to: booking.customer_phone, salonName }).catch(smsErr =>
+        console.warn('[bookings/cancel] Customer SMS failed:', smsErr?.message)
+      );
+    }
+
+    // 7. E-post till salong (admin)
+    if (booking.salon_id) {
+      const { data: admins } = await supabase
+        .from('users')
+        .select('email')
+        .eq('salon_id', booking.salon_id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (admins?.email) {
+        sendCancellationNotificationEmail({
+          to: admins.email,
+          customerName: booking.customer_name,
+          serviceName: booking.services?.name || 'Tjänst',
+          date: booking.booking_date,
+          time: booking.booking_time,
+          salonName,
+        }).catch(emailErr =>
+          console.warn('[bookings/cancel] Salon email failed:', emailErr?.message)
+        );
+      }
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[bookings/cancel] error:', err);
+    return res.status(500).json({ error: 'Kunde inte avboka.' });
+  }
+});
+
+// ── PATCH /api/bookings/:id/cancel — Avboka (admin, kräver auth) ─────────────
 router.patch('/:id/cancel', requireAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
