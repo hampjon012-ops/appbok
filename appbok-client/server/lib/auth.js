@@ -40,10 +40,14 @@ export function requireAuth(req, res, next) {
     
     // Impersonation Support for Superadmin
     if (req.user.role === 'superadmin') {
-      const impId = req.headers['x-impersonate-salon-id'];
-      if (impId) {
+      const impSalonId = req.headers['x-impersonate-salon-id'];
+      if (impSalonId) {
         req.user.originalSalonId = req.user.salonId;
-        req.user.salonId = impId;
+        req.user.salonId = impSalonId;
+      }
+      const impStaffId = req.headers['x-impersonate-staff-id'];
+      if (impStaffId) {
+        req.user.impersonateStaffId = impStaffId;
       }
     }
 

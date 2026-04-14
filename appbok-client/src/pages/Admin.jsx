@@ -19,23 +19,50 @@ function getAuth() {
   const token = localStorage.getItem('sb_token');
   const user = JSON.parse(localStorage.getItem('sb_user') || 'null');
   const salon = JSON.parse(localStorage.getItem('sb_salon') || 'null');
-  
+
   if (user?.role === 'superadmin') {
     const impRaw = localStorage.getItem('sb_superadmin_impersonate');
     if (impRaw) {
       try {
         const impersonating = JSON.parse(impRaw);
         if (impersonating && typeof impersonating === 'object') {
+          // Stylist-vy: { id, name, email, role: 'staff', salonId }
+          if (impersonating.role === 'staff' && impersonating.salonId) {
+            const salonFromStorage = JSON.parse(localStorage.getItem('sb_salon') || 'null');
+            const fallbackSalon = {
+              id: impersonating.salonId,
+              name: impersonating.salonName || salon?.name || 'Salong',
+              slug: impersonating.salonSlug || salon?.slug || '',
+            };
+            return {
+              token,
+              user: {
+                ...user,
+                role: 'staff',
+                originalRole: 'superadmin',
+                impersonatedName: impersonating.name || 'Stylist',
+                impersonatedEmail: impersonating.email || '',
+                impersonatedStaffId: impersonating.id,
+              },
+              salon:
+                salonFromStorage && String(salonFromStorage.id) === String(impersonating.salonId)
+                  ? salonFromStorage
+                  : fallbackSalon,
+            };
+          }
+          // Salong som admin (befintligt objekt med salongs-id som id)
           return {
             token,
             user: { ...user, role: 'admin', originalRole: 'superadmin' },
-            salon: impersonating
+            salon: impersonating,
           };
         }
-      } catch (e) {}
+      } catch (e) {
+        /* ignore */
+      }
     }
   }
-  
+
   return { token, user, salon };
 }
 
@@ -154,38 +181,48 @@ const DASHBOARD_PERIOD_OPTIONS = [
 ];
 
 // ── Admin Layout ─────────────────────────────────────────────────────────────
-function ImpersonationBanner({ salonName }) {
+function ImpersonationBanner({ salonName, staffName }) {
+  const staffMode = staffName != null && String(staffName).length > 0;
   return (
-    <div style={{
-      background: '#f97316',
-      color: 'white',
-      padding: '10px 20px',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      fontWeight: 'bold',
-      zIndex: 9999,
-      position: 'sticky',
-      top: 0
-    }}>
-      <span>Du är inloggad som {salonName}</span>
-      <button 
-        onClick={() => {
-          localStorage.removeItem('sb_superadmin_impersonate');
-          window.location.reload();
-        }}
-        style={{
-          background: 'rgba(255,255,255,0.2)',
-          border: 'none',
-          color: 'white',
-          padding: '6px 12px',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontWeight: 'bold'
-        }}
-      >
-        Återgå till Superadmin
-      </button>
+    <div
+      style={{
+        background: '#f97316',
+        color: 'white',
+        padding: '10px 20px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '8px',
+        fontWeight: 'bold',
+        zIndex: 9999,
+        position: 'sticky',
+        top: 0,
+      }}
+    >
+      <span>
+        {staffMode
+          ? `Du tittar på ${staffName}s vy · `
+          : `Du är inloggad som ${salonName} · `}
+        <button
+          type="button"
+          onClick={() => {
+            localStorage.removeItem('sb_superadmin_impersonate');
+            window.location.reload();
+          }}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'white',
+            padding: 0,
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            textDecoration: 'underline',
+          }}
+        >
+          ← Tillbaka till superadmin
+        </button>
+      </span>
     </div>
   );
 }
@@ -193,7 +230,20 @@ function ImpersonationBanner({ salonName }) {
 export default function Admin() {
   const { token, user, salon } = getAuth();
   const isSuperAdmin = user?.role === 'superadmin';
-  const [activeTab, setActiveTab] = useState(() => (isSuperAdmin ? 'superadmin' : 'dashboard'));
+  const isStaffImpersonation = user?.originalRole === 'superadmin' && user?.role === 'staff';
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const impRaw = localStorage.getItem('sb_superadmin_impersonate');
+      if (impRaw) {
+        const imp = JSON.parse(impRaw);
+        if (imp?.role === 'staff' && imp?.salonId) return 'bookings';
+      }
+    } catch {
+      /* ignore */
+    }
+    const u = JSON.parse(localStorage.getItem('sb_user') || 'null');
+    return u?.role === 'superadmin' ? 'superadmin' : 'dashboard';
+  });
 
   useEffect(() => {
     if (!token) {
@@ -220,6 +270,12 @@ export default function Admin() {
         { id: 'settings',    label: 'Inställningar', icon: '⚙️', roles: ['superadmin'] },
       ];
     }
+    if (isStaffImpersonation) {
+      return [
+        { id: 'bookings', label: '📅 Bokningar', icon: '📅', roles: ['staff'] },
+        { id: 'settings', label: '⚙️ Inställningar', icon: '⚙️', roles: ['staff'] },
+      ];
+    }
     return [
       { id: 'dashboard', label: '📊 Dashboard', icon: '📊', roles: ['admin'] },
       { id: 'bookings',  label: '📅 Bokningar', icon: '📅', roles: ['admin', 'staff'] },
@@ -227,7 +283,7 @@ export default function Admin() {
       { id: 'services',  label: '💇 Tjänster',  icon: '💇', roles: ['admin'] },
       { id: 'settings',  label: '⚙️ Inställningar', icon: '⚙️', roles: ['admin', 'staff'] },
     ].filter((t) => t.roles.includes(user?.role || 'admin'));
-  }, [isSuperAdmin, user?.role]);
+  }, [isSuperAdmin, isStaffImpersonation, user?.role]);
 
   const saTabs = ['dashboard', 'superadmin', 'billing', 'settings'];
 
@@ -244,14 +300,17 @@ export default function Admin() {
       return;
     }
     setActiveTab((cur) => (tabs.some((t) => t.id === cur) ? cur : tabs[0]?.id || 'dashboard'));
-  }, [isSuperAdmin, user?.role, tabs]);
+  }, [isSuperAdmin, isStaffImpersonation, user?.role, tabs]);
 
   if (!token) return null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f4f2' }}>
       {user?.originalRole === 'superadmin' && (
-        <ImpersonationBanner salonName={salon?.name || 'Salong'} />
+        <ImpersonationBanner
+          salonName={salon?.name || 'Salong'}
+          staffName={isStaffImpersonation ? user?.impersonatedName : null}
+        />
       )}
       <div className="admin-layout" style={{ flex: 1, minHeight: 0 }}>
         {/* Sidebar — always superadmin variant */}
@@ -287,10 +346,16 @@ export default function Admin() {
           <div className="admin-sidebar-footer">
             <div className="admin-user-info">
               <div className="admin-user-name-row">
-                <span className="admin-user-name">{user?.name}</span>
+                <span className="admin-user-name">
+                  {isStaffImpersonation && user?.impersonatedName ? user.impersonatedName : user?.name}
+                </span>
                 <SidebarRoleBadge role={user?.role} />
               </div>
-              <span className="admin-user-email">{user?.email}</span>
+              <span className="admin-user-email">
+                {isStaffImpersonation && user?.impersonatedEmail
+                  ? user.impersonatedEmail
+                  : user?.email}
+              </span>
             </div>
             <button type="button" className="admin-logout-btn" onClick={handleLogout}>
               Logga ut

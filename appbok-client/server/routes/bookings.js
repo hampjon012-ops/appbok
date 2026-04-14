@@ -25,9 +25,11 @@ router.get('/', requireAuth, async (req, res) => {
       .order('booking_date', { ascending: false })
       .order('booking_time', { ascending: true });
 
-    // Staff ser bara sina egna bokningar
+    // Staff ser bara sina egna bokningar; superadmin som impersonerar stylist också
     if (req.user.role === 'staff') {
       query = query.eq('stylist_id', req.user.id);
+    } else if (req.user.role === 'superadmin' && req.user.impersonateStaffId) {
+      query = query.eq('stylist_id', req.user.impersonateStaffId);
     }
 
     // Filtrera på stylist (admin)

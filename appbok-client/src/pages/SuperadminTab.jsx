@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Fragment, useState, useEffect, useCallback, useMemo } from 'react';
 import ActionsDropdown from '../components/ActionsDropdown.jsx';
 import AddSalonModal from '../components/AddSalonModal.jsx';
 import { getLandingOriginForThemePreview } from '../lib/subdomain.js';
@@ -161,6 +161,128 @@ function slugify(s) {
     .replace(/^-+|-+$/g, '') || 'demo';
 }
 
+function staffRoleLabel(role) {
+  if (role === 'admin') return 'Admin';
+  if (role === 'staff') return 'Personal';
+  return role || '—';
+}
+
+function fmtStaffCreated(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' });
+  } catch {
+    return '—';
+  }
+}
+
+function SalonStaffPanel({ salon }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setErr('');
+    fetch(`/api/superadmin/salons/${salon.id}/staff`, { headers: authHeaders() })
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          throw new Error(typeof d.error === 'string' ? d.error : 'Kunde inte hämta personal.');
+        }
+        return Array.isArray(d) ? d : [];
+      })
+      .then((data) => {
+        if (!cancelled) setRows(data);
+      })
+      .catch((e) => {
+        if (!cancelled) setErr(e.message || 'Fel');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [salon.id]);
+
+  const loginAs = (member) => {
+    localStorage.setItem(
+      'sb_superadmin_impersonate',
+      JSON.stringify({
+        id: member.id,
+        name: member.name,
+        email: member.email,
+        role: 'staff',
+        salonId: salon.id,
+        salonName: salon.name,
+        salonSlug: salon.slug || salon.subdomain,
+      }),
+    );
+    localStorage.setItem(
+      'sb_salon',
+      JSON.stringify({
+        id: salon.id,
+        name: salon.name,
+        slug: salon.slug || salon.subdomain,
+      }),
+    );
+    window.location.href = '/admin';
+  };
+
+  if (loading) return <p className="admin-hint">Laddar personal…</p>;
+  if (err) return <p className="superadmin-error">{err}</p>;
+  if (!rows.length) {
+    return (
+      <p className="admin-hint" style={{ margin: 0 }}>
+        Ingen personal ännu. Bjud in stylister via Inställningar → Personal.
+      </p>
+    );
+  }
+
+  return (
+    <div className="superadmin-salon-staff-panel">
+      <h4 className="admin-card-title" style={{ marginTop: 0, marginBottom: '0.75rem' }}>
+        👥 Personal
+      </h4>
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Namn</th>
+              <th>E-post</th>
+              <th>Roll</th>
+              <th>Skapad</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((m) => (
+              <tr key={m.id}>
+                <td>{m.name || '—'}</td>
+                <td>{m.email || '—'}</td>
+                <td>{staffRoleLabel(m.role)}</td>
+                <td>{fmtStaffCreated(m.created_at)}</td>
+                <td style={{ textAlign: 'right' }}>
+                  <button
+                    type="button"
+                    className="btn-sm btn-ghost"
+                    onClick={() => loginAs(m)}
+                    title="Logga in som denna användare"
+                  >
+                    🔑 Logga in som
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function SuperadminTab() {
   const [view, setView] = useState('list');
   const [salons, setSalons] = useState([]);
@@ -170,6 +292,7 @@ export default function SuperadminTab() {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [quickEditSalon, setQuickEditSalon] = useState(null);
+  const [expandedSalonId, setExpandedSalonId] = useState(null);
 
   const loadSalons = useCallback(() => {
     setLoading(true);
@@ -264,40 +387,59 @@ export default function SuperadminTab() {
             </thead>
             <tbody>
               {filtered.map((s) => (
-                <tr key={s.id} className="superadmin-row-hover">
-                  <td className="sa-td-name">
-                    {s.name}
-                    <EditIcon onClick={() => setQuickEditSalon(s)} title="Redigera namn och subdomän" />
-                  </td>
-                  <td>
-                    <code className="sa-subdomain">{s.subdomain || s.slug}</code>
-                    <EditIcon onClick={() => setQuickEditSalon(s)} title="Redigera namn och subdomän" />
-                  </td>
-                  <td className="sa-td-plan">{s.plan || '—'}</td>
-                  <td>
-                    <span className={`sa-status sa-status--${s.status || 'unknown'}`}>
-                      {s.status || '—'}
-                    </span>
-                  </td>
-                  <td onClick={e => e.stopPropagation()}>
-                    <ActionsDropdown
-                      salon={s}
-                      onImpersonate={() => {
-                        localStorage.setItem('sb_superadmin_impersonate', JSON.stringify(s));
-                        localStorage.setItem(
-                          'sb_salon',
-                          JSON.stringify({
-                            id: s.id,
-                            name: s.name,
-                            slug: s.slug || s.subdomain,
-                          }),
-                        );
-                        window.location.reload();
-                      }}
-                      onCopyLink={() => {}}
-                    />
-                  </td>
-                </tr>
+                <Fragment key={s.id}>
+                  <tr className="superadmin-row-hover">
+                    <td className="sa-td-name">
+                      {s.name}
+                      <EditIcon onClick={() => setQuickEditSalon(s)} title="Redigera namn och subdomän" />
+                    </td>
+                    <td>
+                      <code className="sa-subdomain">{s.subdomain || s.slug}</code>
+                      <EditIcon onClick={() => setQuickEditSalon(s)} title="Redigera namn och subdomän" />
+                    </td>
+                    <td className="sa-td-plan">{s.plan || '—'}</td>
+                    <td>
+                      <span className={`sa-status sa-status--${s.status || 'unknown'}`}>
+                        {s.status || '—'}
+                      </span>
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          className="btn-sm btn-ghost"
+                          onClick={() => setExpandedSalonId((cur) => (cur === s.id ? null : s.id))}
+                          aria-expanded={expandedSalonId === s.id}
+                        >
+                          {expandedSalonId === s.id ? '▼ 👥 Personal' : '👥 Personal'}
+                        </button>
+                        <ActionsDropdown
+                          salon={s}
+                          onImpersonate={() => {
+                            localStorage.setItem('sb_superadmin_impersonate', JSON.stringify(s));
+                            localStorage.setItem(
+                              'sb_salon',
+                              JSON.stringify({
+                                id: s.id,
+                                name: s.name,
+                                slug: s.slug || s.subdomain,
+                              }),
+                            );
+                            window.location.reload();
+                          }}
+                          onCopyLink={() => {}}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                  {expandedSalonId === s.id ? (
+                    <tr className="superadmin-staff-expansion-row">
+                      <td colSpan={5} style={{ background: '#fafaf9', padding: '1rem 1.25rem', borderTop: '1px solid #e7e5e4' }}>
+                        <SalonStaffPanel salon={s} />
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
               ))}
             </tbody>
           </table>

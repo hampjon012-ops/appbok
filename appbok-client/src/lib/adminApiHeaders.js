@@ -1,6 +1,7 @@
 /**
  * Headers for authenticated admin API calls. Sends X-Impersonate-Salon-Id when
  * sb_superadmin_impersonate is set; the server only honors it for JWT role superadmin.
+ * Vid stylist-impersonation: även X-Impersonate-Staff-Id (användar-id) + salonId i payload.
  *
  * Superadmin: om endast sb_salon är satt (utan impersonate-nyckel) måste samma salong-ID
  * skickas som vid GET /api/services?salon_id=… — annars matchar PUT fel salon_id i JWT.
@@ -15,7 +16,12 @@ export function adminApiHeaders() {
   if (impRaw) {
     try {
       const parsed = JSON.parse(impRaw);
-      if (parsed?.id) salonIdForImpersonation = parsed.id;
+      if (parsed?.role === 'staff' && parsed?.salonId) {
+        salonIdForImpersonation = parsed.salonId;
+        if (parsed?.id) headers['X-Impersonate-Staff-Id'] = String(parsed.id);
+      } else if (parsed?.id) {
+        salonIdForImpersonation = parsed.id;
+      }
     } catch {
       /* ignore */
     }
@@ -49,6 +55,7 @@ export function getSalonIdForPublicApi() {
     const impRaw = localStorage.getItem('sb_superadmin_impersonate');
     if (impRaw) {
       const parsed = JSON.parse(impRaw);
+      if (parsed?.role === 'staff' && parsed?.salonId) return String(parsed.salonId);
       if (parsed?.id) return String(parsed.id);
     }
   } catch {

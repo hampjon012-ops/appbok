@@ -12,6 +12,14 @@ import {
 
 const router = Router();
 
+/** Superadmin som tittar på en stylists vy ska se/koppla den stylists kalender, inte sin egen. */
+function calendarUserId(req) {
+  if (req.user?.role === 'superadmin' && req.user?.impersonateStaffId) {
+    return req.user.impersonateStaffId;
+  }
+  return req.user.id;
+}
+
 // ── GET /api/calendar/status ─────────────────────────────────────────────────
 // Check if Google Calendar is configured + if the current user has connected
 router.get('/status', requireAuth, async (req, res) => {
@@ -19,10 +27,11 @@ router.get('/status', requireAuth, async (req, res) => {
     return res.json({ configured: false, connected: false });
   }
 
+  const uid = calendarUserId(req);
   const { data } = await supabase
     .from('calendar_tokens')
     .select('id, expires_at')
-    .eq('user_id', req.user.id)
+    .eq('user_id', uid)
     .single();
 
   res.json({
@@ -38,7 +47,7 @@ router.get('/connect', requireAuth, (_req, res) => {
   if (!isConfigured()) {
     return res.status(503).json({ error: 'Google Calendar ej konfigurerat.' });
   }
-  const url = getConsentUrl(_req.user.id);
+  const url = getConsentUrl(calendarUserId(_req));
   res.json({ url });
 });
 
@@ -80,10 +89,11 @@ router.get('/callback', async (req, res) => {
 // ── GET /api/calendar/disconnect ─────────────────────────────────────────────
 // Remove stored Google tokens for current user
 router.get('/disconnect', requireAuth, async (req, res) => {
+  const uid = calendarUserId(req);
   await supabase
     .from('calendar_tokens')
     .delete()
-    .eq('user_id', req.user.id);
+    .eq('user_id', uid);
 
   res.json({ ok: true });
 });

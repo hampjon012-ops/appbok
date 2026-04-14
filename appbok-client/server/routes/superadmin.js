@@ -555,7 +555,7 @@ router.get('/salons/:id/staff', async (req, res) => {
 
     const { data, error } = await supabase
       .from('users')
-      .select('id, name, email, role, title, active')
+      .select('id, name, email, role, title, active, created_at')
       .eq('salon_id', salon.id)
       .in('role', ['admin', 'staff'])
       .order('created_at');
