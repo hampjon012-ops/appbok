@@ -37,6 +37,14 @@ function getAvailableDates() {
   return dates;
 }
 
+/** Lokal kalenderdag YYYY-MM-DD (inte UTC) — matchar serverns datumsträngar. */
+function localYmd(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 const ALL_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 
 // ─── Helper: format date to Swedish ──────────────────────────────────────────
@@ -635,6 +643,7 @@ function BookingSection({
   const [apiError, setApiError]           = useState('');
   const [busySlots, setBusySlots]         = useState(new Set());
   const [busyLoading, setBusyLoading]     = useState(false);
+  const [closedDateSet, setClosedDateSet] = useState(new Set());
   const allowPayOnSite = config?.allowPayOnSite !== false;
   const [paymentChoice, setPaymentChoice] = useState('swish');
   const [intentLoading, setIntentLoading] = useState(false);
@@ -724,45 +733,60 @@ function BookingSection({
     onStylistPrefillApplied?.();
   }, [isModalOpen, prefillStylistFromHome, stylists, isLoadingStylists, onStylistPrefillApplied]);
 
-  const availableDates = getAvailableDates();
-  const selectedDateKey = selectedDate ? selectedDate.toISOString().slice(0, 10) : '';
+  const availableDates = useMemo(() => {
+    const raw = getAvailableDates();
+    if (!selectedStylist) return raw;
+    return raw.filter((d) => !closedDateSet.has(localYmd(d)));
+  }, [selectedStylist, closedDateSet]);
 
-  // Fetch busy slots when date changes
   useEffect(() => {
-    if (!selectedDate || !selectedStylist) return;
+    if (!selectedDate || !availableDates.length) return;
+    if (!availableDates.some((d) => localYmd(d) === localYmd(selectedDate))) {
+      setDate(null);
+      setTime(null);
+    }
+  }, [availableDates, selectedDate]);
+
+  const selectedDateKey = selectedDate ? localYmd(selectedDate) : '';
+
+  useEffect(() => {
+    if (!selectedStylist || !config?.salonId) {
+      setClosedDateSet(new Set());
+      return;
+    }
+    setClosedDateSet(new Set());
+    const from = localYmd(new Date());
+    fetch(
+      `/api/booking-availability/closed-dates?salon_id=${config.salonId}&stylist_id=${selectedStylist.id}&from=${from}&days=30`,
+    )
+      .then((r) => r.json())
+      .then((d) => setClosedDateSet(new Set(d.closedDates || [])))
+      .catch(() => setClosedDateSet(new Set()));
+  }, [selectedStylist, config?.salonId]);
+
+  // Tillgängliga starttider: schema, lunch, block, Google, befintliga bokningar (server)
+  useEffect(() => {
+    if (!selectedDate || !selectedStylist || !config?.salonId) return;
     setBusyLoading(true);
     setBusySlots(new Set());
-    const dateStr = selectedDate.toISOString().slice(0, 10);
+    const dateStr = localYmd(selectedDate);
     const stylistId = selectedStylist.id;
 
-    Promise.all([
-      // Google Calendar busy times
-      fetch(`/api/calendar/busy?stylist_id=${stylistId}&date=${dateStr}`)
-        .then(r => r.json()).catch(() => ({ busy: [] })),
-      // DB bookings for this stylist on this date
-      fetch(`/api/bookings/available?stylist_id=${stylistId}&date=${dateStr}`)
-        .then(r => r.json()).catch(() => ({ booked: [] })),
-    ]).then(([calData, bookData]) => {
-      const blocked = new Set();
-      // Block slots from Google Calendar
-      (calData.busy || []).forEach(b => {
-        const start = new Date(b.start);
-        const end   = new Date(b.end);
-        ALL_SLOTS.forEach(slot => {
-          const [h, m] = slot.split(':').map(Number);
-          const slotTime = new Date(selectedDate);
-          slotTime.setHours(h, m, 0, 0);
-          if (slotTime >= start && slotTime < end) blocked.add(slot);
-        });
+    fetch(
+      `/api/booking-availability?salon_id=${config.salonId}&stylist_id=${stylistId}&date=${dateStr}`,
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        const avail = new Set(data.slots || []);
+        const blocked = new Set(ALL_SLOTS.filter((slot) => !avail.has(slot)));
+        setBusySlots(blocked);
+        setBusyLoading(false);
+      })
+      .catch(() => {
+        setBusySlots(new Set(ALL_SLOTS));
+        setBusyLoading(false);
       });
-      // Block slots from DB bookings
-      (bookData.booked || []).forEach(time => {
-        blocked.add(time.slice(0, 5));
-      });
-      setBusySlots(blocked);
-      setBusyLoading(false);
-    });
-  }, [selectedDate, selectedStylist]);
+  }, [selectedDate, selectedStylist, config?.salonId]);
 
   // Step index for stepper (0-based, total 6 visual steps including category)
   const stepMap = { category:0, service:1, stylist:2, time:3, details:4, checkout:5 };

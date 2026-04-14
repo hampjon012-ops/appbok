@@ -4,6 +4,7 @@ import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
 import SuperadminTab from './SuperadminTab.jsx';
 import SuperadminSettingsTab from '../components/SuperadminSettingsTab.jsx';
 import SalonAdminSettingsTab from '../components/SalonAdminSettingsTab.jsx';
+import ScheduleTab from '../components/ScheduleTab.jsx';
 import ServiceImportModal from '../components/ServiceImportModal.jsx';
 import SidebarRoleBadge from '../components/SidebarRoleBadge.jsx';
 import { adminApiHeaders as authHeaders, getSalonIdForPublicApi } from '../lib/adminApiHeaders.js';
@@ -271,8 +272,10 @@ export default function Admin() {
       ];
     }
     if (isStaffImpersonation) {
+      // Samma flikar som inloggad personal (ej begränsad vy)
       return [
         { id: 'bookings', label: '📅 Bokningar', icon: '📅', roles: ['staff'] },
+        { id: 'schedule', label: '📅 Schema', icon: '📅', roles: ['staff'] },
         { id: 'settings', label: '⚙️ Inställningar', icon: '⚙️', roles: ['staff'] },
       ];
     }
@@ -281,6 +284,7 @@ export default function Admin() {
       { id: 'bookings',  label: '📅 Bokningar', icon: '📅', roles: ['admin', 'staff'] },
       { id: 'staff',     label: '👥 Personal',  icon: '👥', roles: ['admin'] },
       { id: 'services',  label: '💇 Tjänster',  icon: '💇', roles: ['admin'] },
+      { id: 'schedule',  label: '📅 Schema',    icon: '📅', roles: ['admin', 'staff'] },
       { id: 'settings',  label: '⚙️ Inställningar', icon: '⚙️', roles: ['admin', 'staff'] },
     ].filter((t) => t.roles.includes(user?.role || 'admin'));
   }, [isSuperAdmin, isStaffImpersonation, user?.role]);
@@ -387,8 +391,9 @@ export default function Admin() {
         {activeTab === 'bookings' && (
           <BookingsTab newBookingOpen={newBookingOpen} setNewBookingOpen={setNewBookingOpen} />
         )}
-        {activeTab === 'staff'      && <StaffTab />}
+        {activeTab === 'staff'      && <StaffTab salonId={salon?.id} />}
         {activeTab === 'services'  && <ServicesTab />}
+        {activeTab === 'schedule'  && <ScheduleTab user={user} />}
         {activeTab === 'settings' && (
           isSuperAdmin ? (
             <SuperadminSettingsTab user={user} />
@@ -1403,7 +1408,7 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
 }
 
 // ─── Staff Tab ───────────────────────────────────────────────────────────────
-function StaffTab() {
+function StaffTab({ salonId: salonIdProp }) {
   const [staff, setStaff] = useState([]);
   const [calendarStatus, setCalendarStatus] = useState({});
   const [inviteUrl, setInviteUrl] = useState('');
@@ -1413,7 +1418,7 @@ function StaffTab() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const salonId = getSalonIdForPublicApi();
+  const salonId = salonIdProp || getSalonIdForPublicApi();
 
   const loadStaff = useCallback(() => {
     setLoadError('');

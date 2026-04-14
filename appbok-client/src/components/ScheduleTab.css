@@ -1,0 +1,226 @@
+.schedule-tab {
+  max-width: 960px;
+}
+
+.schedule-tab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.schedule-tab-toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.schedule-tab-select {
+  min-width: 220px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.95rem;
+}
+
+.schedule-mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.schedule-mode-toggle button {
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.schedule-mode-toggle button.active {
+  background: #1f2937;
+  color: #fff;
+  border-color: #1f2937;
+}
+
+.schedule-week-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  margin-bottom: 1.5rem;
+}
+
+.schedule-week-table th,
+.schedule-week-table td {
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.9rem;
+}
+
+.schedule-week-table tr:last-child td {
+  border-bottom: none;
+}
+
+.schedule-week-table tr:nth-child(even) td {
+  background: #fafafa;
+}
+
+.schedule-week-table input[type='time'] {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.schedule-cal-wrap {
+  margin-top: 1.25rem;
+}
+
+.schedule-cal-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.schedule-cal-nav button {
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  cursor: pointer;
+}
+
+.schedule-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 1rem;
+}
+
+.schedule-cal-dow {
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #6b7280;
+  padding: 0.25rem 0;
+}
+
+.schedule-cal-cell {
+  min-height: 52px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  padding: 0.25rem;
+  transition: background 0.15s ease;
+}
+
+.schedule-cal-cell:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.schedule-cal-cell--muted {
+  background: #f3f4f6;
+  cursor: default;
+  color: #9ca3af;
+}
+
+.schedule-cal-cell--weekend {
+  background: #f9fafb;
+}
+
+.schedule-cal-cell--blocked {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.schedule-cal-cell--work {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.schedule-block-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.schedule-block-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.9rem;
+}
+
+.schedule-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1rem;
+}
+
+.schedule-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.schedule-modal h4 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+.schedule-modal label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.schedule-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+@media (max-width: 640px) {
+  .schedule-week-table {
+    display: block;
+    overflow-x: auto;
+  }
+  .schedule-cal-grid {
+    gap: 2px;
+  }
+  .schedule-cal-cell {
+    min-height: 44px;
+    font-size: 0.75rem;
+  }
+}

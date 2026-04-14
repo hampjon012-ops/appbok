@@ -61,22 +61,27 @@ export function getSalonIdForPublicApi() {
   } catch {
     /* ignore */
   }
+  // JWT har ofta salonId även om sb_salon är felaktig eller saknar id (t.ex. superadmin-login)
   try {
-    const salon = JSON.parse(localStorage.getItem('sb_salon') || '{}');
-    if (salon?.id) return salon.id;
+    const token = localStorage.getItem('sb_token');
+    if (token) {
+      const parts = token.split('.');
+      if (parts.length >= 2) {
+        const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const pad = b64.length % 4 === 0 ? '' : '='.repeat(4 - (b64.length % 4));
+        const payload = JSON.parse(atob(b64 + pad));
+        const sid = payload.salonId ?? payload.salon_id;
+        if (sid) return String(sid);
+      }
+    }
   } catch {
     /* ignore */
   }
   try {
-    const token = localStorage.getItem('sb_token');
-    if (!token) return '';
-    const parts = token.split('.');
-    if (parts.length < 2) return '';
-    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const pad = b64.length % 4 === 0 ? '' : '='.repeat(4 - (b64.length % 4));
-    const payload = JSON.parse(atob(b64 + pad));
-    return payload.salonId || payload.salon_id || '';
+    const salon = JSON.parse(localStorage.getItem('sb_salon') || '{}');
+    if (salon?.id) return String(salon.id);
   } catch {
-    return '';
+    /* ignore */
   }
+  return '';
 }

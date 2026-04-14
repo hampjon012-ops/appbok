@@ -78,6 +78,20 @@ export function requireSuperAdmin(req, res, next) {
 }
 
 /**
+ * Efter requireAuth: salongsadmin/superadmin, eller staff som endast rör sitt eget user-id i :id.
+ * Används för schema (GET/PUT /api/staff/:id/schedule, blocked-days).
+ */
+export function requireScheduleEditor(req, res, next) {
+  const r = req.user?.role;
+  if (r === 'admin' || r === 'superadmin') return next();
+  if (r === 'staff') {
+    if (String(req.params.id) === String(req.user.id)) return next();
+    return res.status(403).json({ error: 'Du kan bara redigera ditt eget schema.' });
+  }
+  return res.status(403).json({ error: 'Åtkomst nekad.' });
+}
+
+/**
  * Generate JWT for a user
  */
 export function signToken(user) {

@@ -16,6 +16,7 @@ import salonsRoutes from './routes/salons.js';
 import superadminRoutes from './routes/superadmin.js';
 import stripeRoutes from './routes/stripe.js';
 import cronRemindersRoutes from './routes/cronReminders.js';
+import availabilityRoutes from './routes/availability.js';
 import { scrapeBokadirekt, prepareForImport } from './lib/bokadirektScraper.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -87,6 +88,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/bookings', bookingsRoutes);
+app.use('/api/booking-availability', availabilityRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/salons', salonsRoutes);

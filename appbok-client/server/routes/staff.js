@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import supabase from '../lib/supabase.js';
-import { requireAuth, requireAdmin, signToken } from '../lib/auth.js';
+import { requireAuth, requireAdmin, requireScheduleEditor, signToken } from '../lib/auth.js';
 import bcrypt from 'bcryptjs';
 import { sendInviteEmail } from '../lib/email.js';
 
@@ -47,6 +47,39 @@ router.get('/', async (req, res) => {
     res.json(stylists);
   } catch (err) {
     console.error('Staff list error:', err);
+    res.status(500).json({ error: 'Kunde inte hämta personal.' });
+  }
+});
+
+// ── GET /api/staff/list — Admin: hela personalen; staff: bara sig själv (schema) ─
+router.get('/list', requireAuth, async (req, res) => {
+  try {
+    const role = req.user?.role;
+    if (role === 'staff') {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, role, title, photo_url, active, work_schedule')
+        .eq('id', req.user.id)
+        .eq('salon_id', req.user.salonId)
+        .eq('role', 'staff')
+        .maybeSingle();
+      if (error) throw error;
+      return res.json(data ? [data] : []);
+    }
+    if (role !== 'admin' && role !== 'superadmin') {
+      return res.status(403).json({ error: 'Åtkomst nekad.' });
+    }
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name, email, role, title, photo_url, active, work_schedule')
+      .eq('salon_id', req.user.salonId)
+      .eq('role', 'staff')
+      .order('name');
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error('Staff list:', err);
     res.status(500).json({ error: 'Kunde inte hämta personal.' });
   }
 });
@@ -118,24 +151,6 @@ router.post('/invite', requireAuth, requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Invite error:', err);
     res.status(500).json({ error: 'Kunde inte skapa inbjudan.' });
-  }
-});
-
-// ── DELETE /api/staff/:id — Admin: ta bort personal ─────────────────────────
-router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { error } = await supabase
-      .from('users')
-      .update({ active: false })
-      .eq('id', req.params.id)
-      .eq('salon_id', req.user.salonId)
-      .eq('role', 'staff');
-
-    if (error) throw error;
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Staff delete error:', err);
-    res.status(500).json({ error: 'Kunde inte ta bort personal.' });
   }
 });
 
@@ -215,6 +230,146 @@ router.post('/invite/:token/register', async (req, res) => {
   } catch (err) {
     console.error('Staff registration error:', err);
     res.status(500).json({ error: 'Kunde inte registrera kontot.' });
+  }
+});
+
+// ── GET /api/staff/:id/schedule — Admin eller egen staff: schema + blockeringar
+router.get('/:id/schedule', requireAuth, requireScheduleEditor, async (req, res) => {
+  try {
+    const { data: row, error } = await supabase
+      .from('users')
+      .select('id, salon_id, role, work_schedule')
+      .eq('id', req.params.id)
+      .eq('salon_id', req.user.salonId)
+      .eq('role', 'staff')
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!row) return res.status(404).json({ error: 'Personal hittades inte.' });
+
+    const { data: blocks } = await supabase
+      .from('stylist_blocked_days')
+      .select('*')
+      .eq('user_id', req.params.id)
+      .order('start_date', { ascending: true });
+
+    res.json({ work_schedule: row.work_schedule, blocked_days: blocks || [] });
+  } catch (err) {
+    console.error('GET staff schedule:', err);
+    res.status(500).json({ error: 'Kunde inte hämta schema.' });
+  }
+});
+
+// ── PUT /api/staff/:id/schedule — Admin eller egen staff: spara arbetstider + lunch
+router.put('/:id/schedule', requireAuth, requireScheduleEditor, async (req, res) => {
+  const { mode, days, lunch } = req.body;
+  try {
+    const { data: row, error: findErr } = await supabase
+      .from('users')
+      .select('id, salon_id, role')
+      .eq('id', req.params.id)
+      .eq('salon_id', req.user.salonId)
+      .eq('role', 'staff')
+      .maybeSingle();
+
+    if (findErr) throw findErr;
+    if (!row) return res.status(404).json({ error: 'Personal hittades inte.' });
+
+    const work_schedule =
+      mode === 'custom' && Array.isArray(days) && days.length === 7
+        ? { mode: 'custom', days, lunch: lunch && typeof lunch === 'object' ? lunch : { enabled: false, days: [] } }
+        : { mode: 'salon', days: [], lunch: lunch && typeof lunch === 'object' ? lunch : { enabled: false, days: [] } };
+
+    const { error: upErr } = await supabase
+      .from('users')
+      .update({ work_schedule })
+      .eq('id', req.params.id)
+      .eq('salon_id', req.user.salonId);
+
+    if (upErr) throw upErr;
+    res.json({ ok: true, work_schedule });
+  } catch (err) {
+    console.error('PUT staff schedule:', err);
+    res.status(500).json({ error: 'Kunde inte spara schema.' });
+  }
+});
+
+// ── POST /api/staff/:id/blocked-days — Admin eller egen staff: blockeringar ─
+router.post('/:id/blocked-days', requireAuth, requireScheduleEditor, async (req, res) => {
+  const { action } = req.body || {};
+  try {
+    const { data: row, error: findErr } = await supabase
+      .from('users')
+      .select('id, salon_id, role')
+      .eq('id', req.params.id)
+      .eq('salon_id', req.user.salonId)
+      .eq('role', 'staff')
+      .maybeSingle();
+
+    if (findErr) throw findErr;
+    if (!row) return res.status(404).json({ error: 'Personal hittades inte.' });
+
+    if (action === 'remove') {
+      const blockId = req.body?.id;
+      if (!blockId) return res.status(400).json({ error: 'id krävs.' });
+      const { error: delErr } = await supabase
+        .from('stylist_blocked_days')
+        .delete()
+        .eq('id', blockId)
+        .eq('user_id', req.params.id)
+        .eq('salon_id', req.user.salonId);
+      if (delErr) throw delErr;
+      return res.json({ ok: true });
+    }
+
+    if (action === 'add') {
+      const { start_date, end_date, block_type, time_mode, time_from, time_to } = req.body;
+      if (!start_date || !end_date) {
+        return res.status(400).json({ error: 'start_date och end_date krävs.' });
+      }
+      const bt = ['sick', 'vacation', 'other'].includes(block_type) ? block_type : 'other';
+      const tm = time_mode === 'range' ? 'range' : 'full_day';
+      const insert = {
+        user_id: req.params.id,
+        salon_id: req.user.salonId,
+        start_date: String(start_date).slice(0, 10),
+        end_date: String(end_date).slice(0, 10),
+        block_type: bt,
+        time_mode: tm,
+        time_from: tm === 'range' && time_from ? time_from : null,
+        time_to: tm === 'range' && time_to ? time_to : null,
+      };
+      const { data: created, error: insErr } = await supabase
+        .from('stylist_blocked_days')
+        .insert(insert)
+        .select()
+        .single();
+      if (insErr) throw insErr;
+      return res.status(201).json(created);
+    }
+
+    return res.status(400).json({ error: 'Ogiltig action (add eller remove).' });
+  } catch (err) {
+    console.error('POST blocked-days:', err);
+    res.status(500).json({ error: 'Kunde inte uppdatera blockeringar.' });
+  }
+});
+
+// ── DELETE /api/staff/:id — Admin: ta bort personal ─────────────────────────
+router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ active: false })
+      .eq('id', req.params.id)
+      .eq('salon_id', req.user.salonId)
+      .eq('role', 'staff');
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Staff delete error:', err);
+    res.status(500).json({ error: 'Kunde inte ta bort personal.' });
   }
 });
 
