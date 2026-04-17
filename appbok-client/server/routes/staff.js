@@ -7,7 +7,7 @@ import supabase from '../lib/supabase.js';
 import { requireAuth, requireAdmin, requireScheduleEditor, signToken } from '../lib/auth.js';
 import bcrypt from 'bcryptjs';
 import { sendInviteEmail } from '../lib/email.js';
-import { sendBlockedDaySMS } from '../lib/sms.js';
+import { sendBlockedDaySMS, isSmsConfigured } from '../lib/sms.js';
 import { buildRebookPublicUrl } from '../lib/rebookUrl.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -363,10 +363,9 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
   if (!date) return res.status(400).json({ error: 'date krävs (ÅÅÅÅ-MM-DD).' });
 
   try {
-    // Hämta stylists namn + salong-namn
     const { data: stylist, error: styErr } = await supabase
       .from('users')
-      .select('id, name, salon_id, salons(name, slug)')
+      .select('id, name, salon_id')
       .eq('id', req.params.id)
       .eq('salon_id', req.user.salonId)
       .eq('role', 'staff')
@@ -374,29 +373,68 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
     if (styErr) throw styErr;
     if (!stylist) return res.status(404).json({ error: 'Personal hittades inte.' });
 
-    const salonName = stylist.salons?.name || 'vår salong';
-    const salonSlug = stylist.salons?.slug || '';
+    const { data: salonRow } = await supabase
+      .from('salons')
+      .select('name, slug')
+      .eq('id', stylist.salon_id)
+      .maybeSingle();
+    const salonName = salonRow?.name || 'vår salong';
+    const salonSlug = salonRow?.slug || '';
     const stylistName = stylist.name || 'din stylist';
 
-    // Hämta alla bekräftade bokningar för stylisten det datumet
+    const twilioOk = isSmsConfigured();
+
+    // Bekräftade/ombokade bokningar som inte redan markerats vid tidigare block-notis
     const { data: bookings, error: bErr } = await supabase
       .from('bookings')
       .select('id, booking_date, booking_time, customer_name, customer_phone')
       .eq('stylist_id', req.params.id)
       .eq('salon_id', req.user.salonId)
       .eq('booking_date', String(date).slice(0, 10))
-      .eq('status', 'confirmed')
+      .in('status', ['confirmed', 'rebooked'])
       .eq('blocked_affects_booking', false);
     if (bErr) throw bErr;
 
     if (!bookings?.length) {
-      return res.json({ sent: 0, message: 'Inga kunder behöver informeras.' });
+      return res.json({
+        sent: 0,
+        total: 0,
+        twilio_configured: twilioOk,
+        message: 'Inga kunder behöver informeras (inga bokningar den dagen).',
+      });
+    }
+
+    if (!twilioOk) {
+      console.warn('[notify-blocked-day] TWILIO_* saknas eller är placeholder — inga SMS skickas.');
+      return res.json({
+        sent: 0,
+        total: bookings.length,
+        twilio_configured: false,
+        hint: 'SMS är inte konfigurerat. Sätt TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN och TWILIO_SENDER_ID i server/.env (och på Vercel).',
+        results: bookings.map((b) => ({
+          id: b.id,
+          customer: b.customer_name,
+          sent: false,
+          reason: 'twilio_not_configured',
+        })),
+      });
     }
 
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
     const results = await Promise.all(
       bookings.map(async (b) => {
+        const phone = String(b.customer_phone || '').trim();
+        if (!phone) {
+          console.warn(`[notify-blocked-day] bokning ${b.id} saknar telefon — hoppar över SMS`);
+          return {
+            id: b.id,
+            customer: b.customer_name,
+            sent: false,
+            reason: 'no_phone',
+          };
+        }
+
         const token = crypto.randomUUID();
         const rebookUrl = buildRebookPublicUrl(salonSlug, token, b.booking_date, req.params.id);
         const { error: upErr } = await supabase
@@ -409,10 +447,17 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
           .eq('id', b.id);
         if (upErr) {
           console.error('[notify-blocked-day] token save:', upErr);
-          return { id: b.id, customer: b.customer_name, sent: false };
+          return {
+            id: b.id,
+            customer: b.customer_name,
+            sent: false,
+            reason: 'db_error',
+            detail: upErr.message,
+          };
         }
-        const sent = await sendBlockedDaySMS({
-          to: b.customer_phone,
+
+        const sid = await sendBlockedDaySMS({
+          to: phone,
           customerName: b.customer_name,
           salonName,
           date: b.booking_date,
@@ -421,7 +466,10 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
           block_type: block_type || 'other',
           rebookUrl,
         });
-        return { id: b.id, customer: b.customer_name, sent: !!sent };
+        if (!sid) {
+          return { id: b.id, customer: b.customer_name, sent: false, reason: 'sms_send_failed' };
+        }
+        return { id: b.id, customer: b.customer_name, sent: true, reason: null };
       }),
     );
 
@@ -430,6 +478,7 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
     res.json({
       sent: sentCount,
       total: results.length,
+      twilio_configured: true,
       results,
     });
   } catch (err) {

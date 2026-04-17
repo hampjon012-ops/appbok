@@ -320,7 +320,8 @@ export default function ScheduleTab({ user }) {
       if (notifySms) {
         try {
           let totalSent = 0;
-          let anyResponse = false;
+          const lines = [];
+          let twilioHintShown = false;
           for (const day of dayList) {
             const ds = toLocalISODate(day);
             const smsRes = await fetch(`/api/staff/${selectedId}/notify-blocked-day`, {
@@ -329,20 +330,42 @@ export default function ScheduleTab({ user }) {
               body: JSON.stringify({ date: ds, block_type: blockType }),
             });
             const smsData = await smsRes.json().catch(() => ({}));
-            if (smsRes.ok && typeof smsData.sent === 'number') {
-              anyResponse = true;
-              totalSent += smsData.sent;
+            if (!smsRes.ok) {
+              lines.push(
+                typeof smsData.error === 'string'
+                  ? smsData.error
+                  : `Kunde inte skicka SMS (HTTP ${smsRes.status}).`,
+              );
+              continue;
+            }
+            if (smsData.hint && !twilioHintShown) {
+              lines.push(smsData.hint);
+              twilioHintShown = true;
+            }
+            if (typeof smsData.sent === 'number') totalSent += smsData.sent;
+            if (typeof smsData.message === 'string' && smsData.total === 0) {
+              lines.push(smsData.message);
+            }
+            const results = Array.isArray(smsData.results) ? smsData.results : [];
+            const noPhone = results.filter((r) => r.reason === 'no_phone').length;
+            if (noPhone) {
+              lines.push(
+                `${noPhone} bokning${noPhone !== 1 ? 'ar' : ''} saknar kundtelefon — inget SMS till dem.`,
+              );
+            }
+            const sendFail = results.filter((r) => r.reason === 'sms_send_failed').length;
+            if (sendFail) {
+              lines.push(`Kunde inte skicka ${sendFail} SMS (kontrollera Twilio och mottagarnummer).`);
             }
           }
-          if (anyResponse) {
-            if (totalSent === 0) {
-              setSmsSummary('Inga kunder behöver informeras.');
-            } else {
-              setSmsSummary(`SMS skickat till ${totalSent} kund${totalSent !== 1 ? 'er' : ''} totalt.`);
-            }
+          const uniq = [...new Set(lines.filter(Boolean))];
+          if (totalSent > 0) {
+            uniq.unshift(`SMS skickat till ${totalSent} kund${totalSent !== 1 ? 'er' : ''} totalt.`);
           }
-        } catch {
-          /* SMS sekundärt */
+          if (uniq.length) setSmsSummary(uniq.join(' '));
+          else setSmsSummary('Inga SMS skickades.');
+        } catch (e) {
+          setSmsSummary(e?.message || 'Nätverksfel vid SMS.');
         }
       }
     } catch (err) {

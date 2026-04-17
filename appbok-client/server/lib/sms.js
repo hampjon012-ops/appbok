@@ -15,6 +15,11 @@ function getClient() {
   return Twilio(accountSid, authToken);
 }
 
+/** True om SMS kan skickas (Twilio + avsändare kan lösas när ett meddelande skickas). */
+export function isSmsConfigured() {
+  return Boolean(accountSid && authToken && !String(accountSid).includes('PLACEHOLDER'));
+}
+
 /**
  * Twilio kräver `from` som E.164 (+4670…), Messaging Service (MG…), inte raw Phone Number SID (PN…).
  */
