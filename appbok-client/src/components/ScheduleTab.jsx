@@ -124,6 +124,8 @@ export default function ScheduleTab({ user }) {
   const [modal, setModal] = useState(null);
   const [listError, setListError] = useState('');
   const [smsSummary, setSmsSummary] = useState('');
+  /** SMS-rad under kalendern: rött vid fel, grönt vid lyckad utskick */
+  const [smsSummaryIsError, setSmsSummaryIsError] = useState(false);
   /** Flerval av kalenderdagar (ISO-datum) innan gemensam blockering */
   const [pickedBlockDates, setPickedBlockDates] = useState([]);
 
@@ -208,6 +210,7 @@ export default function ScheduleTab({ user }) {
     if (selectedId && selectedId !== 'all') loadSchedule(selectedId);
     setPickedBlockDates([]);
     setSmsSummary('');
+    setSmsSummaryIsError(false);
   }, [selectedId, loadSchedule]);
 
   const loadAllBlocks = useCallback(() => {
@@ -291,6 +294,7 @@ export default function ScheduleTab({ user }) {
     if (!dayList.length) return;
     const { blockType, timeMode, timeFrom, timeTo, notifySms } = modal;
     setSmsSummary('');
+    setSmsSummaryIsError(false);
     try {
       for (const day of dayList) {
         const ds = toLocalISODate(day);
@@ -322,6 +326,7 @@ export default function ScheduleTab({ user }) {
           let totalSent = 0;
           const lines = [];
           let twilioHintShown = false;
+          let anyHttpError = false;
           for (const day of dayList) {
             const ds = toLocalISODate(day);
             const smsRes = await fetch(`/api/staff/${selectedId}/notify-blocked-day`, {
@@ -331,11 +336,18 @@ export default function ScheduleTab({ user }) {
             });
             const smsData = await smsRes.json().catch(() => ({}));
             if (!smsRes.ok) {
+              anyHttpError = true;
               lines.push(
                 typeof smsData.error === 'string'
                   ? smsData.error
                   : `Kunde inte skicka SMS (HTTP ${smsRes.status}).`,
               );
+              if (typeof smsData.detail === 'string' && smsData.detail.trim()) {
+                lines.push(smsData.detail);
+              }
+              if (typeof smsData.hint === 'string' && smsData.hint.trim()) {
+                lines.push(smsData.hint);
+              }
               continue;
             }
             if (smsData.hint && !twilioHintShown) {
@@ -364,8 +376,18 @@ export default function ScheduleTab({ user }) {
           }
           if (uniq.length) setSmsSummary(uniq.join(' '));
           else setSmsSummary('Inga SMS skickades.');
+          const onlyNeutralInfo =
+            uniq.length > 0 &&
+            uniq.every((l) => /inga kunder behöver informeras|inga bokningar.*den dagen/i.test(String(l)));
+          setSmsSummaryIsError(
+            anyHttpError ||
+              (totalSent === 0 &&
+                uniq.length > 0 &&
+                !onlyNeutralInfo),
+          );
         } catch (e) {
           setSmsSummary(e?.message || 'Nätverksfel vid SMS.');
+          setSmsSummaryIsError(true);
         }
       }
     } catch (err) {
@@ -422,6 +444,7 @@ export default function ScheduleTab({ user }) {
       return new Date(y, mo - 1, da);
     });
     setSmsSummary('');
+    setSmsSummaryIsError(false);
     setModal({
       days: dates,
       blockType: 'other',
@@ -758,7 +781,10 @@ export default function ScheduleTab({ user }) {
             </ul>
           )}
           {smsSummary && !modal ? (
-            <p className="superadmin-success" style={{ marginTop: '0.75rem' }}>
+            <p
+              className={smsSummaryIsError ? 'superadmin-error' : 'superadmin-success'}
+              style={{ marginTop: '0.75rem' }}
+            >
               {smsSummary}
             </p>
           ) : null}
@@ -771,6 +797,7 @@ export default function ScheduleTab({ user }) {
           onClick={() => {
             setModal(null);
             setSmsSummary('');
+            setSmsSummaryIsError(false);
           }}
         >
           <div className="schedule-modal" onClick={(e) => e.stopPropagation()}>
@@ -842,7 +869,15 @@ export default function ScheduleTab({ user }) {
               Skicka SMS till berörda kunder
             </label>
             <div className="schedule-modal-actions">
-              <button type="button" className="btn-sm btn-ghost" onClick={() => { setModal(null); setSmsSummary(''); }}>
+              <button
+                type="button"
+                className="btn-sm btn-ghost"
+                onClick={() => {
+                  setModal(null);
+                  setSmsSummary('');
+                  setSmsSummaryIsError(false);
+                }}
+              >
                 Avbryt
               </button>
               <button type="button" className="btn-admin-primary" onClick={addBlock}>

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import crypto from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -91,7 +91,7 @@ router.post('/invite', requireAuth, requireAdmin, async (req, res) => {
   const { email } = req.body;
 
   try {
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = randomBytes(32).toString('hex');
 
     const { data, error } = await supabase
       .from('invitations')
@@ -435,7 +435,7 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
           };
         }
 
-        const token = crypto.randomUUID();
+        const token = randomUUID();
         const rebookUrl = buildRebookPublicUrl(salonSlug, token, b.booking_date, req.params.id);
         const { error: upErr } = await supabase
           .from('bookings')
@@ -482,8 +482,18 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
       results,
     });
   } catch (err) {
+    const detail = err?.message || String(err);
     console.error('POST notify-blocked-day:', err);
-    res.status(500).json({ error: 'Kunde inte skicka meddelanden.' });
+    let hint;
+    if (/blocked_affects_booking|rebook_token|rebook_expires|column .* does not exist/i.test(detail)) {
+      hint =
+        'Databasen saknar kolumner. Kör migration 014 och 015 (appbok-client/server/migrations/) mot din Postgres och starta om API.';
+    }
+    res.status(500).json({
+      error: 'Kunde inte skicka meddelanden.',
+      detail,
+      hint,
+    });
   }
 });
 
