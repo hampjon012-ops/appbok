@@ -4,7 +4,8 @@ import supabase from '../lib/supabase.js';
 import { requireAuth } from '../lib/auth.js';
 import { createCalendarEvent, deleteCalendarEvent } from '../lib/google.js';
 import { sendBookingConfirmationEmail, sendCancellationEmail, sendCancellationNotificationEmail, sendStylistNotificationEmail } from '../lib/email.js';
-import { sendBookingSMS, sendCancellationSMS } from '../lib/sms.js';
+import { sendBookingSMS, sendCancellationSMS, sendRebookConfirmationSMS } from '../lib/sms.js';
+import { computeSlotsForStylist } from '../lib/stylistAvailability.js';
 
 const router = Router();
 
@@ -74,7 +75,7 @@ router.get('/available', async (req, res) => {
       .from('bookings')
       .select('booking_time')
       .eq('booking_date', date)
-      .eq('status', 'confirmed');
+      .in('status', ['confirmed', 'rebooked']);
 
     // If a specific stylist, filter by them
     if (stylist_id !== 'any') {
@@ -89,6 +90,215 @@ router.get('/available', async (req, res) => {
   } catch (err) {
     console.error('Availability check error:', err);
     res.json({ booked: [] });
+  }
+});
+
+// ── GET /api/bookings/rebook/lookup — Publik: bokning + salong för ombokningssida ─
+router.get('/rebook/lookup', async (req, res) => {
+  const { token } = req.query;
+  if (!token || typeof token !== 'string') {
+    return res.status(400).json({ error: 'token krävs.' });
+  }
+
+  try {
+    const { data: booking, error } = await supabase
+      .from('bookings')
+      .select(
+        'id, salon_id, service_id, stylist_id, customer_name, booking_date, booking_time, duration_minutes, status, rebook_expires_at',
+      )
+      .eq('rebook_token', token.trim())
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!booking) {
+      return res.status(404).json({ error: 'Länken är ogiltig eller har gått ut.' });
+    }
+    if (!booking.rebook_expires_at || new Date(booking.rebook_expires_at) < new Date()) {
+      return res.status(410).json({ error: 'Länken har gått ut. Kontakta salongen.' });
+    }
+    if (!['confirmed', 'rebooked'].includes(booking.status)) {
+      return res.status(409).json({ error: 'Bokningen kan inte ombokas.' });
+    }
+
+    const [{ data: salon }, { data: svc }, { data: st }] = await Promise.all([
+      supabase.from('salons').select('name, slug').eq('id', booking.salon_id).maybeSingle(),
+      booking.service_id
+        ? supabase.from('services').select('name').eq('id', booking.service_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      booking.stylist_id
+        ? supabase.from('users').select('id, name').eq('id', booking.stylist_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+
+    res.json({
+      booking: {
+        id: booking.id,
+        salon_id: booking.salon_id,
+        service_id: booking.service_id,
+        stylist_id: booking.stylist_id,
+        customer_name: booking.customer_name,
+        booking_date: booking.booking_date,
+        booking_time: booking.booking_time,
+        duration_minutes: booking.duration_minutes,
+      },
+      salon: salon || {},
+      service: svc || {},
+      stylist: st || {},
+    });
+  } catch (err) {
+    console.error('rebook/lookup:', err);
+    res.status(500).json({ error: 'Kunde inte hämta bokningen.' });
+  }
+});
+
+// ── POST /api/bookings/rebook — Publik: omboka med token ─────────────────────
+router.post('/rebook', async (req, res) => {
+  const { token, new_stylist_id, new_date, new_time } = req.body || {};
+  if (!token || !new_stylist_id || !new_date || !new_time) {
+    return res.status(400).json({ error: 'token, new_stylist_id, new_date och new_time krävs.' });
+  }
+
+  const dateStr = String(new_date).slice(0, 10);
+  const timeRaw = String(new_time);
+  const timeStr = timeRaw.length >= 5 ? timeRaw.slice(0, 5) : timeRaw;
+  const timeDb = timeStr.length === 5 ? `${timeStr}:00` : timeRaw;
+
+  try {
+    const { data: booking, error: findErr } = await supabase
+      .from('bookings')
+      .select(
+        'id, salon_id, service_id, stylist_id, customer_name, customer_phone, booking_date, booking_time, duration_minutes, status, google_event_id, rebook_token, rebook_expires_at',
+      )
+      .eq('rebook_token', String(token).trim())
+      .maybeSingle();
+
+    if (findErr) throw findErr;
+    if (!booking) {
+      return res.status(404).json({ error: 'Ogiltig länk.' });
+    }
+    if (!booking.rebook_expires_at || new Date(booking.rebook_expires_at) < new Date()) {
+      return res.status(410).json({ error: 'Länken har gått ut.' });
+    }
+
+    const { data: newStylist, error: stErr } = await supabase
+      .from('users')
+      .select('id, salon_id, name, work_schedule')
+      .eq('id', new_stylist_id)
+      .eq('salon_id', booking.salon_id)
+      .eq('role', 'staff')
+      .maybeSingle();
+    if (stErr) throw stErr;
+    if (!newStylist) {
+      return res.status(400).json({ error: 'Stylist hittades inte i salongen.' });
+    }
+
+    const slots = await computeSlotsForStylist({
+      salonId: booking.salon_id,
+      stylistId: new_stylist_id,
+      dateStr,
+      workSchedule: newStylist.work_schedule,
+    });
+    const slotOk = slots.some((s) => String(s).slice(0, 5) === timeStr);
+    if (!slotOk) {
+      return res.status(400).json({ error: 'Tiden är inte tillgänglig.' });
+    }
+
+    const { data: clash } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('stylist_id', new_stylist_id)
+      .eq('booking_date', dateStr)
+      .eq('booking_time', timeDb)
+      .in('status', ['confirmed', 'rebooked'])
+      .neq('id', booking.id)
+      .maybeSingle();
+    if (clash) {
+      return res.status(409).json({ error: 'Tiden är redan bokad.' });
+    }
+
+    const oldStylistId = booking.stylist_id;
+    const oldEventId = booking.google_event_id;
+
+    if (oldEventId && oldStylistId) {
+      try {
+        const { data: oldTok } = await supabase
+          .from('calendar_tokens')
+          .select('*')
+          .eq('user_id', oldStylistId)
+          .maybeSingle();
+        if (oldTok) await deleteCalendarEvent(oldTok, oldEventId);
+      } catch (calErr) {
+        console.warn('[rebook] delete old calendar event:', calErr?.message);
+      }
+    }
+
+    const { data: updated, error: upErr } = await supabase
+      .from('bookings')
+      .update({
+        stylist_id: new_stylist_id,
+        booking_date: dateStr,
+        booking_time: timeDb,
+        status: 'rebooked',
+        rebook_token: null,
+        rebook_expires_at: null,
+        google_event_id: null,
+      })
+      .eq('id', booking.id)
+      .select()
+      .single();
+
+    if (upErr) throw upErr;
+
+    if (new_stylist_id && new_stylist_id !== 'any') {
+      try {
+        const { data: tokens } = await supabase
+          .from('calendar_tokens')
+          .select('*')
+          .eq('user_id', new_stylist_id)
+          .maybeSingle();
+        if (tokens) {
+          const event = await createCalendarEvent(tokens, {
+            summary: `${booking.customer_name} — ${booking.id.slice(0, 8)}`,
+            description: `Ombokning via Appbok\nKund: ${booking.customer_name}`,
+            date: dateStr,
+            time: timeDb,
+            durationMinutes: booking.duration_minutes || 60,
+          });
+          if (event?.id) {
+            await supabase.from('bookings').update({ google_event_id: event.id }).eq('id', booking.id);
+          }
+        }
+      } catch (calErr) {
+        console.warn('[rebook] calendar create:', calErr?.message);
+      }
+    }
+
+    let salonName = 'Salongen';
+    try {
+      const { data: salon } = await supabase.from('salons').select('name').eq('id', booking.salon_id).single();
+      if (salon?.name) salonName = salon.name;
+    } catch {
+      /* ignore */
+    }
+
+    if (booking.customer_phone && String(booking.customer_phone).trim()) {
+      try {
+        await sendRebookConfirmationSMS({
+          to: booking.customer_phone,
+          customerName: booking.customer_name,
+          salonName,
+          date: dateStr,
+          time: timeStr,
+        });
+      } catch (smsErr) {
+        console.warn('[rebook] SMS:', smsErr?.message);
+      }
+    }
+
+    res.json({ ok: true, booking: updated });
+  } catch (err) {
+    console.error('POST /rebook:', err);
+    res.status(500).json({ error: 'Kunde inte omboka.' });
   }
 });
 
@@ -121,8 +331,8 @@ router.post('/', async (req, res) => {
       .eq('stylist_id', stylist_id)
       .eq('booking_date', booking_date)
       .eq('booking_time', booking_time)
-      .eq('status', 'confirmed')
-      .single();
+      .in('status', ['confirmed', 'rebooked'])
+      .maybeSingle();
 
     if (existing) {
       return res.status(409).json({ error: 'Tiden är redan bokad.' });

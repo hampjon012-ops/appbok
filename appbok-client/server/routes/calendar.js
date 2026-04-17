@@ -9,6 +9,7 @@ import {
   createCalendarEvent,
   deleteCalendarEvent,
 } from '../lib/google.js';
+import { computeSlotsForStylist } from '../lib/stylistAvailability.js';
 
 const router = Router();
 
@@ -96,6 +97,53 @@ router.get('/disconnect', requireAuth, async (req, res) => {
     .eq('user_id', uid);
 
   res.json({ ok: true });
+});
+
+// ── GET /api/calendar/available?stylist_id=&from=YYYY-MM-DD&days=14
+// Publik: lediga tider per dag för en stylist (samma logik som booking-availability)
+router.get('/available', async (req, res) => {
+  const { stylist_id, from, days } = req.query;
+  if (!stylist_id || stylist_id === 'any') {
+    return res.status(400).json({ error: 'stylist_id krävs (ej any).' });
+  }
+  const fromStr = String(from || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromStr)) {
+    return res.status(400).json({ error: 'from måste vara YYYY-MM-DD.' });
+  }
+  const n = Math.min(Math.max(parseInt(String(days || '14'), 10) || 14, 1), 60);
+
+  try {
+    const { data: u, error: uErr } = await supabase
+      .from('users')
+      .select('id, salon_id, work_schedule')
+      .eq('id', stylist_id)
+      .eq('role', 'staff')
+      .maybeSingle();
+    if (uErr) throw uErr;
+    if (!u) return res.status(404).json({ error: 'Stylist hittades inte.' });
+
+    const start = new Date(`${fromStr}T12:00:00`);
+    const dates = [];
+    for (let i = 0; i < n; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${day}`;
+      const slots = await computeSlotsForStylist({
+        salonId: u.salon_id,
+        stylistId: stylist_id,
+        dateStr,
+        workSchedule: u.work_schedule,
+      });
+      dates.push({ date: dateStr, slots });
+    }
+    res.json({ salon_id: u.salon_id, stylist_id, dates });
+  } catch (err) {
+    console.error('GET /calendar/available:', err);
+    res.status(500).json({ error: 'Kunde inte hämta tillgängliga tider.' });
+  }
 });
 
 // ── GET /api/calendar/busy?stylist_id=...&date=YYYY-MM-DD ────────────────────

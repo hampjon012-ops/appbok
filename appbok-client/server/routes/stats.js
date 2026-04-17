@@ -48,7 +48,7 @@ router.get('/overview', requireAuth, requireAdmin, async (req, res) => {
       .select('*', { count: 'exact', head: true })
       .eq('salon_id', salonId)
       .eq('booking_date', today)
-      .eq('status', 'confirmed');
+      .in('status', ['confirmed', 'rebooked']);
 
     // Bokningar denna månad
     const { count: monthCount } = await supabase
@@ -56,7 +56,7 @@ router.get('/overview', requireAuth, requireAdmin, async (req, res) => {
       .select('*', { count: 'exact', head: true })
       .eq('salon_id', salonId)
       .gte('booking_date', monthStart)
-      .in('status', ['confirmed', 'completed']);
+      .in('status', ['confirmed', 'rebooked', 'completed']);
 
     // Total intäkt denna månad (bekräftade + genomförda): betalt belopp eller tjänstepris
     const { data: monthRevenue, error: monthRevErr } = await supabase
@@ -64,7 +64,7 @@ router.get('/overview', requireAuth, requireAdmin, async (req, res) => {
       .select('amount_paid, services(price_amount)')
       .eq('salon_id', salonId)
       .gte('booking_date', monthStart)
-      .in('status', ['confirmed', 'completed']);
+      .in('status', ['confirmed', 'rebooked', 'completed']);
 
     if (monthRevErr) console.error('Stats overview monthRevenue:', monthRevErr.message);
 
@@ -83,7 +83,7 @@ router.get('/overview', requireAuth, requireAdmin, async (req, res) => {
       .eq('salon_id', salonId)
       .gte('booking_date', today)
       .lte('booking_date', weekEnd.toISOString().split('T')[0])
-      .eq('status', 'confirmed')
+      .in('status', ['confirmed', 'rebooked'])
       .order('booking_date')
       .order('booking_time')
       .limit(10);
@@ -123,7 +123,7 @@ router.get('/monthly', requireAuth, requireAdmin, async (req, res) => {
       .select('booking_date, amount_paid, services(price_amount)')
       .eq('salon_id', salonId)
       .gte('booking_date', yearAgoStr)
-      .in('status', ['confirmed', 'completed']);
+      .in('status', ['confirmed', 'rebooked', 'completed']);
 
     if (error) throw error;
 
@@ -158,7 +158,7 @@ router.get('/top-stylists', requireAuth, requireAdmin, async (req, res) => {
       `)
       .eq('salon_id', salonId)
       .gte('booking_date', monthStart)
-      .in('status', ['confirmed', 'completed']);
+      .in('status', ['confirmed', 'rebooked', 'completed']);
 
     if (error) throw error;
 

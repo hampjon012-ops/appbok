@@ -1382,11 +1382,11 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
                   <td>{b.stylist?.name || 'Valfri'}</td>
                   <td>
                     <span className={`status-badge status-${b.status}`}>
-                      {b.status === 'confirmed' ? 'Bekräftad' : b.status === 'cancelled' ? 'Avbokad' : b.status === 'completed' ? 'Genomförd' : b.status}
+                      {b.status === 'confirmed' ? 'Bekräftad' : b.status === 'rebooked' ? 'Ombokad' : b.status === 'cancelled' ? 'Avbokad' : b.status === 'completed' ? 'Genomförd' : b.status}
                     </span>
                   </td>
                   <td>
-                    {b.status === 'confirmed' && (
+                    {(b.status === 'confirmed' || b.status === 'rebooked') && (
                       <button className="btn-sm btn-danger" onClick={() => handleCancel(b.id)}>Avboka</button>
                     )}
                   </td>

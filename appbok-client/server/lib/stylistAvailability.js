@@ -166,7 +166,7 @@ async function fetchBookedTimes(salonId, stylistId, dateStr) {
     .select('booking_time')
     .eq('salon_id', salonId)
     .eq('booking_date', dateStr)
-    .eq('status', 'confirmed');
+    .in('status', ['confirmed', 'rebooked']);
   if (stylistId && stylistId !== 'any') {
     q = q.eq('stylist_id', stylistId);
   }

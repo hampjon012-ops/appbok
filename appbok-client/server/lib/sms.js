@@ -136,13 +136,34 @@ export async function sendCancellationSMS({ to, salonName }) {
  * Skickar SMS till kund när deras stylists bokning påverkas av blockering.
  * @param {{ to, customerName, salonName, date, time, stylistName, blockType }} p
  */
-export async function sendBlockedDaySMS({ to, customerName, salonName, date, time, stylistName, blockType }) {
+export async function sendBlockedDaySMS({
+  to,
+  customerName,
+  salonName,
+  date,
+  time,
+  stylistName,
+  blockType,
+  rebookUrl,
+}) {
   const reason =
     blockType === 'sick'     ? 'sjuk'
     : blockType === 'vacation' ? 'på semester'
     : 'ledig';
-  const msg =
+  let msg =
     `Hej ${customerName}, din bokning hos ${salonName} den ${date} kl ${time} kan inte genomföras ` +
-    `eftersom ${stylistName} är ${reason}. Vi kontaktar dig för att boka om.`;
+    `eftersom ${stylistName} är ${reason}.`;
+  if (rebookUrl) {
+    msg += ` Boka om här: ${rebookUrl}`;
+  } else {
+    msg += ' Vi kontaktar dig för att boka om.';
+  }
+  return sendSMS(to, msg);
+}
+
+/** Bekräftelse efter lyckad ombokning via /rebook */
+export async function sendRebookConfirmationSMS({ to, customerName, salonName, date, time }) {
+  const msg =
+    `Hej ${customerName}! Din ombokning är bekräftad: ${salonName}, ${date} kl ${String(time).slice(0, 5)}. Vi ses!`;
   return sendSMS(to, msg);
 }

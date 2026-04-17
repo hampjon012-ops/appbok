@@ -51,7 +51,7 @@ router.get('/', requireCronSecret, async (req, res) => {
     const { data: bookings, error } = await supabase
       .from('bookings')
       .select('id, customer_phone, customer_name, booking_date, booking_time, salon_id, reminder_sent')
-      .eq('status', 'confirmed')
+      .in('status', ['confirmed', 'rebooked'])
       .eq('reminder_sent', false)
       .gte('booking_date', targetDateStr)
       .lte('booking_date', targetDateStr);

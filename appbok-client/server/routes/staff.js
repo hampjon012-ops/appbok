@@ -8,6 +8,7 @@ import { requireAuth, requireAdmin, requireScheduleEditor, signToken } from '../
 import bcrypt from 'bcryptjs';
 import { sendInviteEmail } from '../lib/email.js';
 import { sendBlockedDaySMS } from '../lib/sms.js';
+import { buildRebookPublicUrl } from '../lib/rebookUrl.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '../.env') });
@@ -365,7 +366,7 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
     // Hämta stylists namn + salong-namn
     const { data: stylist, error: styErr } = await supabase
       .from('users')
-      .select('id, name, salon_id, salons(name)')
+      .select('id, name, salon_id, salons(name, slug)')
       .eq('id', req.params.id)
       .eq('salon_id', req.user.salonId)
       .eq('role', 'staff')
@@ -374,6 +375,7 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
     if (!stylist) return res.status(404).json({ error: 'Personal hittades inte.' });
 
     const salonName = stylist.salons?.name || 'vår salong';
+    const salonSlug = stylist.salons?.slug || '';
     const stylistName = stylist.name || 'din stylist';
 
     // Hämta alla bekräftade bokningar för stylisten det datumet
@@ -391,8 +393,24 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
       return res.json({ sent: 0, message: 'Inga kunder behöver informeras.' });
     }
 
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
     const results = await Promise.all(
       bookings.map(async (b) => {
+        const token = crypto.randomUUID();
+        const rebookUrl = buildRebookPublicUrl(salonSlug, token, b.booking_date, req.params.id);
+        const { error: upErr } = await supabase
+          .from('bookings')
+          .update({
+            rebook_token: token,
+            rebook_expires_at: expiresAt,
+            blocked_affects_booking: true,
+          })
+          .eq('id', b.id);
+        if (upErr) {
+          console.error('[notify-blocked-day] token save:', upErr);
+          return { id: b.id, customer: b.customer_name, sent: false };
+        }
         const sent = await sendBlockedDaySMS({
           to: b.customer_phone,
           customerName: b.customer_name,
@@ -401,12 +419,8 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
           time: String(b.booking_time).slice(0, 5),
           stylistName,
           block_type: block_type || 'other',
+          rebookUrl,
         });
-        // Markera bokningen som påverkad (spara SMS-status)
-        await supabase
-          .from('bookings')
-          .update({ blocked_affects_booking: true })
-          .eq('id', b.id);
         return { id: b.id, customer: b.customer_name, sent: !!sent };
       }),
     );
