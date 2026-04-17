@@ -247,6 +247,11 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (config?.salonStatus !== 'expired') return;
+    closeBookingModal();
+  }, [config?.salonStatus, closeBookingModal]);
+
+  useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
     };
@@ -303,8 +308,9 @@ function App() {
   const isDemo = config.salonStatus === 'demo';
   const isTrial = config.salonStatus === 'trial';
   const isLive = config.salonStatus === 'live';
-  // Banner visas ENDAST i demo/draft/active — alltså INTE under trial eller live
-  const showDemoBanner = !isTrial && !isLive && !previewEmbed;
+  const isExpired = config.salonStatus === 'expired';
+  // Banner visas ENDAST i demo/draft/active — alltså INTE under trial, live eller expired
+  const showDemoBanner = !isTrial && !isLive && !isExpired && !previewEmbed;
 
   return (
     <div className="app-wrapper">
@@ -330,18 +336,18 @@ function App() {
         <div /> {/* spacer */}
         <button
           type="button"
-          onClick={isDemo ? undefined : () => openBookingModal(null)}
-          disabled={isDemo}
+          onClick={isDemo || isExpired ? undefined : () => openBookingModal(null)}
+          disabled={isDemo || isExpired}
           className="desktop-header-btn"
           style={
-            isDemo
+            isDemo || isExpired
               ? { opacity: 0.5, cursor: 'not-allowed', pointerEvents: 'none' }
               : scrollY > 50
               ? { backgroundColor: accentColor, color: '#fff' }
               : undefined
           }
         >
-          {isDemo ? 'Boka (inaktiverad)' : 'Boka tid'}
+          {isDemo ? 'Boka (inaktiverad)' : isExpired ? 'Bokning stängd' : 'Boka tid'}
         </button>
       </div>
 
@@ -374,121 +380,139 @@ function App() {
 
       <main className="content-card">
 
-        {/* ── 1. POPULÄRA TJÄNSTER ── */}
-        <section className="home-section">
-          <div className="container">
-            <div className="home-section-header home-section-header--popular">
-              <h2 className="home-section-title">Våra mest populära tjänster</h2>
+        {isExpired ? (
+          <section className="home-section">
+            <div className="container">
+              <div className="expired-banner" role="status">
+                <h2 className="expired-banner-title">Denna salongs testperiod är avslutad</h2>
+                <p className="expired-banner-text">
+                  Salongen har inte längre möjlighet att ta emot bokningar här.
+                </p>
+                <p className="expired-banner-text">
+                  Kontakta salongen direkt för mer information.
+                </p>
+              </div>
             </div>
-            <div className="services-popular-list">
-              {(() => {
-                const allServices = (categories || []).flatMap((cat) =>
-                  (cat.services || []).map((svc) => ({
-                    ...svc,
-                    categoryName: cat.name,
-                    isPopular: Boolean(svc.is_popular ?? svc.isPopular),
-                  })),
-                );
-                const popularMarked = allServices.filter((s) => s.isPopular);
-                const raw =
-                  popularMarked.length > 0
-                    ? popularMarked.slice(0, 4)
-                    : allServices.length > 0
-                      ? allServices.slice(0, 4)
-                      : CURATED_FALLBACK_SERVICES.filter((s) => s.isPopular).length > 0
-                        ? CURATED_FALLBACK_SERVICES.filter((s) => s.isPopular)
-                        : CURATED_FALLBACK_SERVICES;
-                const rows = raw.slice(0, 4).map(normalizeHomeService);
-                return rows.map((svc, i) => {
-                  const metaParts = [svc.duration, svc.price].filter(Boolean);
-                  const metaLine = metaParts.join(' · ');
-                  return (
-                    <div
-                      key={svc.id || i}
-                      className={`service-popular-row service-popular-row--interactive${isDemo ? ' service-popular-row--demo' : ''}`}
-                      role={isDemo ? 'presentation' : 'button'}
-                      tabIndex={isDemo ? -1 : 0}
-                      onClick={isDemo ? undefined : () => openBookingModal(svc)}
-                      onKeyDown={isDemo ? undefined : (e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          openBookingModal(svc);
-                        }
-                      }}
-                      style={isDemo ? { opacity: 0.6, cursor: 'default' } : undefined}
-                    >
-                      <div className="service-popular-text">
-                        <p className="service-popular-name">{svc.name}</p>
-                        {metaLine ? (
-                          <p className="service-popular-meta">{metaLine}</p>
-                        ) : null}
-                      </div>
-                      <button
-                        type="button"
-                        className="service-popular-btn"
-                        tabIndex={-1}
-                        disabled={isDemo}
-                        style={isDemo ? { opacity: 0.5, cursor: 'not-allowed' } : { backgroundColor: accentColor }}
-                      >
-                        {isDemo ? 'Låst' : 'Välj'}
-                      </button>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          </div>
-        </section>
-
-        {/* ── 2. STYLISTER ── */}
-        {(() => {
-          const stylists = config.stylists || [];
-          const display = stylists.length > 0 ? stylists : [
-            { id: 1, name: 'Anna', title: 'Senior Stylist', photo: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=400&auto=format&fit=crop' },
-            { id: 2, name: 'Sofia', title: 'Top Stylist', photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400&auto=format&fit=crop' },
-            { id: 3, name: 'Emma', title: 'Color Specialist', photo: 'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=400&auto=format&fit=crop' },
-            { id: 4, name: 'Lina', title: 'Junior Stylist', photo: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=400&auto=format&fit=crop' },
-          ];
-          return (
-            <section className="home-section home-section-alt">
+          </section>
+        ) : (
+          <>
+            {/* ── 1. POPULÄRA TJÄNSTER ── */}
+            <section className="home-section">
               <div className="container">
-                <div className="home-section-header">
-                  <h2 className="home-section-title">Träffa vårt team</h2>
+                <div className="home-section-header home-section-header--popular">
+                  <h2 className="home-section-title">Våra mest populära tjänster</h2>
                 </div>
-                <div className="stylists-scroll-row">
-                  {display.map((st, i) => (
-                    <div
-                      key={st.id || i}
-                      role="button"
-                      tabIndex={0}
-                      className="stylist-card stylist-card--interactive"
-                      onClick={() => openBookingModal(null, st)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          openBookingModal(null, st);
-                        }
-                      }}
-                    >
-                      <div className="stylist-avatar">
-                        {(st.photo || st.photo_url) ? (
-                          <img src={st.photo || st.photo_url} alt={st.name} />
-                        ) : (
-                          <div className="stylist-avatar-fallback" aria-hidden />
-                        )}
-                      </div>
-                      <p className="stylist-name">{st.name}</p>
-                      <p className="stylist-title">{st.title || st.specialization || 'Stylist'}</p>
-                    </div>
-                  ))}
+                <div className="services-popular-list">
+                  {(() => {
+                    const allServices = (categories || []).flatMap((cat) =>
+                      (cat.services || []).map((svc) => ({
+                        ...svc,
+                        categoryName: cat.name,
+                        isPopular: Boolean(svc.is_popular ?? svc.isPopular),
+                      })),
+                    );
+                    const popularMarked = allServices.filter((s) => s.isPopular);
+                    const raw =
+                      popularMarked.length > 0
+                        ? popularMarked.slice(0, 4)
+                        : allServices.length > 0
+                          ? allServices.slice(0, 4)
+                          : CURATED_FALLBACK_SERVICES.filter((s) => s.isPopular).length > 0
+                            ? CURATED_FALLBACK_SERVICES.filter((s) => s.isPopular)
+                            : CURATED_FALLBACK_SERVICES;
+                    const rows = raw.slice(0, 4).map(normalizeHomeService);
+                    return rows.map((svc, i) => {
+                      const metaParts = [svc.duration, svc.price].filter(Boolean);
+                      const metaLine = metaParts.join(' · ');
+                      return (
+                        <div
+                          key={svc.id || i}
+                          className={`service-popular-row service-popular-row--interactive${isDemo ? ' service-popular-row--demo' : ''}`}
+                          role={isDemo ? 'presentation' : 'button'}
+                          tabIndex={isDemo ? -1 : 0}
+                          onClick={isDemo ? undefined : () => openBookingModal(svc)}
+                          onKeyDown={isDemo ? undefined : (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              openBookingModal(svc);
+                            }
+                          }}
+                          style={isDemo ? { opacity: 0.6, cursor: 'default' } : undefined}
+                        >
+                          <div className="service-popular-text">
+                            <p className="service-popular-name">{svc.name}</p>
+                            {metaLine ? (
+                              <p className="service-popular-meta">{metaLine}</p>
+                            ) : null}
+                          </div>
+                          <button
+                            type="button"
+                            className="service-popular-btn"
+                            tabIndex={-1}
+                            disabled={isDemo}
+                            style={isDemo ? { opacity: 0.5, cursor: 'not-allowed' } : { backgroundColor: accentColor }}
+                          >
+                            {isDemo ? 'Låst' : 'Välj'}
+                          </button>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             </section>
-          );
-        })()}
+
+            {/* ── 2. STYLISTER ── */}
+            {(() => {
+              const stylists = config.stylists || [];
+              const display = stylists.length > 0 ? stylists : [
+                { id: 1, name: 'Anna', title: 'Senior Stylist', photo: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=400&auto=format&fit=crop' },
+                { id: 2, name: 'Sofia', title: 'Top Stylist', photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400&auto=format&fit=crop' },
+                { id: 3, name: 'Emma', title: 'Color Specialist', photo: 'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=400&auto=format&fit=crop' },
+                { id: 4, name: 'Lina', title: 'Junior Stylist', photo: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=400&auto=format&fit=crop' },
+              ];
+              return (
+                <section className="home-section home-section-alt">
+                  <div className="container">
+                    <div className="home-section-header">
+                      <h2 className="home-section-title">Träffa vårt team</h2>
+                    </div>
+                    <div className="stylists-scroll-row">
+                      {display.map((st, i) => (
+                        <div
+                          key={st.id || i}
+                          role="button"
+                          tabIndex={0}
+                          className="stylist-card stylist-card--interactive"
+                          onClick={() => openBookingModal(null, st)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              openBookingModal(null, st);
+                            }
+                          }}
+                        >
+                          <div className="stylist-avatar">
+                            {(st.photo || st.photo_url) ? (
+                              <img src={st.photo || st.photo_url} alt={st.name} />
+                            ) : (
+                              <div className="stylist-avatar-fallback" aria-hidden />
+                            )}
+                          </div>
+                          <p className="stylist-name">{st.name}</p>
+                          <p className="stylist-title">{st.title || st.specialization || 'Stylist'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              );
+            })()}
+          </>
+        )}
 
         {/* ── 3. INSTAGRAM ── */}
-        {(config.instagram && config.instagram.length > 0) && (
+        {!isExpired && (config.instagram && config.instagram.length > 0) && (
           <section className="home-section">
             <div className="container">
               <div className="home-section-header" style={{ textAlign: 'center' }}>
@@ -579,18 +603,18 @@ function App() {
         <button
           type="button"
           className="btn-floating"
-          disabled={isDemo}
-          style={isDemo ? { opacity: 0.5, cursor: 'not-allowed', backgroundColor: '#9CA3AF' } : { backgroundColor: accentColor }}
-          onClick={isDemo ? undefined : () => openBookingModal(null)}
+          disabled={isDemo || isExpired}
+          style={isDemo || isExpired ? { opacity: 0.5, cursor: 'not-allowed', backgroundColor: '#9CA3AF' } : { backgroundColor: accentColor }}
+          onClick={isDemo || isExpired ? undefined : () => openBookingModal(null)}
         >
-          {isDemo ? 'Boka (inaktiverad)' : 'Boka Tid'}
+          {isDemo ? 'Boka (inaktiverad)' : isExpired ? 'Bokning stängd' : 'Boka Tid'}
         </button>
       </div>
 
       {/* ── BOOKING MODAL (always mounted so data loads early) ── */}
       <div
         className="booking-modal-overlay"
-        style={{ display: isBookingModalOpen ? 'flex' : 'none' }}
+        style={{ display: !isExpired && isBookingModalOpen ? 'flex' : 'none' }}
         onClick={closeBookingModal}
       >
         <div className="booking-modal-sheet" onClick={e => e.stopPropagation()}>

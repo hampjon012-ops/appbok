@@ -516,8 +516,13 @@ function DashboardTab({
   const isActiveSalon = ls?.status === 'active';
   const isTrialSalon = ls?.status === 'trial';
   const isLiveSalon = ls?.status === 'live';
+  const isExpiredSalon = ls?.status === 'expired';
   const isPreTrialSalon = isDraftSalon || isDemoSalon || isActiveSalon;
-  const knownLifecycle = isPreTrialSalon || isTrialSalon || isLiveSalon;
+  const knownLifecycle = isPreTrialSalon || isTrialSalon || isLiveSalon || isExpiredSalon;
+  const stripeConnected = Boolean(
+    ls?.stripe_account_id ||
+      (ls?.contact && typeof ls.contact === 'object' && ls.contact.stripe_connected),
+  );
   const previewBookingUrl = ls ? getSalonPublicBookingPreviewUrl(ls) : '';
 
   const handleGoLive = async () => {
@@ -742,6 +747,61 @@ function DashboardTab({
           </div>
           {goLiveMsg && (
             <p style={{ margin: 0, fontSize: '0.75rem', color: goLiveMsg.startsWith('✓') ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
+              {goLiveMsg}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── EXPIRED TRIAL BANNER ── */}
+      {showSalonLifecycleBanner && ls && isExpiredSalon && (
+        <div style={{
+          marginBottom: '1.25rem',
+          background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
+          borderRadius: '12px',
+          padding: '1rem 1.25rem',
+          border: '1px solid #fdba74',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.85rem',
+          width: '100%',
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '1.15rem', lineHeight: 1.2, flexShrink: 0 }} aria-hidden>⚠️</span>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: '#9a3412', fontWeight: 600, lineHeight: 1.45 }}>
+              Din testperiod är avslutad. För att fortsätta ta emot bokningar, gå live med Stripe.
+            </p>
+          </div>
+          {ls.allow_pay_on_site !== false && !stripeConnected ? (
+            <p style={{ margin: 0, fontSize: '0.8rem', color: '#57534e', lineHeight: 1.45 }}>
+              Betalning på plats är aktiverat, men för att ta betalt online behöver du koppla Stripe.
+            </p>
+          ) : null}
+          <div>
+            <button
+              type="button"
+              disabled={goLiveBusy}
+              onClick={handleGoLive}
+              style={{
+                background: '#ea580c',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '0.65rem 1.35rem',
+                fontSize: '1rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                opacity: goLiveBusy ? 0.6 : 1,
+                boxShadow: '0 2px 8px rgba(234, 88, 12, 0.35)',
+                minWidth: 'min(100%, 220px)',
+              }}
+            >
+              {goLiveBusy ? 'Startar...' : 'Gå live med Stripe'}
+            </button>
+          </div>
+          {goLiveMsg && (
+            <p style={{ margin: 0, fontSize: '0.75rem', color: goLiveMsg.startsWith('✓') ? '#16a34a' : '#dc2626' }}>
               {goLiveMsg}
             </p>
           )}

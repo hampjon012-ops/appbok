@@ -16,6 +16,7 @@ import salonsRoutes from './routes/salons.js';
 import superadminRoutes from './routes/superadmin.js';
 import stripeRoutes from './routes/stripe.js';
 import cronRemindersRoutes from './routes/cronReminders.js';
+import cronExpireTrialsRoutes from './routes/cronExpireTrials.js';
 import availabilityRoutes from './routes/availability.js';
 import { scrapeBokadirekt, prepareForImport } from './lib/bokadirektScraper.js';
 
@@ -95,6 +96,7 @@ app.use('/api/salons', salonsRoutes);
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/cron/reminders', cronRemindersRoutes);
+app.use('/api/cron/expire-trials', cronExpireTrialsRoutes);
 
 // ── Bokadirekt scraper ──────────────────────────────────────────────────────
 app.get('/api/scrape/bokadirekt', async (req, res) => {

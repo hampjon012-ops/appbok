@@ -6,6 +6,7 @@ import { createCalendarEvent, deleteCalendarEvent } from '../lib/google.js';
 import { sendBookingConfirmationEmail, sendCancellationEmail, sendCancellationNotificationEmail, sendStylistNotificationEmail } from '../lib/email.js';
 import { sendBookingSMS, sendCancellationSMS, sendRebookConfirmationSMS } from '../lib/sms.js';
 import { computeSlotsForStylist } from '../lib/stylistAvailability.js';
+import { loadSalonMaybeExpire } from '../lib/expireTrialSalon.js';
 
 const router = Router();
 
@@ -180,6 +181,13 @@ router.post('/rebook', async (req, res) => {
       return res.status(410).json({ error: 'Länken har gått ut.' });
     }
 
+    const salonRow = await loadSalonMaybeExpire(booking.salon_id);
+    if (salonRow?.status === 'expired') {
+      return res.status(403).json({
+        error: 'Denna salongs testperiod är avslutad. Ombokning är inte möjlig.',
+      });
+    }
+
     const { data: newStylist, error: stErr } = await supabase
       .from('users')
       .select('id, salon_id, name, work_schedule')
@@ -324,6 +332,16 @@ router.post('/', async (req, res) => {
   }
 
   try {
+    const salon = await loadSalonMaybeExpire(salon_id);
+    if (!salon) {
+      return res.status(404).json({ error: 'Salong hittades inte.' });
+    }
+    if (salon.status === 'expired') {
+      return res.status(403).json({
+        error: 'Denna salongs testperiod är avslutad. Bokning är inte möjlig.',
+      });
+    }
+
     // Kontrollera dubbelbokning
     const { data: existing } = await supabase
       .from('bookings')

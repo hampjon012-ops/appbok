@@ -1,0 +1,3 @@
+-- Salongs-livscykel: status 'expired' sätts när trial_ends_at passerats utan att salongen är 'live'
+-- (se server/lib/expireTrialSalon.js och POST/GET /api/cron/expire-trials).
+-- Kolumnen salons.status är TEXT utan CHECK; inget schemaändring krävs.

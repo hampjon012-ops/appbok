@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import supabase from '../lib/supabase.js';
+import { loadSalonMaybeExpire } from '../lib/expireTrialSalon.js';
 import {
   computeSlotsForStylist,
   computeSlotsForAnyStylist,
@@ -30,6 +31,18 @@ router.get('/', async (req, res) => {
   const dateStr = String(date).slice(0, 10);
 
   try {
+    const salon = await loadSalonMaybeExpire(salon_id);
+    if (!salon) {
+      return res.status(404).json({ error: 'Salong hittades inte.', slots: [], dateClosed: true });
+    }
+    if (salon.status === 'expired') {
+      return res.status(403).json({
+        error: 'Denna salongs testperiod är avslutad.',
+        slots: [],
+        dateClosed: true,
+      });
+    }
+
     if (stylist_id === 'any') {
       const { data: staff, error } = await supabase
         .from('users')
@@ -86,6 +99,17 @@ router.get('/closed-dates', async (req, res) => {
   const start = new Date(`${String(from).slice(0, 10)}T12:00:00`);
 
   try {
+    const salon = await loadSalonMaybeExpire(salon_id);
+    if (!salon) {
+      return res.status(404).json({ error: 'Salong hittades inte.', closedDates: [] });
+    }
+    if (salon.status === 'expired') {
+      return res.status(403).json({
+        error: 'Denna salongs testperiod är avslutad.',
+        closedDates: [],
+      });
+    }
+
     const closed = [];
     for (let i = 0; i < n; i++) {
       const d = new Date(start);

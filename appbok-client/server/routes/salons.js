@@ -2,6 +2,7 @@ import { Router } from 'express';
 import supabase from '../lib/supabase.js';
 import { requireAuth, requireAdmin } from '../lib/auth.js';
 import { ensureSalonThemeAccent } from '../lib/ensureSalonThemeAccent.js';
+import { maybeExpireTrialSalonIfNeeded } from '../lib/expireTrialSalon.js';
 
 const router = Router();
 
@@ -41,9 +42,10 @@ router.get('/public', async (req, res) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Salong hittades inte.' });
 
-    ensureSalonThemeAccent(data);
+    const dataAfterExpire = await maybeExpireTrialSalonIfNeeded(data);
+    ensureSalonThemeAccent(dataAfterExpire);
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.json(data);
+    res.json(dataAfterExpire);
   } catch (err) {
     console.error('Salon public get error:', err);
     res.status(500).json({ error: 'Kunde inte hämta salong.' });
@@ -62,8 +64,9 @@ router.get('/', requireAuth, async (req, res) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Salong hittades inte.' });
 
-    ensureSalonThemeAccent(data);
-    res.json(data);
+    const dataAfterExpire = await maybeExpireTrialSalonIfNeeded(data);
+    ensureSalonThemeAccent(dataAfterExpire);
+    res.json(dataAfterExpire);
   } catch (err) {
     console.error('Salon get error:', err);
     res.status(500).json({ error: 'Kunde inte hämta salong.' });
@@ -192,14 +195,16 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
 // POST /api/salons/current/go-live — Gå live (kräver Stripe)
 router.post('/current/go-live', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { data: current, error: fetchErr } = await supabase
+    const { data: row, error: fetchErr } = await supabase
       .from('salons')
-      .select('id, status, stripe_account_id, contact, name, slug')
+      .select('id, status, trial_ends_at, stripe_account_id, contact, name, slug')
       .eq('id', req.user.salonId)
       .single();
 
     if (fetchErr) throw fetchErr;
-    if (!current) return res.status(404).json({ error: 'Salong hittades inte.' });
+    if (!row) return res.status(404).json({ error: 'Salong hittades inte.' });
+
+    const current = await maybeExpireTrialSalonIfNeeded(row);
 
     if (current.status === 'live') {
       return res.status(400).json({ error: 'Salongen är redan live.' });
@@ -246,20 +251,28 @@ router.post('/current/go-live', requireAuth, requireAdmin, async (req, res) => {
 // POST /api/salons/current/trial — Starta 14 dagars testperiod
 router.post('/current/trial', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { data: current, error: fetchErr } = await supabase
+    const { data: row, error: fetchErr } = await supabase
       .from('salons')
-      .select('status')
+      .select('id, status, trial_ends_at')
       .eq('id', req.user.salonId)
       .single();
 
     if (fetchErr) throw fetchErr;
-    if (!current) return res.status(404).json({ error: 'Salong hittades inte.' });
+    if (!row) return res.status(404).json({ error: 'Salong hittades inte.' });
+
+    const current = await maybeExpireTrialSalonIfNeeded(row);
 
     if (current.status === 'trial') {
       return res.status(400).json({ error: 'Trial-period är redan aktiv.' });
     }
     if (current.status === 'live') {
       return res.status(400).json({ error: 'Salongen är redan live.' });
+    }
+    if (current.status === 'expired') {
+      return res.status(400).json({
+        error:
+          'Testperioden är avslutad. Koppla Stripe och gå live för att ta emot bokningar igen.',
+      });
     }
 
     const trialEndsAt = new Date();
