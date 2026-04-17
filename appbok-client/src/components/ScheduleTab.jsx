@@ -115,6 +115,7 @@ export default function ScheduleTab({ user }) {
   });
   const [modal, setModal] = useState(null);
   const [listError, setListError] = useState('');
+  const [smsSummary, setSmsSummary] = useState('');
 
   const loadStaff = useCallback(() => {
     setListError('');
@@ -274,8 +275,9 @@ export default function ScheduleTab({ user }) {
 
   const addBlock = async () => {
     if (!modal || !selectedId || selectedId === 'all') return;
-    const { day, blockType, timeMode, timeFrom, timeTo } = modal;
+    const { day, blockType, timeMode, timeFrom, timeTo, notifySms } = modal;
     const ds = day.toISOString().slice(0, 10);
+    setSmsSummary('');
     try {
       const res = await fetch(`/api/staff/${selectedId}/blocked-days`, {
         method: 'POST',
@@ -297,6 +299,27 @@ export default function ScheduleTab({ user }) {
       if (!res.ok) throw new Error(data.error || 'Fel');
       setModal(null);
       loadSchedule(selectedId);
+
+      // Skicka SMS om checkbox är förkryssad
+      if (notifySms) {
+        try {
+          const smsRes = await fetch(`/api/staff/${selectedId}/notify-blocked-day`, {
+            method: 'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date: ds, block_type: blockType }),
+          });
+          const smsData = await smsRes.json().catch(() => ({}));
+          if (smsRes.ok && smsData.sent != null) {
+            if (smsData.sent === 0) {
+              setSmsSummary('Inga kunder behöver informeras.');
+            } else {
+              setSmsSummary(`SMS skickat till ${smsData.sent} kund${smsData.sent !== 1 ? 'er' : ''}.`);
+            }
+          }
+        } catch {
+          // SMS är sekundärt — visa inget hårt fel
+        }
+      }
     } catch (err) {
       setMsg(err.message || 'Fel');
     }
@@ -615,6 +638,7 @@ export default function ScheduleTab({ user }) {
                         timeMode: 'full_day',
                         timeFrom: '09:00',
                         timeTo: '17:00',
+                        notifySms: true,
                       });
                     }}
                   >
@@ -696,8 +720,19 @@ export default function ScheduleTab({ user }) {
                 </label>
               </>
             ) : null}
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+              <input
+                type="checkbox"
+                checked={modal.notifySms !== false}
+                onChange={(e) => setModal({ ...modal, notifySms: e.target.checked })}
+              />
+              Skicka SMS till berörda kunder
+            </label>
+            {smsSummary ? (
+              <p className="superadmin-success" style={{ marginTop: '0.5rem' }}>{smsSummary}</p>
+            ) : null}
             <div className="schedule-modal-actions">
-              <button type="button" className="btn-sm btn-ghost" onClick={() => setModal(null)}>
+              <button type="button" className="btn-sm btn-ghost" onClick={() => { setModal(null); setSmsSummary(''); }}>
                 Avbryt
               </button>
               <button type="button" className="btn-admin-primary" onClick={addBlock}>

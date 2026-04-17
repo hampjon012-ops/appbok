@@ -131,3 +131,18 @@ export async function sendCancellationSMS({ to, salonName }) {
   const msg = `Din tid hos ${salonName} är avbokad. Beloppet återbetalas till ditt kort inom 3–5 bankdagar.`;
   return sendSMS(to, msg);
 }
+
+/**
+ * Skickar SMS till kund när deras stylists bokning påverkas av blockering.
+ * @param {{ to, customerName, salonName, date, time, stylistName, blockType }} p
+ */
+export async function sendBlockedDaySMS({ to, customerName, salonName, date, time, stylistName, blockType }) {
+  const reason =
+    blockType === 'sick'     ? 'sjuk'
+    : blockType === 'vacation' ? 'på semester'
+    : 'ledig';
+  const msg =
+    `Hej ${customerName}, din bokning hos ${salonName} den ${date} kl ${time} kan inte genomföras ` +
+    `eftersom ${stylistName} är ${reason}. Vi kontaktar dig för att boka om.`;
+  return sendSMS(to, msg);
+}

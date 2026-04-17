@@ -7,6 +7,7 @@ import supabase from '../lib/supabase.js';
 import { requireAuth, requireAdmin, requireScheduleEditor, signToken } from '../lib/auth.js';
 import bcrypt from 'bcryptjs';
 import { sendInviteEmail } from '../lib/email.js';
+import { sendBlockedDaySMS } from '../lib/sms.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '../.env') });
@@ -352,6 +353,74 @@ router.post('/:id/blocked-days', requireAuth, requireScheduleEditor, async (req,
   } catch (err) {
     console.error('POST blocked-days:', err);
     res.status(500).json({ error: 'Kunde inte uppdatera blockeringar.' });
+  }
+});
+
+// ── POST /api/staff/:id/notify-blocked-day — Skicka SMS till kunder vid blockering ─
+router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async (req, res) => {
+  const { date, block_type } = req.body || {};
+  if (!date) return res.status(400).json({ error: 'date krävs (ÅÅÅÅ-MM-DD).' });
+
+  try {
+    // Hämta stylists namn + salong-namn
+    const { data: stylist, error: styErr } = await supabase
+      .from('users')
+      .select('id, name, salon_id, salons(name)')
+      .eq('id', req.params.id)
+      .eq('salon_id', req.user.salonId)
+      .eq('role', 'staff')
+      .maybeSingle();
+    if (styErr) throw styErr;
+    if (!stylist) return res.status(404).json({ error: 'Personal hittades inte.' });
+
+    const salonName = stylist.salons?.name || 'vår salong';
+    const stylistName = stylist.name || 'din stylist';
+
+    // Hämta alla bekräftade bokningar för stylisten det datumet
+    const { data: bookings, error: bErr } = await supabase
+      .from('bookings')
+      .select('id, booking_date, booking_time, customer_name, customer_phone')
+      .eq('stylist_id', req.params.id)
+      .eq('salon_id', req.user.salonId)
+      .eq('booking_date', String(date).slice(0, 10))
+      .eq('status', 'confirmed')
+      .eq('blocked_affects_booking', false);
+    if (bErr) throw bErr;
+
+    if (!bookings?.length) {
+      return res.json({ sent: 0, message: 'Inga kunder behöver informeras.' });
+    }
+
+    const results = await Promise.all(
+      bookings.map(async (b) => {
+        const sent = await sendBlockedDaySMS({
+          to: b.customer_phone,
+          customerName: b.customer_name,
+          salonName,
+          date: b.booking_date,
+          time: String(b.booking_time).slice(0, 5),
+          stylistName,
+          block_type: block_type || 'other',
+        });
+        // Markera bokningen som påverkad (spara SMS-status)
+        await supabase
+          .from('bookings')
+          .update({ blocked_affects_booking: true })
+          .eq('id', b.id);
+        return { id: b.id, customer: b.customer_name, sent: !!sent };
+      }),
+    );
+
+    const sentCount = results.filter((r) => r.sent).length;
+    console.log(`[notify-blocked-day] ${sentCount}/${results.length} SMS skickade för stylist ${req.params.id} datum ${date}`);
+    res.json({
+      sent: sentCount,
+      total: results.length,
+      results,
+    });
+  } catch (err) {
+    console.error('POST notify-blocked-day:', err);
+    res.status(500).json({ error: 'Kunde inte skicka meddelanden.' });
   }
 });
 
