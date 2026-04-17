@@ -74,6 +74,14 @@ function fmtRange(d) {
   return `${a} (hela dagen)`;
 }
 
+/** Lokalt YYYY-MM-DD (undvik UTC-fel vid toISOString). */
+function toLocalISODate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function monthMatrix(year, month) {
   const first = new Date(year, month, 1);
   const startPad = (first.getDay() + 6) % 7;
@@ -116,6 +124,8 @@ export default function ScheduleTab({ user }) {
   const [modal, setModal] = useState(null);
   const [listError, setListError] = useState('');
   const [smsSummary, setSmsSummary] = useState('');
+  /** Flerval av kalenderdagar (ISO-datum) innan gemensam blockering */
+  const [pickedBlockDates, setPickedBlockDates] = useState([]);
 
   const loadStaff = useCallback(() => {
     setListError('');
@@ -196,6 +206,8 @@ export default function ScheduleTab({ user }) {
 
   useEffect(() => {
     if (selectedId && selectedId !== 'all') loadSchedule(selectedId);
+    setPickedBlockDates([]);
+    setSmsSummary('');
   }, [selectedId, loadSchedule]);
 
   const loadAllBlocks = useCallback(() => {
@@ -275,49 +287,62 @@ export default function ScheduleTab({ user }) {
 
   const addBlock = async () => {
     if (!modal || !selectedId || selectedId === 'all') return;
-    const { day, blockType, timeMode, timeFrom, timeTo, notifySms } = modal;
-    const ds = day.toISOString().slice(0, 10);
+    const dayList = Array.isArray(modal.days) && modal.days.length ? modal.days : [];
+    if (!dayList.length) return;
+    const { blockType, timeMode, timeFrom, timeTo, notifySms } = modal;
     setSmsSummary('');
     try {
-      const res = await fetch(`/api/staff/${selectedId}/blocked-days`, {
-        method: 'POST',
-        headers: {
-          ...authHeaders(),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'add',
-          start_date: ds,
-          end_date: ds,
-          block_type: blockType,
-          time_mode: timeMode,
-          time_from: timeMode === 'range' ? timeFrom : null,
-          time_to: timeMode === 'range' ? timeTo : null,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Fel');
+      for (const day of dayList) {
+        const ds = toLocalISODate(day);
+        const res = await fetch(`/api/staff/${selectedId}/blocked-days`, {
+          method: 'POST',
+          headers: {
+            ...authHeaders(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'add',
+            start_date: ds,
+            end_date: ds,
+            block_type: blockType,
+            time_mode: timeMode,
+            time_from: timeMode === 'range' ? timeFrom : null,
+            time_to: timeMode === 'range' ? timeTo : null,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Fel');
+      }
       setModal(null);
+      setPickedBlockDates([]);
       loadSchedule(selectedId);
 
-      // Skicka SMS om checkbox är förkryssad
       if (notifySms) {
         try {
-          const smsRes = await fetch(`/api/staff/${selectedId}/notify-blocked-day`, {
-            method: 'POST',
-            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date: ds, block_type: blockType }),
-          });
-          const smsData = await smsRes.json().catch(() => ({}));
-          if (smsRes.ok && smsData.sent != null) {
-            if (smsData.sent === 0) {
+          let totalSent = 0;
+          let anyResponse = false;
+          for (const day of dayList) {
+            const ds = toLocalISODate(day);
+            const smsRes = await fetch(`/api/staff/${selectedId}/notify-blocked-day`, {
+              method: 'POST',
+              headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+              body: JSON.stringify({ date: ds, block_type: blockType }),
+            });
+            const smsData = await smsRes.json().catch(() => ({}));
+            if (smsRes.ok && typeof smsData.sent === 'number') {
+              anyResponse = true;
+              totalSent += smsData.sent;
+            }
+          }
+          if (anyResponse) {
+            if (totalSent === 0) {
               setSmsSummary('Inga kunder behöver informeras.');
             } else {
-              setSmsSummary(`SMS skickat till ${smsData.sent} kund${smsData.sent !== 1 ? 'er' : ''}.`);
+              setSmsSummary(`SMS skickat till ${totalSent} kund${totalSent !== 1 ? 'er' : ''} totalt.`);
             }
           }
         } catch {
-          // SMS är sekundärt — visa inget hårt fel
+          /* SMS sekundärt */
         }
       }
     } catch (err) {
@@ -330,7 +355,7 @@ export default function ScheduleTab({ user }) {
   const dayMeta = useCallback(
     (d) => {
       if (!d) return { muted: true };
-      const iso = d.toISOString().slice(0, 10);
+      const iso = toLocalISODate(d);
       const wd = (d.getDay() + 6) % 7;
       const weekend = wd >= 5;
       let blocked = false;
@@ -348,13 +373,40 @@ export default function ScheduleTab({ user }) {
     [blockedDays, days, selectedId],
   );
 
-  const dayCellClass = (meta) => {
+  const dayCellClass = (meta, picked) => {
     const c = ['schedule-cal-cell'];
     if (meta.muted) return [...c, 'schedule-cal-cell--muted'].join(' ');
+    if (picked) c.push('schedule-cal-cell--picked');
     if (meta.weekend) c.push('schedule-cal-cell--weekend');
     if (meta.blocked) c.push('schedule-cal-cell--blocked');
     else if (meta.workHint) c.push('schedule-cal-cell--work');
     return c.join(' ');
+  };
+
+  const togglePickBlockDate = (cell, meta) => {
+    if (!cell || meta.muted || meta.blocked) return;
+    const iso = toLocalISODate(cell);
+    setPickedBlockDates((prev) => {
+      if (prev.includes(iso)) return prev.filter((x) => x !== iso);
+      return [...prev, iso].sort();
+    });
+  };
+
+  const openBlockModalFromPick = () => {
+    if (pickedBlockDates.length === 0 || !selectedId || selectedId === 'all') return;
+    const dates = pickedBlockDates.map((iso) => {
+      const [y, mo, da] = iso.split('-').map(Number);
+      return new Date(y, mo - 1, da);
+    });
+    setSmsSummary('');
+    setModal({
+      days: dates,
+      blockType: 'other',
+      timeMode: 'full_day',
+      timeFrom: '09:00',
+      timeTo: '17:00',
+      notifySms: true,
+    });
   };
 
   return (
@@ -581,6 +633,25 @@ export default function ScheduleTab({ user }) {
       {selectedId && selectedId !== 'all' ? (
         <div className="admin-card schedule-cal-wrap">
           <h3 className="admin-card-title">Blockera dagar (sjukskrivning, semester, …)</h3>
+          <p className="admin-hint" style={{ marginBottom: '0.75rem' }}>
+            Klicka på lediga dagar i kalendern för att markera flera. Välj sedan typ (sjuk, semester …) och spara alla på en gång — du slipper öppna varje dag för sig.
+          </p>
+          <div className="schedule-cal-pick-actions">
+            <button
+              type="button"
+              className="btn-admin-primary"
+              disabled={pickedBlockDates.length === 0}
+              onClick={openBlockModalFromPick}
+            >
+              Välj typ och spara
+              {pickedBlockDates.length > 0 ? ` (${pickedBlockDates.length})` : ''}
+            </button>
+            {pickedBlockDates.length > 0 ? (
+              <button type="button" className="btn-sm btn-ghost" onClick={() => setPickedBlockDates([])}>
+                Rensa val
+              </button>
+            ) : null}
+          </div>
           <div className="schedule-cal-nav">
             <button
               type="button"
@@ -624,22 +695,17 @@ export default function ScheduleTab({ user }) {
             <div className="schedule-cal-grid" key={ri}>
               {row.map((cell, ci) => {
                 const meta = dayMeta(cell);
+                const iso = cell ? toLocalISODate(cell) : '';
+                const picked = Boolean(iso && pickedBlockDates.includes(iso));
                 return (
                   <button
                     key={ci}
                     type="button"
-                    className={dayCellClass(meta)}
+                    className={dayCellClass(meta, picked)}
                     disabled={meta.muted}
                     onClick={() => {
                       if (!cell) return;
-                      setModal({
-                        day: cell,
-                        blockType: 'other',
-                        timeMode: 'full_day',
-                        timeFrom: '09:00',
-                        timeTo: '17:00',
-                        notifySms: true,
-                      });
+                      togglePickBlockDate(cell, meta);
                     }}
                   >
                     {cell ? <span>{cell.getDate()}</span> : ''}
@@ -668,13 +734,37 @@ export default function ScheduleTab({ user }) {
               ))}
             </ul>
           )}
+          {smsSummary && !modal ? (
+            <p className="superadmin-success" style={{ marginTop: '0.75rem' }}>
+              {smsSummary}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
       {modal ? (
-        <div className="schedule-modal-backdrop" onClick={() => setModal(null)}>
+        <div
+          className="schedule-modal-backdrop"
+          onClick={() => {
+            setModal(null);
+            setSmsSummary('');
+          }}
+        >
           <div className="schedule-modal" onClick={(e) => e.stopPropagation()}>
-            <h4>Blockera {modal.day.toLocaleDateString('sv-SE', { dateStyle: 'long' })}</h4>
+            <h4>
+              {modal.days?.length > 1
+                ? `Blockera ${modal.days.length} dagar`
+                : modal.days?.[0]
+                  ? `Blockera ${modal.days[0].toLocaleDateString('sv-SE', { dateStyle: 'long' })}`
+                  : 'Blockera dagar'}
+            </h4>
+            {modal.days?.length > 1 ? (
+              <p className="admin-hint" style={{ marginBottom: '0.75rem' }}>
+                {modal.days
+                  .map((d) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }))
+                  .join(', ')}
+              </p>
+            ) : null}
             <label>
               Typ
               <select
@@ -728,15 +818,12 @@ export default function ScheduleTab({ user }) {
               />
               Skicka SMS till berörda kunder
             </label>
-            {smsSummary ? (
-              <p className="superadmin-success" style={{ marginTop: '0.5rem' }}>{smsSummary}</p>
-            ) : null}
             <div className="schedule-modal-actions">
               <button type="button" className="btn-sm btn-ghost" onClick={() => { setModal(null); setSmsSummary(''); }}>
                 Avbryt
               </button>
               <button type="button" className="btn-admin-primary" onClick={addBlock}>
-                Spara blockering
+                Spara blockering{modal.days?.length > 1 ? ` (${modal.days.length})` : ''}
               </button>
             </div>
           </div>
