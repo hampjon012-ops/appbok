@@ -36,8 +36,10 @@ export function requireAuth(req, res, next) {
   const token = authHeader.slice(7);
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // { id, email, role, salonId, name }
-    
+    // SUPERADMIN_EMAILS måste gälla varje request (samma som vid signToken), annars har gamla JWT:er
+    // role: 'admin' och impersonation + plattformsstatistik körs aldrig.
+    req.user = withEffectiveRole(decoded);
+
     // Impersonation Support for Superadmin
     if (req.user.role === 'superadmin') {
       const impSalonId = req.headers['x-impersonate-salon-id'];
