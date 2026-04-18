@@ -207,6 +207,42 @@ router.put('/salons/:id', async (req, res) => {
   }
 });
 
+// DELETE /api/superadmin/salons/:id/permanent — raderar salong och CASCADE-relaterad data (endast soft-deleted)
+router.delete('/salons/:id/permanent', async (req, res) => {
+  const id = req.params.id;
+  if (!id || id === SYSTEM_SALON_ID) {
+    return res.status(400).json({ error: 'Ogiltig salong.' });
+  }
+
+  try {
+    const { data: row, error: fetchErr } = await supabase
+      .from('salons')
+      .select('id, status, plan')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchErr) throw fetchErr;
+    if (!row) return res.status(404).json({ error: 'Salong hittades inte.' });
+    if (row.plan === 'internal') {
+      return res.status(400).json({ error: 'Denna salong kan inte raderas.' });
+    }
+    if (row.status !== 'deleted') {
+      return res.status(400).json({
+        error:
+          'Endast salonger som är inaktiva (soft delete) kan tas bort permanent. Använd fliken Inaktiva.',
+      });
+    }
+
+    const { error: delErr } = await supabase.from('salons').delete().eq('id', id);
+    if (delErr) throw delErr;
+
+    res.json({ ok: true, id });
+  } catch (err) {
+    console.error('superadmin salon permanent delete:', err);
+    res.status(500).json({ error: err?.message || 'Kunde inte radera salongen permanent.' });
+  }
+});
+
 // GET /api/superadmin/salons/:id
 router.get('/salons/:id', async (req, res) => {
   try {

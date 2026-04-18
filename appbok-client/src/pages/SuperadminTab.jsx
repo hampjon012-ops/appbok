@@ -304,6 +304,9 @@ export default function SuperadminTab() {
   const [quickEditSalon, setQuickEditSalon] = useState(null);
   const [expandedSalonId, setExpandedSalonId] = useState(null);
   const [restoreBusyId, setRestoreBusyId] = useState(null);
+  const [permanentModalSalon, setPermanentModalSalon] = useState(null);
+  const [permanentNameConfirm, setPermanentNameConfirm] = useState('');
+  const [permanentBusy, setPermanentBusy] = useState(false);
 
   const loadSalons = useCallback(() => {
     setLoading(true);
@@ -351,6 +354,32 @@ export default function SuperadminTab() {
       alert(e.message || 'Fel');
     } finally {
       setRestoreBusyId(null);
+    }
+  };
+
+  const permanentNameMatches =
+    permanentModalSalon &&
+    String(permanentModalSalon.name ?? '').trim() === String(permanentNameConfirm).trim();
+
+  const handlePermanentDeleteSalon = async () => {
+    if (!permanentModalSalon || !permanentNameMatches) return;
+    setPermanentBusy(true);
+    try {
+      const res = await fetch(`/api/superadmin/salons/${permanentModalSalon.id}/permanent`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(typeof d.error === 'string' ? d.error : 'Kunde inte radera salongen permanent.');
+      }
+      setPermanentModalSalon(null);
+      setPermanentNameConfirm('');
+      loadSalons();
+    } catch (e) {
+      alert(e.message || 'Fel');
+    } finally {
+      setPermanentBusy(false);
     }
   };
 
@@ -441,14 +470,41 @@ export default function SuperadminTab() {
                   <td className="sa-td-name">{s.name}</td>
                   <td>{fmtSalonDeletedAt(s.deleted_at)}</td>
                   <td style={{ textAlign: 'right' }}>
-                    <button
-                      type="button"
-                      className="btn-sm btn-ghost"
-                      disabled={restoreBusyId === s.id}
-                      onClick={() => handleRestoreSalon(s)}
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        gap: '8px',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                      }}
                     >
-                      {restoreBusyId === s.id ? 'Återställer…' : 'Återställ'}
-                    </button>
+                      <button
+                        type="button"
+                        className="btn-sm btn-ghost"
+                        disabled={restoreBusyId === s.id}
+                        onClick={() => handleRestoreSalon(s)}
+                      >
+                        {restoreBusyId === s.id ? 'Återställer…' : 'Återställ'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-sm"
+                        disabled={restoreBusyId === s.id}
+                        style={{
+                          color: '#991b1b',
+                          border: '1px solid #fecaca',
+                          background: '#fff',
+                          fontWeight: 600,
+                        }}
+                        onClick={() => {
+                          setPermanentNameConfirm('');
+                          setPermanentModalSalon(s);
+                        }}
+                      >
+                        ⚠️ Radera permanent
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -551,6 +607,100 @@ export default function SuperadminTab() {
           }}
         />
       )}
+
+      {permanentModalSalon ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !permanentBusy) {
+              setPermanentModalSalon(null);
+              setPermanentNameConfirm('');
+            }
+          }}
+        >
+          <div
+            className="modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="permanent-delete-title"
+            style={{ maxWidth: '460px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="close-btn"
+              aria-label="Stäng"
+              disabled={permanentBusy}
+              onClick={() => {
+                setPermanentModalSalon(null);
+                setPermanentNameConfirm('');
+              }}
+            >
+              &times;
+            </button>
+            <h3
+              id="permanent-delete-title"
+              style={{ marginTop: 0, fontSize: '1.15rem', color: '#991b1b', fontWeight: 700 }}
+            >
+              ⚠️ VARNING: Detta kan inte ångras!
+            </h3>
+            <p style={{ margin: '0.75rem 0', color: '#444', lineHeight: 1.55 }}>
+              Att radera salongen permanent tar bort:
+            </p>
+            <ul style={{ margin: '0 0 1rem 1.1rem', padding: 0, color: '#444', lineHeight: 1.6 }}>
+              <li>Alla bokningar</li>
+              <li>Alla kunduppgifter</li>
+              <li>All betalningshistorik</li>
+            </ul>
+            <label htmlFor="permanent-salon-name-confirm" style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 600, color: '#374151' }}>
+              Ange SALONGENS NAMN för att bekräfta:
+            </label>
+            <p className="admin-hint" style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+              Skriv exakt: <strong>{permanentModalSalon.name}</strong>
+            </p>
+            <input
+              id="permanent-salon-name-confirm"
+              type="text"
+              className="admin-input"
+              autoComplete="off"
+              value={permanentNameConfirm}
+              onChange={(e) => setPermanentNameConfirm(e.target.value)}
+              disabled={permanentBusy}
+              placeholder="Salongens namn"
+            />
+            <div className="superadmin-modal-actions" style={{ marginTop: '1.25rem' }}>
+              <button
+                type="button"
+                className="btn-sm btn-ghost"
+                disabled={permanentBusy}
+                onClick={() => {
+                  setPermanentModalSalon(null);
+                  setPermanentNameConfirm('');
+                }}
+              >
+                Avbryt
+              </button>
+              <button
+                type="button"
+                disabled={!permanentNameMatches || permanentBusy}
+                style={{
+                  background: permanentNameMatches && !permanentBusy ? '#b91c1c' : '#d1d5db',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.45rem 1rem',
+                  fontWeight: 600,
+                  cursor: permanentNameMatches && !permanentBusy ? 'pointer' : 'not-allowed',
+                }}
+                onClick={handlePermanentDeleteSalon}
+              >
+                {permanentBusy ? 'Raderar…' : 'Radera permanent'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

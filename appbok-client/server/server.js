@@ -210,6 +210,7 @@ if (!process.env.VERCEL) {
     console.log(`   GET  /api/calendar/busy`);
     console.log(`   POST /api/create-checkout-session`);
     console.log(`   GET  /api/superadmin/salons (superadmin)`);
+    console.log(`   DELETE /api/superadmin/salons/:id/permanent (superadmin, endast soft-deleted)`);
     console.log(`   GET  /api/stripe/connect (admin)`);
     console.log(`   GET  /api/stripe/callback (admin)`);
     console.log(`   GET  /api/stripe/status (admin)\n`);
