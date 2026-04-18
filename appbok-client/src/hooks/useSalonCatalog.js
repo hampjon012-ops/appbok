@@ -6,11 +6,22 @@ import { useState, useEffect, useMemo } from 'react';
 export function useSalonCatalog(salonId, config) {
   const [dbCategories, setDbCategories] = useState(null);
   const [dbStylists, setDbStylists] = useState(null);
+  const [popularCombos, setPopularCombos] = useState([]);
 
   useEffect(() => {
     if (!salonId) return undefined;
 
     let cancelled = false;
+
+    fetch(`/api/booking-combos?salon_id=${salonId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled || !data?.combinations) return;
+        setPopularCombos(Array.isArray(data.combinations) ? data.combinations : []);
+      })
+      .catch(() => {
+        if (!cancelled) setPopularCombos([]);
+      });
 
     fetch(`/api/services?salon_id=${salonId}`)
       .then((r) => r.json())
@@ -58,6 +69,7 @@ export function useSalonCatalog(salonId, config) {
   return {
     categories,
     stylists,
+    popularCombos,
     isLoadingCategories: dbCategories === null,
     isLoadingStylists: dbStylists === null,
   };

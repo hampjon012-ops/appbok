@@ -1364,6 +1364,36 @@ function bookingNotesTrimmed(b) {
   return String(b.notes).trim();
 }
 
+/** Radlista från booking_services (JSONB) eller en tjänst via join. */
+function bookingServicesList(b) {
+  let raw = b?.booking_services;
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      raw = null;
+    }
+  }
+  if (Array.isArray(raw) && raw.length > 0) return raw;
+  return null;
+}
+
+function bookingServicesTotalÖre(b) {
+  const lines = bookingServicesList(b);
+  if (lines?.length) {
+    return lines.reduce((sum, row) => sum + (Number(row.price_amount) || 0), 0);
+  }
+  const pa = b?.services?.price_amount;
+  return typeof pa === 'number' ? pa : 0;
+}
+
+function bookingServiceCellLabel(b) {
+  const lines = bookingServicesList(b);
+  if (lines?.length > 1) return `${lines.map((x) => x.name).join(' · ')}`;
+  if (lines?.length === 1) return lines[0].name;
+  return b?.services?.name || '—';
+}
+
 /** Hover-tooltip med meddelandetext (portal så tabell-scroll inte klipper) */
 function BookingNoteTooltip({ text, children }) {
   const [show, setShow] = useState(false);
@@ -1551,7 +1581,7 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
                       {b.customer_email || b.customer_phone || ''}
                     </div>
                   </td>
-                  <td>{b.services?.name || '—'}</td>
+                  <td>{bookingServiceCellLabel(b)}</td>
                   <td>{b.stylist?.name || 'Valfri'}</td>
                   <td>
                     <span className={`status-badge status-${b.status}`}>
@@ -1627,8 +1657,25 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
                 </dd>
               </div>
               <div>
-                <dt>Tjänst</dt>
-                <dd>{detailBooking.services?.name || '—'}</dd>
+                <dt>Tjänster</dt>
+                <dd>
+                  {bookingServicesList(detailBooking) ? (
+                    <div className="booking-detail-services-wrap">
+                      <ul className="booking-detail-service-bullets">
+                        {bookingServicesList(detailBooking).map((row, idx) => (
+                          <li key={`${row.service_id || 's'}-${idx}`}>
+                            {row.name} — {fmtKr(Number(row.price_amount) || 0)}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="booking-detail-service-total-line">
+                        Totalt: {fmtKr(bookingServicesTotalÖre(detailBooking))}
+                      </p>
+                    </div>
+                  ) : (
+                    detailBooking.services?.name || '—'
+                  )}
+                </dd>
               </div>
               <div>
                 <dt>Stylist</dt>

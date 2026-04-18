@@ -18,6 +18,7 @@ import stripeRoutes from './routes/stripe.js';
 import cronRemindersRoutes from './routes/cronReminders.js';
 import cronExpireTrialsRoutes from './routes/cronExpireTrials.js';
 import availabilityRoutes from './routes/availability.js';
+import bookingCombosRoutes from './routes/bookingCombos.js';
 import { scrapeBokadirekt, prepareForImport } from './lib/bokadirektScraper.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -90,6 +91,7 @@ app.use('/api/services', servicesRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/booking-availability', availabilityRoutes);
+app.use('/api/booking-combos', bookingCombosRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/salons', salonsRoutes);
@@ -201,6 +203,7 @@ if (!process.env.VERCEL) {
     console.log(`   POST /api/auth/login`);
     console.log(`   GET  /api/auth/me`);
     console.log(`   GET  /api/services`);
+    console.log(`   GET  /api/booking-combos`);
     console.log(`   GET  /api/staff`);
     console.log(`   GET  /api/bookings`);
     console.log(`   GET  /api/stats/overview`);

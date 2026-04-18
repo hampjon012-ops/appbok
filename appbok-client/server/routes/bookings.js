@@ -315,22 +315,54 @@ router.post('/rebook', async (req, res) => {
   }
 });
 
+async function loadValidatedServicesForSalon(salonId, serviceIds) {
+  if (!serviceIds.length) return { ok: false, error: 'Inga tjänster angivna.' };
+  const { data, error } = await supabase
+    .from('services')
+    .select('id, name, price_amount, duration_minutes, price_label, duration')
+    .eq('salon_id', salonId)
+    .in('id', serviceIds);
+
+  if (error) throw error;
+  if (!data || data.length !== serviceIds.length) {
+    return { ok: false, error: 'En eller flera tjänster finns inte för denna salong.' };
+  }
+  const byId = new Map(data.map((r) => [r.id, r]));
+  const ordered = serviceIds.map((id) => byId.get(id)).filter(Boolean);
+  if (ordered.length !== serviceIds.length) {
+    return { ok: false, error: 'Ogiltig tjänstlista.' };
+  }
+  return { ok: true, rows: ordered };
+}
+
+function snapshotBookingServices(rows) {
+  return rows.map((r) => ({
+    service_id: r.id,
+    name: r.name,
+    price_amount: r.price_amount,
+    duration_minutes: r.duration_minutes ?? 60,
+    price_label: r.price_label || '',
+    duration: r.duration || '',
+  }));
+}
+
 // ── POST /api/bookings — Skapa bokning ──────────────────────────────────────
 router.post('/', async (req, res) => {
   const {
     salon_id,
-    service_id,
+    service_id: serviceIdBody,
     stylist_id,
     customer_name,
     customer_email,
     customer_phone,
     booking_date,
     booking_time,
-    duration_minutes,
-    amount_paid,
+    duration_minutes: durationBody,
+    amount_paid: amountBody,
     stripe_session_id,
     stripe_payment_intent_id,
     notes: notesRaw,
+    services: servicesPayload,
   } = req.body;
 
   const notes =
@@ -338,7 +370,7 @@ router.post('/', async (req, res) => {
       ? notesRaw.trim().slice(0, 500)
       : null;
 
-  if (!salon_id || !service_id || !customer_name || !booking_date || !booking_time) {
+  if (!salon_id || !customer_name || !booking_date || !booking_time) {
     return res.status(400).json({ error: 'Obligatoriska fält saknas.' });
   }
 
@@ -356,6 +388,43 @@ router.post('/', async (req, res) => {
       return res.status(403).json({
         error: 'Denna salongs testperiod är avslutad. Bokning är inte möjlig.',
       });
+    }
+
+    let service_id;
+    let duration_minutes;
+    let amount_paid;
+    let booking_services = null;
+
+    if (Array.isArray(servicesPayload) && servicesPayload.length > 0) {
+      const ids = servicesPayload.map((s) => s?.id || s?.service_id).filter(Boolean);
+      if (ids.length !== servicesPayload.length || ids.length === 0) {
+        return res.status(400).json({ error: 'Ogiltig tjänstlista.' });
+      }
+      const validated = await loadValidatedServicesForSalon(salon_id, ids);
+      if (!validated.ok) return res.status(400).json({ error: validated.error });
+      booking_services = snapshotBookingServices(validated.rows);
+      service_id = validated.rows[0].id;
+      const sumDur = validated.rows.reduce((sum, r) => sum + (Number(r.duration_minutes) || 60), 0);
+      const sumPrice = validated.rows.reduce((sum, r) => sum + (Number(r.price_amount) || 0), 0);
+      duration_minutes =
+        typeof durationBody === 'number' && durationBody > 0 ? durationBody : sumDur;
+      amount_paid = typeof amountBody === 'number' && amountBody >= 0 ? amountBody : sumPrice;
+    } else if (serviceIdBody) {
+      const validated = await loadValidatedServicesForSalon(salon_id, [serviceIdBody]);
+      if (!validated.ok) return res.status(400).json({ error: validated.error });
+      booking_services = snapshotBookingServices(validated.rows);
+      service_id = validated.rows[0].id;
+      const row = validated.rows[0];
+      duration_minutes =
+        typeof durationBody === 'number' && durationBody > 0
+          ? durationBody
+          : Number(row.duration_minutes) || 60;
+      amount_paid =
+        typeof amountBody === 'number' && amountBody >= 0
+          ? amountBody
+          : Number(row.price_amount) || 0;
+    } else {
+      return res.status(400).json({ error: 'Välj minst en tjänst.' });
     }
 
     // Kontrollera dubbelbokning
@@ -388,6 +457,7 @@ router.post('/', async (req, res) => {
         stripe_session_id: stripe_session_id || null,
         stripe_payment_intent_id: stripe_payment_intent_id || null,
         notes,
+        booking_services,
         status: 'confirmed',
       })
       .select()
@@ -405,11 +475,15 @@ router.post('/', async (req, res) => {
           .single();
 
         if (tokens) {
+          const serviceLine =
+            booking_services?.length > 0
+              ? `\nTjänster: ${booking_services.map((x) => x.name).join(', ')}`
+              : '';
           const event = await createCalendarEvent(tokens, {
             summary: `${customer_name} — ${data.id.slice(0, 8)}`,
             description: `Bokning via Appbok\nKund: ${customer_name}\nTelefon: ${customer_phone || '-'}\nE-post: ${customer_email || '-'}${
-              notes ? `\nMeddelande: ${notes}` : ''
-            }`,
+              serviceLine
+            }${notes ? `\nMeddelande: ${notes}` : ''}`,
             date: booking_date,
             time: booking_time,
             durationMinutes: duration_minutes || 60,
@@ -435,8 +509,9 @@ router.post('/', async (req, res) => {
     let salonName = 'Salongen';
 
     try {
-      // Fetch service name
-      if (service_id && service_id !== 'any') {
+      if (booking_services && booking_services.length > 0) {
+        serviceName = booking_services.map((x) => x.name).join(' + ');
+      } else if (service_id && service_id !== 'any') {
         const { data: svc } = await supabase
           .from('services')
           .select('name')

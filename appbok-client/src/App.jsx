@@ -15,6 +15,7 @@ import { usePreviewEmbedUi } from './hooks/usePreviewEmbedUi.js';
 import { useSalonCatalog } from './hooks/useSalonCatalog.js';
 import PreviewDeviceStatusBar from './components/PreviewDeviceStatusBar.jsx';
 import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
+import { Plus } from 'lucide-react';
 
 function isPreviewEmbedClient() {
   if (typeof window === 'undefined') return false;
@@ -53,6 +54,17 @@ function fmtDateLong(d) {
 }
 function fmtPrice(öre) {
   return `${(öre / 100).toLocaleString('sv-SE')} kr`;
+}
+
+/** Summerad varaktighet för flera tjänster (visning). */
+function fmtDurationTotal(totalMin) {
+  const n = Math.max(0, Math.round(Number(totalMin) || 0));
+  const h = Math.floor(n / 60);
+  const m = n % 60;
+  if (n === 0) return '0 min';
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h} ${h === 1 ? 'timme' : 'timmar'}`;
+  return `${h} tim ${m} min`;
 }
 
 /** Startsida: kurerad meny om config saknar egna tjänster */
@@ -226,7 +238,7 @@ function App() {
     config && !config.tenantNotFound
       ? config.salonId || 'a0000000-0000-0000-0000-000000000001'
       : null;
-  const { categories, stylists, isLoadingCategories, isLoadingStylists } = useSalonCatalog(
+  const { categories, stylists, popularCombos, isLoadingCategories, isLoadingStylists } = useSalonCatalog(
     catalogSalonId,
     config,
   );
@@ -622,6 +634,7 @@ function App() {
             config={config}
             categories={categories}
             stylists={stylists}
+            popularCombos={popularCombos}
             isLoadingCategories={isLoadingCategories}
             isLoadingStylists={isLoadingStylists}
             isModalOpen={isBookingModalOpen}
@@ -644,6 +657,7 @@ function BookingSection({
   config,
   categories,
   stylists,
+  popularCombos = [],
   isLoadingCategories,
   isLoadingStylists,
   isModalOpen,
@@ -655,7 +669,7 @@ function BookingSection({
 }) {
   const [step, setStep]                   = useState('category');
   const [selectedCategory, setCategory]   = useState(null);
-  const [selectedService, setService]     = useState(null);
+  const [selectedServices, setSelectedServices] = useState([]);
   const [selectedStylist, setStylist]     = useState(null);
   /** True när stylist valts via team-kort: hoppa över stylist-steget och annorlunda bakåt från tid */
   const [stylistPreChosenFromHome, setStylistPreChosenFromHome] = useState(false);
@@ -677,6 +691,9 @@ function BookingSection({
   const [paymentIntentId, setPaymentIntentId] = useState('');
   const [intentRequested, setIntentRequested] = useState(false);
 
+  const selectedStylistRef = useRef(null);
+  selectedStylistRef.current = selectedStylist;
+
   /** DB returnerar price_amount / duration_minutes; config.json använder priceAmount / durationMinutes */
   const servicePriceÖre = (svc) => {
     if (!svc) return 0;
@@ -689,13 +706,22 @@ function BookingSection({
     return typeof n === 'number' && n > 0 ? n : 60;
   };
 
+  const totalPriceÖre = useMemo(
+    () => selectedServices.reduce((sum, s) => sum + servicePriceÖre(s), 0),
+    [selectedServices],
+  );
+  const totalDurationMin = useMemo(
+    () => selectedServices.reduce((sum, s) => sum + serviceDurationMin(s), 0),
+    [selectedServices],
+  );
+
   const prevModalOpenRef = useRef(false);
 
   useLayoutEffect(() => {
     if (isModalOpen && !prevModalOpenRef.current) {
       setStep('category');
       setCategory(null);
-      setService(null);
+      setSelectedServices([]);
       setStylist(null);
       setDate(null);
       setTime(null);
@@ -730,7 +756,7 @@ function BookingSection({
     const found = findCategoryAndServiceForPrefill(categories, prefillFromHome);
     if (found) {
       setCategory(found.category);
-      setService(found.service);
+      setSelectedServices([found.service]);
       setStylist(null);
       setStylistPreChosenFromHome(false);
       setDate(null);
@@ -831,26 +857,80 @@ function BookingSection({
 
   const handleSelectCategory = (cat) => {
     setCategory(cat);
-    setService(null);
     setDate(null);
     setTime(null);
-    if (!stylistPreChosenFromHome) {
+    if (selectedServices.length === 0 && !stylistPreChosenFromHome) {
       setStylist(null);
     }
     setStep('service');
   };
 
-  const handleSelectService = (svc) => {
-    setService(svc);
+  const removeService = (serviceId) => {
+    setSelectedServices((prev) => {
+      const next = prev.filter((s) => s.id !== serviceId);
+      if (next.length === 0) {
+        setStep('category');
+        setCategory(null);
+      }
+      return next;
+    });
     setDate(null);
     setTime(null);
     setBusySlots(new Set());
-    if (selectedStylist) {
-      setStep('time');
-    } else {
-      setStylist(null);
-      setStep('stylist');
-    }
+  };
+
+  const applyPopularCombo = useCallback(
+    (combo) => {
+      if (!combo?.serviceIds?.length) return;
+      const flat = categories.flatMap((c) => c.services || []);
+      const resolved = combo.serviceIds.map((id) => flat.find((s) => s.id === id)).filter(Boolean);
+      if (resolved.length !== combo.serviceIds.length) return;
+      setSelectedServices((prev) => {
+        const next = [...prev];
+        for (const s of resolved) {
+          if (next.length >= 8) break;
+          if (!next.some((x) => x.id === s.id)) next.push(s);
+        }
+        return next;
+      });
+      setDate(null);
+      setTime(null);
+      setBusySlots(new Set());
+      setStep(selectedStylistRef.current ? 'time' : 'stylist');
+    },
+    [categories],
+  );
+
+  const handleSelectService = (svc) => {
+    setSelectedServices((prev) => {
+      if (prev.length >= 8) return prev;
+      if (prev.some((s) => s.id === svc.id)) return prev;
+      const isFirst = prev.length === 0;
+      const next = [...prev, svc];
+
+      setDate(null);
+      setTime(null);
+      setBusySlots(new Set());
+
+      if (isFirst) {
+        if (!selectedStylistRef.current) {
+          setStylist(null);
+          setStep('stylist');
+        } else {
+          setStep('time');
+        }
+      } else if (selectedStylistRef.current) {
+        setStep('time');
+      } else {
+        setStep('stylist');
+      }
+      return next;
+    });
+  };
+
+  const goAddAnotherService = () => {
+    setCategory(null);
+    setStep('category');
   };
 
   const handleSelectStylist = (st) => {
@@ -864,14 +944,15 @@ function BookingSection({
   const handleContinueTime   = ()  => setStep('details');
   const handleContinueDetails= ()  => setStep('checkout');
 
-  const priceAmount = servicePriceÖre(selectedService);
+  const priceAmount = totalPriceÖre;
+  const selectedServiceIdsKey = selectedServices.map((s) => s.id).join(',');
 
   useEffect(() => {
     setClientSecret('');
     setPaymentIntentId('');
     setStripePromise(null);
     setIntentRequested(false);
-  }, [selectedService?.id, selectedDateKey, selectedTime, form.email, config?.salonId]);
+  }, [selectedServiceIdsKey, selectedDateKey, selectedTime, form.email, config?.salonId]);
 
   const elementsOptions = useMemo(() => {
     if (!clientSecret) return null;
@@ -888,16 +969,25 @@ function BookingSection({
   }, [clientSecret, config?.theme]);
 
   const createBooking = useCallback(async ({ amountPaid, stripeSessionId, paymentIntentId }) => {
+    const servicesPayload = selectedServices.map((s) => ({
+      id: s.id,
+      name: s.name,
+      price_amount: servicePriceÖre(s),
+      duration_minutes: serviceDurationMin(s),
+      price_label: s.price_label || s.price,
+      duration: s.duration,
+    }));
     const payload = {
       salon_id: config.salonId,
-      service_id: selectedService.id,
+      service_id: selectedServices[0]?.id,
+      services: servicesPayload,
       stylist_id: selectedStylist?.id || 'any',
       customer_name: form.name,
       customer_email: form.email,
       customer_phone: form.phone,
       booking_date: selectedDate.toISOString().slice(0, 10),
       booking_time: selectedTime,
-      duration_minutes: serviceDurationMin(selectedService),
+      duration_minutes: totalDurationMin,
       amount_paid: amountPaid,
       stripe_session_id: stripeSessionId || null,
       stripe_payment_intent_id: paymentIntentId || null,
@@ -913,10 +1003,21 @@ function BookingSection({
       throw new Error(bd.error || 'Kunde inte skapa bokning.');
     }
     return bookRes.json();
-  }, [config?.salonId, form.email, form.name, form.phone, notes, selectedDate, selectedService, selectedStylist, selectedTime]);
+  }, [
+    config?.salonId,
+    form.email,
+    form.name,
+    form.phone,
+    notes,
+    selectedDate,
+    selectedServices,
+    selectedStylist,
+    selectedTime,
+    totalDurationMin,
+  ]);
 
   const fetchPaymentIntent = useCallback(async () => {
-    if (!selectedService || !selectedDate || !selectedTime) return;
+    if (selectedServices.length === 0 || !selectedDate || !selectedTime) return;
     if (clientSecret || intentLoading || intentRequested) return;
 
     setIntentRequested(true);
@@ -930,7 +1031,7 @@ function BookingSection({
         body: JSON.stringify({
           salonId: config.salonId,
           amount: priceAmount,
-          serviceName: selectedService.name,
+          serviceName: selectedServices.map((s) => s.name).join(' + '),
           stylistName: selectedStylist?.name || 'Valfri stylist',
           date: selectedDate ? fmtDateLong(selectedDate) : '',
           time: selectedTime,
@@ -969,7 +1070,7 @@ function BookingSection({
     intentLoading,
     priceAmount,
     selectedDate,
-    selectedService,
+    selectedServices,
     selectedStylist?.name,
     selectedTime,
     intentRequested,
@@ -1011,13 +1112,37 @@ function BookingSection({
     }
   };
 
-  // ── Summary pill helper ───────────────────────────────────────────────────
-  const SummaryPill = () => selectedService && (
-    <div className="selected-service-summary">
-      <span className="ss-name">{selectedService.name}</span>
-      <span className="ss-meta">{selectedService.duration} · {selectedService.price}</span>
-    </div>
-  );
+  // ── Valda tjänster (chips + total + lägg till) ─────────────────────────────
+  const SelectedServicesSummary = () =>
+    selectedServices.length > 0 ? (
+      <div className="selected-services-block">
+        <div className="selected-services-scroll-row">
+          {selectedServices.map((svc) => (
+            <div key={svc.id} className="selected-service-chip">
+              <span className="ssc-name">{svc.name}</span>
+              <span className="ssc-meta">{svc.price}</span>
+              <button
+                type="button"
+                className="selected-service-chip-remove"
+                onClick={() => removeService(svc.id)}
+                aria-label={`Ta bort ${svc.name}`}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          {selectedServices.length >= 1 && selectedServices.length < 8 ? (
+            <button type="button" className="add-service-chip-btn" onClick={goAddAnotherService}>
+              <Plus className="add-service-chip-icon" size={16} strokeWidth={2.25} aria-hidden />
+              <span>Lägg till tjänst</span>
+            </button>
+          ) : null}
+        </div>
+        <p className="selected-services-total-line">
+          Totalt: {fmtPrice(totalPriceÖre)} · {fmtDurationTotal(totalDurationMin)}
+        </p>
+      </div>
+    ) : null;
 
   return (
     <>
@@ -1051,6 +1176,23 @@ function BookingSection({
           {step === 'category' && (
             <>
               <h3 className="booking-step-title">Välj kategori</h3>
+              {selectedServices.length >= 1 && popularCombos.length > 0 ? (
+                <div className="popular-combos">
+                  <p className="popular-combos-title">Populära kombinationer</p>
+                  <div className="popular-combos-grid">
+                    {popularCombos.map((c) => (
+                      <button
+                        key={c.label}
+                        type="button"
+                        className="popular-combo-btn"
+                        onClick={() => applyPopularCombo(c)}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {isLoadingCategories ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
                   Laddar tjänster...
@@ -1082,6 +1224,23 @@ function BookingSection({
                 <button className="back-arrow-btn" onClick={goBack}>←</button>
                 <h3 className="booking-step-title">{selectedCategory.name}</h3>
               </div>
+              {selectedServices.length >= 1 && popularCombos.length > 0 ? (
+                <div className="popular-combos">
+                  <p className="popular-combos-title">Populära kombinationer</p>
+                  <div className="popular-combos-grid">
+                    {popularCombos.map((c) => (
+                      <button
+                        key={`svc-${c.label}`}
+                        type="button"
+                        className="popular-combo-btn"
+                        onClick={() => applyPopularCombo(c)}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <div className="category-selection-list">
                 {selectedCategory.services.map(svc => (
                   <button key={svc.id} className="category-selection-btn" onClick={() => handleSelectService(svc)}>
@@ -1097,13 +1256,13 @@ function BookingSection({
           )}
 
           {/* ── STEG 3: Välj stylist ──────────────────────────────────────── */}
-          {step === 'stylist' && selectedService && (
+          {step === 'stylist' && selectedServices.length > 0 && (
             <>
               <div className="booking-step-header-with-back">
                 <button className="back-arrow-btn" onClick={goBack}>←</button>
                 <h3 className="booking-step-title">Välj stylist</h3>
               </div>
-              <SummaryPill />
+              <SelectedServicesSummary />
               <div className="category-selection-list">
                 {stylists.map(st => (
                   <button
@@ -1138,13 +1297,13 @@ function BookingSection({
           )}
 
           {/* ── STEG 4: Välj tid ──────────────────────────────────────────── */}
-          {step === 'time' && (
+          {step === 'time' && selectedServices.length > 0 && (
             <>
               <div className="booking-step-header-with-back">
                 <button className="back-arrow-btn" onClick={goBack}>←</button>
                 <h3 className="booking-step-title">Välj datum & tid</h3>
               </div>
-              <SummaryPill />
+              <SelectedServicesSummary />
 
               {/* Date strip */}
               <div className="date-strip">
@@ -1199,13 +1358,13 @@ function BookingSection({
           )}
 
           {/* ── STEG 5: Kunduppgifter ─────────────────────────────────────── */}
-          {step === 'details' && (
+          {step === 'details' && selectedServices.length > 0 && (
             <>
               <div className="booking-step-header-with-back">
                 <button className="back-arrow-btn" onClick={goBack}>←</button>
                 <h3 className="booking-step-title">Dina uppgifter</h3>
               </div>
-              <SummaryPill />
+              <SelectedServicesSummary />
 
               <div className="details-form">
                 <div className="form-group">
@@ -1253,7 +1412,7 @@ function BookingSection({
           )}
 
           {/* ── STEG 6: Kassa ─────────────────────────────────────────────── */}
-          {step === 'checkout' && (
+          {step === 'checkout' && selectedServices.length > 0 && (
             <>
               <div className="booking-step-header-with-back">
                 <button className="back-arrow-btn" onClick={goBack}>←</button>
@@ -1262,10 +1421,13 @@ function BookingSection({
 
               {/* Order summary */}
               <div className="checkout-summary">
-                <div className="checkout-row">
-                  <span>Tjänst</span>
-                  <span>{selectedService?.name}</span>
-                </div>
+                <p className="checkout-services-heading">Tjänster</p>
+                {selectedServices.map((svc) => (
+                  <div key={svc.id} className="checkout-row checkout-service-line">
+                    <span>{svc.name}</span>
+                    <span>{fmtPrice(servicePriceÖre(svc))}</span>
+                  </div>
+                ))}
                 <div className="checkout-row">
                   <span>Stylist</span>
                   <span>{selectedStylist?.name}</span>
@@ -1285,8 +1447,13 @@ function BookingSection({
                 <div className="checkout-divider" />
                 <div className="checkout-row checkout-total">
                   <span>Totalt</span>
-                  <span>{selectedService ? fmtPrice(servicePriceÖre(selectedService)) : '—'}</span>
+                  <span>{selectedServices.length ? fmtPrice(totalPriceÖre) : '—'}</span>
                 </div>
+                <p className="checkout-duration-hint">
+                  {selectedServices.length
+                    ? `Sammanlagd tid: ${fmtDurationTotal(totalDurationMin)}`
+                    : null}
+                </p>
               </div>
 
               <div className="booking-notes">

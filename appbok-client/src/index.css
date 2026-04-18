@@ -1278,6 +1278,170 @@ html.preview-embed-mode [role='button'] {
   align-self: flex-end;
 }
 
+/* Flera tjänster — chips, kombinationer, kassa */
+.selected-services-block {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  background: #fafafa;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+.selected-services-scroll-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.selected-services-scroll-row::-webkit-scrollbar {
+  display: none;
+}
+.selected-service-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0 0.1rem 0 0.75rem;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+.selected-service-chip .ssc-name {
+  font-weight: 500;
+  color: var(--text-color);
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.selected-service-chip .ssc-meta {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.selected-service-chip-remove {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 0;
+  border-radius: 999px;
+}
+.selected-service-chip-remove:hover {
+  color: #171717;
+  background: #f3f4f6;
+}
+.selected-services-total-line {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.add-service-chip-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  padding: 0 1rem;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-color);
+  background: #f4f4f5;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.add-service-chip-btn:hover {
+  background: #e4e4e7;
+}
+.add-service-chip-icon {
+  flex-shrink: 0;
+}
+
+.popular-combos {
+  margin-bottom: 1rem;
+}
+.popular-combos-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.popular-combos-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.popular-combo-btn {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text-color);
+}
+.popular-combo-btn:hover {
+  border-color: var(--accent-color);
+  background: #fafafa;
+}
+
+.checkout-services-heading {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.checkout-service-line {
+  font-size: 0.88rem;
+}
+.checkout-duration-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.booking-detail-services-wrap {
+  width: 100%;
+}
+.booking-detail-service-bullets {
+  margin: 0;
+  padding-left: 1.1rem;
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+.booking-detail-service-total-line {
+  margin: 0.65rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-color);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
 /* Terms */
 .terms-block {
   background: #F7F6F3;
