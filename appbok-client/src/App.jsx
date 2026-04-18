@@ -663,6 +663,7 @@ function BookingSection({
   const [selectedTime, setTime]           = useState(null);
   const [form, setForm]                   = useState({ name:'', phone:'', email:'' });
   const [termsAccepted, setTerms]         = useState(false);
+  const [notes, setNotes]                 = useState('');
   const [loading, setLoading]             = useState(false);
   const [apiError, setApiError]           = useState('');
   const [busySlots, setBusySlots]         = useState(new Set());
@@ -701,6 +702,7 @@ function BookingSection({
       setBusySlots(new Set());
       setStylistPreChosenFromHome(false);
       setForm({ name: '', phone: '', email: '' });
+      setNotes('');
       setTerms(false);
       setApiError('');
       setLoading(false);
@@ -899,6 +901,7 @@ function BookingSection({
       amount_paid: amountPaid,
       stripe_session_id: stripeSessionId || null,
       stripe_payment_intent_id: paymentIntentId || null,
+      notes: notes.trim() ? notes.trim().slice(0, 500) : undefined,
     };
     const bookRes = await fetch('/api/bookings', {
       method: 'POST',
@@ -910,7 +913,7 @@ function BookingSection({
       throw new Error(bd.error || 'Kunde inte skapa bokning.');
     }
     return bookRes.json();
-  }, [config?.salonId, form.email, form.name, form.phone, selectedDate, selectedService, selectedStylist, selectedTime]);
+  }, [config?.salonId, form.email, form.name, form.phone, notes, selectedDate, selectedService, selectedStylist, selectedTime]);
 
   const fetchPaymentIntent = useCallback(async () => {
     if (!selectedService || !selectedDate || !selectedTime) return;
@@ -1284,6 +1287,20 @@ function BookingSection({
                   <span>Totalt</span>
                   <span>{selectedService ? fmtPrice(servicePriceÖre(selectedService)) : '—'}</span>
                 </div>
+              </div>
+
+              <div className="booking-notes">
+                <label htmlFor="booking-notes-text">Meddelande till salongen (valfritt)</label>
+                <textarea
+                  id="booking-notes-text"
+                  className="booking-notes-textarea"
+                  placeholder="Något salongen bör veta? T.ex. allergier, särskilda önskemål..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+                  maxLength={500}
+                  rows={4}
+                />
+                <span className="char-count booking-notes-char-count">{notes.length}/500</span>
               </div>
 
               {/* Terms */}

@@ -330,7 +330,13 @@ router.post('/', async (req, res) => {
     amount_paid,
     stripe_session_id,
     stripe_payment_intent_id,
+    notes: notesRaw,
   } = req.body;
+
+  const notes =
+    typeof notesRaw === 'string' && notesRaw.trim()
+      ? notesRaw.trim().slice(0, 500)
+      : null;
 
   if (!salon_id || !service_id || !customer_name || !booking_date || !booking_time) {
     return res.status(400).json({ error: 'Obligatoriska fält saknas.' });
@@ -381,6 +387,7 @@ router.post('/', async (req, res) => {
         amount_paid: amount_paid || 0,
         stripe_session_id: stripe_session_id || null,
         stripe_payment_intent_id: stripe_payment_intent_id || null,
+        notes,
         status: 'confirmed',
       })
       .select()
@@ -400,7 +407,9 @@ router.post('/', async (req, res) => {
         if (tokens) {
           const event = await createCalendarEvent(tokens, {
             summary: `${customer_name} — ${data.id.slice(0, 8)}`,
-            description: `Bokning via Appbok\nKund: ${customer_name}\nTelefon: ${customer_phone || '-'}\nE-post: ${customer_email || '-'}`,
+            description: `Bokning via Appbok\nKund: ${customer_name}\nTelefon: ${customer_phone || '-'}\nE-post: ${customer_email || '-'}${
+              notes ? `\nMeddelande: ${notes}` : ''
+            }`,
             date: booking_date,
             time: booking_time,
             durationMinutes: duration_minutes || 60,

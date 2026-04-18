@@ -1363,6 +1363,7 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('');
+  const [detailBooking, setDetailBooking] = useState(null);
 
   const loadBookings = useCallback((searchTerm, dateFrom) => {
     setLoading(true);
@@ -1443,7 +1444,11 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
             </thead>
             <tbody>
               {bookings.map(b => (
-                <tr key={b.id} className={b.status === 'cancelled' ? 'row-cancelled' : ''}>
+                <tr
+                  key={b.id}
+                  className={`bookings-table-row-clickable ${b.status === 'cancelled' ? 'row-cancelled' : ''}`}
+                  onClick={() => setDetailBooking(b)}
+                >
                   <td>{b.booking_date}</td>
                   <td>{b.booking_time?.slice(0,5)}</td>
                   <td>
@@ -1459,7 +1464,16 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
                   </td>
                   <td>
                     {(b.status === 'confirmed' || b.status === 'rebooked') && (
-                      <button className="btn-sm btn-danger" onClick={() => handleCancel(b.id)}>Avboka</button>
+                      <button
+                        type="button"
+                        className="btn-sm btn-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancel(b.id);
+                        }}
+                      >
+                        Avboka
+                      </button>
                     )}
                   </td>
                 </tr>
@@ -1475,6 +1489,76 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
           onCreated={handleCreated}
         />
       )}
+
+      {detailBooking ? (
+        <div
+          className="superadmin-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="booking-detail-title"
+          onClick={() => setDetailBooking(null)}
+        >
+          <div className="superadmin-modal booking-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 id="booking-detail-title" className="superadmin-modal-title">
+              Bokningsdetaljer
+            </h3>
+            <dl className="booking-detail-dl">
+              <div>
+                <dt>Datum & tid</dt>
+                <dd>
+                  {detailBooking.booking_date}{' '}
+                  {detailBooking.booking_time ? detailBooking.booking_time.slice(0, 5) : ''}
+                </dd>
+              </div>
+              <div>
+                <dt>Kund</dt>
+                <dd>{detailBooking.customer_name}</dd>
+              </div>
+              <div>
+                <dt>Kontakt</dt>
+                <dd>
+                  {[detailBooking.customer_email, detailBooking.customer_phone].filter(Boolean).join(' · ') || '—'}
+                </dd>
+              </div>
+              <div>
+                <dt>Tjänst</dt>
+                <dd>{detailBooking.services?.name || '—'}</dd>
+              </div>
+              <div>
+                <dt>Stylist</dt>
+                <dd>{detailBooking.stylist?.name || 'Valfri'}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>
+                  <span className={`status-badge status-${detailBooking.status}`}>
+                    {detailBooking.status === 'confirmed'
+                      ? 'Bekräftad'
+                      : detailBooking.status === 'rebooked'
+                        ? 'Ombokad'
+                        : detailBooking.status === 'cancelled'
+                          ? 'Avbokad'
+                          : detailBooking.status === 'completed'
+                            ? 'Genomförd'
+                            : detailBooking.status}
+                  </span>
+                </dd>
+              </div>
+            </dl>
+            {detailBooking.notes != null && String(detailBooking.notes).trim() !== '' ? (
+              <div className="booking-customer-notes-block">
+                <div className="booking-customer-notes-label">📝 Meddelande från kunden:</div>
+                <blockquote className="booking-customer-notes-body">{String(detailBooking.notes).trim()}</blockquote>
+              </div>
+            ) : null}
+            <div className="superadmin-modal-actions">
+              <button type="button" className="btn-admin-primary" onClick={() => setDetailBooking(null)}>
+                Stäng
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
