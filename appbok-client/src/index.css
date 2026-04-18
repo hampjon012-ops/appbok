@@ -2824,6 +2824,12 @@ html.preview-embed-mode [role='button'] {
   color: #6d28d9;
 }
 
+.sa-status--live {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
 .sa-status--unknown {
   background: #f3f4f6;
   color: #9ca3af;

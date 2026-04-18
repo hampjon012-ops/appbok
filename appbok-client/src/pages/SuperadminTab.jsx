@@ -292,6 +292,98 @@ function fmtSalonDeletedAt(iso) {
   }
 }
 
+function trialDaysLeft(trialEndsAt) {
+  if (!trialEndsAt) return null;
+  return Math.ceil((new Date(trialEndsAt) - new Date()) / (1000 * 60 * 60 * 24));
+}
+
+function superadminPlanLabel(plan) {
+  const p = String(plan ?? '').toLowerCase().trim();
+  if (p === 'demo') return 'Demo';
+  if (p === 'trial') return 'Trial (14 dagar)';
+  if (p === 'live') return 'Live (2000kr/mån)';
+  return plan ? String(plan) : '—';
+}
+
+/** Salongstatus i superadmin-lista: DEMO / TRIAL + dagar / LIVE (+ rå läge för övrigt) */
+function SuperadminSalonStatusCell({ salon }) {
+  const st = String(salon?.status ?? '').toLowerCase();
+
+  if (st === 'demo' || st === 'draft') {
+    return (
+      <span className="sa-status sa-status--demo" style={{ textTransform: 'none' }} title="Demo / förhandsvisning">
+        DEMO
+      </span>
+    );
+  }
+  if (st === 'active') {
+    return (
+      <span className="sa-status sa-status--demo" style={{ textTransform: 'none' }} title="Före trial (visas som demo)">
+        DEMO
+      </span>
+    );
+  }
+  if (st === 'trial') {
+    const left = trialDaysLeft(salon.trial_ends_at);
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        <span
+          style={{
+            display: 'inline-block',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            padding: '0.2rem 0.55rem',
+            borderRadius: '50px',
+            textTransform: 'none',
+            letterSpacing: '0.02em',
+            background: '#fef9c3',
+            color: '#a16207',
+            border: '1px solid #fde047',
+          }}
+        >
+          TRIAL
+        </span>
+        {salon.trial_ends_at && left !== null ? (
+          <span
+            style={{
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              padding: '0.15rem 0.5rem',
+              borderRadius: '999px',
+              background: left > 0 ? '#fffbeb' : '#fee2e2',
+              color: left > 0 ? '#854d0e' : '#991b1b',
+              border: '1px solid #fde68a',
+            }}
+            title={salon.trial_ends_at}
+          >
+            {left > 0 ? `${left} dagar kvar` : 'Trial utgången'}
+          </span>
+        ) : (
+          <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>—</span>
+        )}
+      </div>
+    );
+  }
+  if (st === 'live') {
+    return (
+      <span className="sa-status sa-status--live" style={{ textTransform: 'none' }} title="Live">
+        LIVE
+      </span>
+    );
+  }
+  if (st === 'expired') {
+    return (
+      <span className="sa-status sa-status--inactive" style={{ textTransform: 'none' }}>
+        UTGÅNGEN
+      </span>
+    );
+  }
+
+  return (
+    <span className={`sa-status sa-status--${st || 'unknown'}`}>{salon.status || '—'}</span>
+  );
+}
+
 export default function SuperadminTab() {
   const [view, setView] = useState('list');
   const [salons, setSalons] = useState([]);
@@ -538,11 +630,9 @@ export default function SuperadminTab() {
                       <code className="sa-subdomain">{s.subdomain || s.slug}</code>
                       <EditIcon onClick={() => setQuickEditSalon(s)} title="Redigera namn och subdomän" />
                     </td>
-                    <td className="sa-td-plan">{s.plan || '—'}</td>
+                    <td className="sa-td-plan">{superadminPlanLabel(s.plan)}</td>
                     <td>
-                      <span className={`sa-status sa-status--${s.status || 'unknown'}`}>
-                        {s.status || '—'}
-                      </span>
+                      <SuperadminSalonStatusCell salon={s} />
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>

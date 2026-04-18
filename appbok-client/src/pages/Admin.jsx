@@ -629,9 +629,11 @@ function DashboardTab({
               borderRadius: '9999px',
               border: '1px solid #FED7AA',
               flexShrink: 0,
-            }}>DEMOLÄGE</span>
+            }}>{isDemoSalon ? 'DEMO' : isDraftSalon ? 'UTKAST' : 'FÖRHANDSGRANSNING'}</span>
             <span style={{ fontSize: '0.8rem', color: '#4B5563', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              Din sida är i förhandsgranskningsläge. Kunder kan inte boka förrän du startar din testperiod.
+              {isDemoSalon
+                ? 'Du är i demoläge — starta en 14 dagars testperiod för att ta emot riktiga bokningar.'
+                : 'Din sida är i förhandsgranskningsläge. Starta testperioden när du är redo.'}
             </span>
           </div>
 
@@ -721,9 +723,11 @@ function DashboardTab({
             <span style={{ fontSize: '0.8rem', color: '#4B5563', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {ls.trial_ends_at
                 ? (() => {
-                    const left = Math.ceil((new Date(ls.trial_ends_at) - new Date()) / 86400000);
+                    const left = Math.ceil(
+                      (new Date(ls.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24),
+                    );
                     return left > 0
-                      ? `Testperiod: ${left} dagar kvar — din bokningssida är aktiv.`
+                      ? `${left} dagar kvar av din testperiod — din bokningssida är aktiv.`
                       : 'Testperioden har gått ut.';
                   })()
                 : 'Din testperiod är aktiv.'}
@@ -837,7 +841,8 @@ function DashboardTab({
             flexShrink: 0,
           }}>LIVE</span>
           <span style={{ fontSize: '0.8rem', color: '#4B5563' }}>
-            Er bokningssida är live! Kunder kan nu boka och betala direkt.
+            💳 <strong style={{ fontWeight: 600 }}>Du är live</strong>
+            {' — '}kunder kan boka och betala direkt.
           </span>
         </div>
       )}

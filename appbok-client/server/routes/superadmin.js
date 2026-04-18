@@ -129,7 +129,7 @@ router.get('/salons', async (req, res) => {
   try {
     let q = supabase
       .from('salons')
-      .select('id, name, slug, subdomain, plan, status, created_at, deleted_at')
+      .select('id, name, slug, subdomain, plan, status, created_at, deleted_at, trial_ends_at')
       .order('created_at', { ascending: false });
 
     if (scope === 'inactive') {
@@ -143,7 +143,7 @@ router.get('/salons', async (req, res) => {
     if (error && isColumnMissingError(error)) {
       const { data: rows, error: e2 } = await supabase
         .from('salons')
-        .select('id, name, slug, created_at, status')
+        .select('id, name, slug, created_at, status, plan, trial_ends_at, deleted_at')
         .order('created_at', { ascending: false });
       if (e2) throw e2;
       let base = (rows || []).filter((r) => r.id !== SYSTEM_SALON_ID);

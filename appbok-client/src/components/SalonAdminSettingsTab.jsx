@@ -790,26 +790,32 @@ function SalonPaymentsPanel({ salon, onTrialStarted }) {
         border: `1px solid ${isLive ? '#86EFAC' : isTrial ? '#FDE047' : isPreTrial ? '#D1D5DB' : '#E5E5E5'}`,
       }}>
         <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.25rem', color: '#1F2937' }}>
-          Status:{' '}
-          {isLive
-            ? 'Live'
-            : isTrial
-            ? 'Trial'
-            : isPreTrial
-            ? 'Demo'
-            : salonStatus || '—'}
+          {isLive ? (
+            <>
+              💳 <span style={{ fontWeight: 700 }}>Du är live</span>
+            </>
+          ) : isTrial ? (
+            <>Trial</>
+          ) : isPreTrial ? (
+            <>Demo — starta testperiod nedan när du är redo</>
+          ) : (
+            <>Status: {salonStatus || '—'}</>
+          )}
         </div>
         {!knownLifecycle && (
           <p className="admin-hint" style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem' }}>
-            Provperiod startas bara när salongen har status <strong>demo</strong>. Kontakta support om du vill att vi
-            sätter om status.
+            Kontakta support om livscykelstatus behöver justeras manuellt.
           </p>
         )}
         {isTrial && salon?.trial_ends_at && (
           <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: '#92400E' }}>
             {(() => {
-              const left = Math.ceil((new Date(salon.trial_ends_at) - new Date()) / 86400000);
-              return left > 0 ? `${left} dagar kvar av testperioden.` : 'Testperioden har gått ut.';
+              const left = Math.ceil(
+                (new Date(salon.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24),
+              );
+              return left > 0
+                ? `${left} dagar kvar av din testperiod.`
+                : 'Testperioden har gått ut.';
             })()}
           </p>
         )}
