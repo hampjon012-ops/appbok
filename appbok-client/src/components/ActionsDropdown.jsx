@@ -46,17 +46,24 @@ function InactivateIcon() {
   );
 }
 
-export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLink }) {
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${localStorage.getItem('sb_token')}`,
+  };
+}
+
+/** Billing-inaktiverad (syns under Aktiva) — aktiveras via /billing, inte soft delete. */
+function isBillingPausedStatus(status) {
+  return status === 'paused' || status === 'suspended' || status === 'inactive';
+}
+
+export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLink, onSalonUpdated }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [isInactive, setIsInactive] = useState(
-    () =>
-      salon.status === 'paused' ||
-      salon.status === 'suspended' ||
-      salon.status === 'inactive',
-  );
+  const isBillingPaused = isBillingPausedStatus(salon.status);
 
   // Close on outside click
   useEffect(() => {
@@ -77,23 +84,49 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLi
   }
 
   async function handleToggleInactive() {
-    const msg = isInactive
-      ? `Aktivera salongen "${salon.name}"?`
-      : `Inaktivera salongen "${salon.name}"? Kunder kan inte boka medan salongen är inaktiverad.`;
+    if (isBillingPaused) {
+      const msg = `Aktivera salongen "${salon.name}"? Salongen blir synlig igen i listan med status aktiv.`;
+      if (!confirm(msg)) return;
+      setBusy(true);
+      try {
+        const res = await fetch(`/api/superadmin/salons/${salon.id}/billing`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify({ status: 'active' }),
+        });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(typeof d.error === 'string' ? d.error : 'Kunde inte aktivera salongen.');
+        onSalonUpdated?.();
+      } catch (e) {
+        alert(e?.message || 'Fel');
+      } finally {
+        setBusy(false);
+        setOpen(false);
+      }
+      return;
+    }
+
+    const msg =
+      `Inaktivera salongen "${salon.name}"? Salongen flyttas till fliken Inaktiva (soft delete). ` +
+      'All data sparas och kan återställas från Inaktiva.';
     if (!confirm(msg)) return;
+
     setBusy(true);
     try {
-      await fetch(`/api/superadmin/salons/${salon.id}/billing`, {
+      const res = await fetch(`/api/superadmin/salons/${salon.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('sb_token')}`,
-        },
-        body: JSON.stringify({ status: isInactive ? 'active' : 'inactive' }),
+        headers: authHeaders(),
+        body: JSON.stringify({
+          status: 'deleted',
+          deleted_at: new Date().toISOString(),
+        }),
       });
-      setIsInactive((v) => !v);
-    } catch { /* ignore */ }
-    finally {
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof d.error === 'string' ? d.error : 'Kunde inte inaktivera salongen.');
+      onSalonUpdated?.();
+    } catch (e) {
+      alert(e?.message || 'Fel');
+    } finally {
       setBusy(false);
       setOpen(false);
     }
@@ -144,7 +177,7 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLi
           >
             <InactivateIcon />
             <span>
-              {busy ? 'Uppdaterar…' : isInactive ? 'Aktivera salong' : 'Inaktivera salong'}
+              {busy ? 'Uppdaterar…' : isBillingPaused ? 'Aktivera salong' : 'Inaktivera salong'}
             </span>
           </button>
         </div>

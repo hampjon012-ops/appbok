@@ -500,6 +500,7 @@ export default function SuperadminTab() {
                         </button>
                         <ActionsDropdown
                           salon={s}
+                          onSalonUpdated={() => loadSalons()}
                           onImpersonate={() => {
                             localStorage.setItem('sb_superadmin_impersonate', JSON.stringify(s));
                             localStorage.setItem(
