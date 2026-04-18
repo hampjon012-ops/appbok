@@ -7,9 +7,16 @@ const router = Router();
 /** Intern system-salong (superadmin-JWT); ingen riktig driftdata — aggregera över övriga salonger. */
 const SYSTEM_SALON_ID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
 
-/** Superadmin utan impersonation: översikt ska visa hela plattformen, inte system-salongen. */
+/**
+ * Superadmin-översikt ska visa hela plattformen, inte system-salongen.
+ * Klienten skickar ofta X-Impersonate-Salon-Id från sb_salon (även utan "riktig" impersonation)
+ * så att andra API:er får rätt salon_id — om det är system-salongen ska statistik ändå aggregeras.
+ */
 function isPlatformSuperadminStats(req) {
-  return req.user?.role === 'superadmin' && !req.headers['x-impersonate-salon-id'];
+  if (req.user?.role !== 'superadmin') return false;
+  const imp = req.headers['x-impersonate-salon-id'];
+  if (!imp) return true;
+  return String(imp).toLowerCase() === SYSTEM_SALON_ID.toLowerCase();
 }
 
 /** Dagens datum och månadens första dag i svensk kalender (matchar booking_date i UI). */
