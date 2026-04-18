@@ -37,12 +37,11 @@ function CopyIcon() {
   );
 }
 
-function PauseIcon() {
+function InactivateIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <circle cx="12" cy="12" r="10" />
-      <line x1="10" y1="15" x2="10" y2="9" />
-      <line x1="14" y1="15" x2="14" y2="9" />
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
     </svg>
   );
 }
@@ -51,8 +50,13 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLi
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const [copied, setCopied] = useState(false);
-  const [pausing, setPausing] = useState(false);
-  const [paused, setPaused] = useState(salon.status === 'paused' || salon.status === 'suspended');
+  const [busy, setBusy] = useState(false);
+  const [isInactive, setIsInactive] = useState(
+    () =>
+      salon.status === 'paused' ||
+      salon.status === 'suspended' ||
+      salon.status === 'inactive',
+  );
 
   // Close on outside click
   useEffect(() => {
@@ -72,9 +76,12 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLi
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function handlePause() {
-    if (!confirm(`Pausa salongen "${salon.name}"?`)) return;
-    setPausing(true);
+  async function handleToggleInactive() {
+    const msg = isInactive
+      ? `Aktivera salongen "${salon.name}"?`
+      : `Inaktivera salongen "${salon.name}"? Kunder kan inte boka medan salongen är inaktiverad.`;
+    if (!confirm(msg)) return;
+    setBusy(true);
     try {
       await fetch(`/api/superadmin/salons/${salon.id}/billing`, {
         method: 'PUT',
@@ -82,11 +89,14 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLi
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('sb_token')}`,
         },
-        body: JSON.stringify({ status: paused ? 'active' : 'suspended' }),
+        body: JSON.stringify({ status: isInactive ? 'active' : 'inactive' }),
       });
-      setPaused(p => !p);
+      setIsInactive((v) => !v);
     } catch { /* ignore */ }
-    finally { setPausing(false); setOpen(false); }
+    finally {
+      setBusy(false);
+      setOpen(false);
+    }
   }
 
   return (
@@ -129,11 +139,13 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLi
             type="button"
             className="sa-actions-item sa-actions-item--danger"
             role="menuitem"
-            onClick={handlePause}
-            disabled={pausing}
+            onClick={handleToggleInactive}
+            disabled={busy}
           >
-            <PauseIcon />
-            <span>{pausing ? 'Uppdaterar...' : paused ? 'Aktivera konto' : 'Pausa konto'}</span>
+            <InactivateIcon />
+            <span>
+              {busy ? 'Uppdaterar…' : isInactive ? 'Aktivera salong' : 'Inaktivera salong'}
+            </span>
           </button>
         </div>
       )}
