@@ -1650,14 +1650,22 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
                   </span>
                 </dd>
               </div>
+              <div
+                className={`booking-detail-dl-row booking-detail-dl-row--message ${
+                  bookingNotesTrimmed(detailBooking) ? 'booking-detail-dl-row--message-filled' : ''
+                }`}
+              >
+                <dt>Meddelande från kunden</dt>
+                <dd>
+                  {bookingNotesTrimmed(detailBooking) ? (
+                    <span className="booking-detail-message-body">{bookingNotesTrimmed(detailBooking)}</span>
+                  ) : (
+                    <span className="booking-detail-message-empty">Inget meddelande</span>
+                  )}
+                </dd>
+              </div>
             </dl>
           </div>
-          {bookingNotesTrimmed(detailBooking) ? (
-            <div className="bookings-detail-sheet-notes">
-              <div className="bookings-detail-sheet-notes-label">Meddelande från kunden</div>
-              <p className="bookings-detail-sheet-notes-text">{bookingNotesTrimmed(detailBooking)}</p>
-            </div>
-          ) : null}
         </aside>
       ) : null}
     </div>
