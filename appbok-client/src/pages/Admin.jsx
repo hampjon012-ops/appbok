@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { MessageSquare } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
 import SuperadminTab from './SuperadminTab.jsx';
@@ -1357,6 +1359,75 @@ function NewBookingModal({ onClose, onCreated }) {
   );
 }
 
+function bookingNotesTrimmed(b) {
+  if (b?.notes == null) return '';
+  return String(b.notes).trim();
+}
+
+/** Hover-tooltip med meddelandetext (portal så tabell-scroll inte klipper) */
+function BookingNoteTooltip({ text, children }) {
+  const [show, setShow] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const anchorRef = useRef(null);
+
+  const updatePos = useCallback(() => {
+    const el = anchorRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setPos({ top: r.top, left: r.left + r.width / 2 });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!show) return;
+    updatePos();
+  }, [show, updatePos]);
+
+  useEffect(() => {
+    if (!show) return;
+    const handler = () => updatePos();
+    window.addEventListener('scroll', handler, true);
+    window.addEventListener('resize', handler);
+    return () => {
+      window.removeEventListener('scroll', handler, true);
+      window.removeEventListener('resize', handler);
+    };
+  }, [show, updatePos]);
+
+  return (
+    <>
+      <span
+        ref={anchorRef}
+        className="booking-note-tooltip-anchor"
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onFocus={() => setShow(true)}
+        onBlur={() => setShow(false)}
+        tabIndex={0}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </span>
+      {show && text
+        ? createPortal(
+            <div
+              className="booking-note-tooltip-content"
+              role="tooltip"
+              style={{
+                position: 'fixed',
+                left: pos.left,
+                top: pos.top,
+                transform: 'translate(-50%, calc(-100% - 8px))',
+              }}
+            >
+              {text}
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
 // ─── BookingsTab ────────────────────────────────────────────────────────────
 function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
   const [bookings, setBookings] = useState([]);
@@ -1381,6 +1452,15 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
     const timer = setTimeout(() => loadBookings(search, dateFilter), 280);
     return () => clearTimeout(timer);
   }, [search, dateFilter, loadBookings]);
+
+  useEffect(() => {
+    if (!detailBooking) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setDetailBooking(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [detailBooking]);
 
   const handleCancel = async (id) => {
     if (!confirm('Vill du avboka denna bokning?')) return;
@@ -1443,7 +1523,9 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
               </tr>
             </thead>
             <tbody>
-              {bookings.map(b => (
+              {bookings.map((b) => {
+                const rowNotes = bookingNotesTrimmed(b);
+                return (
                 <tr
                   key={b.id}
                   className={`bookings-table-row-clickable ${b.status === 'cancelled' ? 'row-cancelled' : ''}`}
@@ -1451,9 +1533,23 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
                 >
                   <td>{b.booking_date}</td>
                   <td>{b.booking_time?.slice(0,5)}</td>
-                  <td>
-                    <div>{b.customer_name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{b.customer_email || b.customer_phone || ''}</div>
+                  <td className="booking-customer-td">
+                    <div className="booking-customer-name-line">
+                      <span>{b.customer_name}</span>
+                      {rowNotes ? (
+                        <BookingNoteTooltip text={rowNotes}>
+                          <MessageSquare
+                            className="booking-note-icon"
+                            size={16}
+                            strokeWidth={1.75}
+                            aria-hidden
+                          />
+                        </BookingNoteTooltip>
+                      ) : null}
+                    </div>
+                    <div className="booking-customer-contact-line">
+                      {b.customer_email || b.customer_phone || ''}
+                    </div>
                   </td>
                   <td>{b.services?.name || '—'}</td>
                   <td>{b.stylist?.name || 'Valfri'}</td>
@@ -1477,7 +1573,8 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
                     )}
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
@@ -1491,17 +1588,26 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
       )}
 
       {detailBooking ? (
-        <div
-          className="superadmin-modal-overlay"
-          role="dialog"
-          aria-modal="true"
+        <aside
+          className="bookings-detail-sheet"
           aria-labelledby="booking-detail-title"
-          onClick={() => setDetailBooking(null)}
+          role="dialog"
+          aria-modal="false"
         >
-          <div className="superadmin-modal booking-detail-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 id="booking-detail-title" className="superadmin-modal-title">
+          <div className="bookings-detail-sheet-header">
+            <h2 id="booking-detail-title" className="bookings-detail-sheet-title">
               Bokningsdetaljer
-            </h3>
+            </h2>
+            <button
+              type="button"
+              className="bookings-detail-sheet-close"
+              onClick={() => setDetailBooking(null)}
+              aria-label="Stäng panel"
+            >
+              ×
+            </button>
+          </div>
+          <div className="bookings-detail-sheet-body">
             <dl className="booking-detail-dl">
               <div>
                 <dt>Datum & tid</dt>
@@ -1545,19 +1651,14 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
                 </dd>
               </div>
             </dl>
-            {detailBooking.notes != null && String(detailBooking.notes).trim() !== '' ? (
-              <div className="booking-customer-notes-block">
-                <div className="booking-customer-notes-label">📝 Meddelande från kunden:</div>
-                <blockquote className="booking-customer-notes-body">{String(detailBooking.notes).trim()}</blockquote>
-              </div>
-            ) : null}
-            <div className="superadmin-modal-actions">
-              <button type="button" className="btn-admin-primary" onClick={() => setDetailBooking(null)}>
-                Stäng
-              </button>
-            </div>
           </div>
-        </div>
+          {bookingNotesTrimmed(detailBooking) ? (
+            <div className="bookings-detail-sheet-notes">
+              <div className="bookings-detail-sheet-notes-label">Meddelande från kunden</div>
+              <p className="bookings-detail-sheet-notes-text">{bookingNotesTrimmed(detailBooking)}</p>
+            </div>
+          ) : null}
+        </aside>
       ) : null}
     </div>
   );
