@@ -1001,7 +1001,10 @@ function DashboardTab({
                         <span className="dashboard-status-label">{st.label}</span>
                       </span>
                     </div>
-                    <span className="booking-stylist">{b.stylist?.name || 'Valfri'}</span>
+                    <span className="booking-stylist">
+                      {b.stylist?.name || 'Valfri'}
+                      {b.salons?.name ? ` · ${b.salons.name}` : ''}
+                    </span>
                   </div>
                 </div>
               );
