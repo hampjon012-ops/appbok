@@ -283,9 +283,19 @@ function SalonStaffPanel({ salon }) {
   );
 }
 
+function fmtSalonDeletedAt(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' });
+  } catch {
+    return '—';
+  }
+}
+
 export default function SuperadminTab() {
   const [view, setView] = useState('list');
   const [salons, setSalons] = useState([]);
+  const [salonScope, setSalonScope] = useState('active');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -293,11 +303,12 @@ export default function SuperadminTab() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [quickEditSalon, setQuickEditSalon] = useState(null);
   const [expandedSalonId, setExpandedSalonId] = useState(null);
+  const [restoreBusyId, setRestoreBusyId] = useState(null);
 
   const loadSalons = useCallback(() => {
     setLoading(true);
     setLoadError('');
-    fetch('/api/superadmin/salons', { headers: authHeaders() })
+    fetch(`/api/superadmin/salons?scope=${encodeURIComponent(salonScope)}`, { headers: authHeaders() })
       .then(async (r) => {
         const d = await r.json().catch(() => ({}));
         if (!r.ok) {
@@ -319,11 +330,29 @@ export default function SuperadminTab() {
         setLoading(false);
         setLoadError('Nätverksfel vid hämtning av salonger.');
       });
-  }, []);
+  }, [salonScope]);
 
   useEffect(() => {
     loadSalons();
   }, [loadSalons]);
+
+  const handleRestoreSalon = async (salon) => {
+    setRestoreBusyId(salon.id);
+    try {
+      const res = await fetch(`/api/superadmin/salons/${salon.id}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ status: 'live', deleted_at: null }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof d.error === 'string' ? d.error : 'Kunde inte återställa salongen.');
+      loadSalons();
+    } catch (e) {
+      alert(e.message || 'Fel');
+    } finally {
+      setRestoreBusyId(null);
+    }
+  };
 
   const filtered = salons.filter(
     (s) =>
@@ -355,6 +384,29 @@ export default function SuperadminTab() {
         </button>
       </div>
 
+      <div className="superadmin-subtabs" style={{ marginBottom: '0.75rem' }}>
+        <button
+          type="button"
+          className={`superadmin-subtab ${salonScope === 'active' ? 'active' : ''}`}
+          onClick={() => {
+            setSalonScope('active');
+            setExpandedSalonId(null);
+          }}
+        >
+          Aktiva
+        </button>
+        <button
+          type="button"
+          className={`superadmin-subtab ${salonScope === 'inactive' ? 'active' : ''}`}
+          onClick={() => {
+            setSalonScope('inactive');
+            setExpandedSalonId(null);
+          }}
+        >
+          Inaktiva
+        </button>
+      </div>
+
       <div className="admin-card superadmin-search-card">
         <input
           type="search"
@@ -373,6 +425,39 @@ export default function SuperadminTab() {
 
       {loading ? (
         <div className="admin-loading">Laddar salonger...</div>
+      ) : salonScope === 'inactive' ? (
+        <div className="admin-table-wrap superadmin-table-wrap">
+          <table className="admin-table superadmin-table">
+            <thead>
+              <tr>
+                <th>Namn</th>
+                <th>Raderad</th>
+                <th style={{ textAlign: 'right' }}>Åtgärder</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((s) => (
+                <tr key={s.id} className="superadmin-row-hover">
+                  <td className="sa-td-name">{s.name}</td>
+                  <td>{fmtSalonDeletedAt(s.deleted_at)}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button
+                      type="button"
+                      className="btn-sm btn-ghost"
+                      disabled={restoreBusyId === s.id}
+                      onClick={() => handleRestoreSalon(s)}
+                    >
+                      {restoreBusyId === s.id ? 'Återställer…' : 'Återställ'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {filtered.length === 0 ? (
+            <p className="admin-empty">Inga inaktiva salonger{search ? ' matchar sökningen' : ''}.</p>
+          ) : null}
+        </div>
       ) : (
         <div className="admin-table-wrap superadmin-table-wrap">
           <table className="admin-table superadmin-table">

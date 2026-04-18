@@ -182,6 +182,11 @@ router.post('/rebook', async (req, res) => {
     }
 
     const salonRow = await loadSalonMaybeExpire(booking.salon_id);
+    if (salonRow?.status === 'deleted') {
+      return res.status(403).json({
+        error: 'Denna salong är inte längre aktiv. Ombokning är inte möjlig.',
+      });
+    }
     if (salonRow?.status === 'expired') {
       return res.status(403).json({
         error: 'Denna salongs testperiod är avslutad. Ombokning är inte möjlig.',
@@ -335,6 +340,11 @@ router.post('/', async (req, res) => {
     const salon = await loadSalonMaybeExpire(salon_id);
     if (!salon) {
       return res.status(404).json({ error: 'Salong hittades inte.' });
+    }
+    if (salon.status === 'deleted') {
+      return res.status(403).json({
+        error: 'Denna salong är inte längre aktiv. Bokning är inte möjlig.',
+      });
     }
     if (salon.status === 'expired') {
       return res.status(403).json({

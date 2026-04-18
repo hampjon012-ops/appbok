@@ -947,16 +947,29 @@ export default function SalonAdminSettingsTab() {
   const [salon, setSalon] = useState(null);
   const [tab, setTab] = useState('theme');
   const [loading, setLoading] = useState(true);
+  const [salonDeletedBlocked, setSalonDeletedBlocked] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteErr, setDeleteErr] = useState('');
 
   const load = useCallback((opts = {}) => {
     const silent = Boolean(opts.silent);
     if (!silent) setLoading(true);
     return fetch('/api/salons', { headers: authHeaders(), cache: 'no-store' })
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (r.status === 403 && data?.code === 'SALON_DELETED') {
+          setSalonDeletedBlocked(true);
+          setSalon(null);
+          if (!silent) setLoading(false);
+          return null;
+        }
+        setSalonDeletedBlocked(false);
+        if (!r.ok) throw new Error(typeof data.error === 'string' ? data.error : `HTTP ${r.status}`);
         if (data && !Array.isArray(data)) setSalon(data);
         else setSalon(null);
         if (!silent) setLoading(false);
+        return data;
       })
       .catch(() => {
         setSalon(null);
@@ -993,9 +1006,43 @@ export default function SalonAdminSettingsTab() {
     return <div className="admin-loading">Laddar inställningar…</div>;
   }
 
+  if (salonDeletedBlocked) {
+    return (
+      <div className="admin-section">
+        <p className="admin-empty" style={{ maxWidth: '28rem' }}>
+          Denna salong är inaktiverad och kan inte redigeras här. Kontakta support om du behöver återställa åtkomst.
+        </p>
+      </div>
+    );
+  }
+
   if (!salon) {
     return <div className="admin-section"><p className="admin-empty">Kunde inte hämta salongsdata.</p></div>;
   }
+
+  const handleConfirmSoftDelete = async () => {
+    setDeleteBusy(true);
+    setDeleteErr('');
+    try {
+      const res = await fetch('/api/salons/current/soft-delete', {
+        method: 'POST',
+        headers: authHeaders(),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Kunde inte radera salongen.');
+      try {
+        localStorage.removeItem('sb_token');
+        localStorage.removeItem('sb_salon');
+      } catch (_) {
+        /* ignore */
+      }
+      window.location.href = '/login';
+    } catch (e) {
+      setDeleteErr(e?.message || 'Ett fel uppstod.');
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
 
   return (
     <div className="admin-section superadmin-section salon-admin-settings">
@@ -1040,6 +1087,96 @@ export default function SalonAdminSettingsTab() {
           }}
         />
       )}
+
+      <div
+        className="admin-card salon-admin-danger-zone"
+        style={{
+          marginTop: '2rem',
+          border: '1px solid #fecaca',
+          borderRadius: '12px',
+          padding: '1.25rem',
+          background: '#fef2f2',
+        }}
+      >
+        <h3 className="admin-card-title" style={{ color: '#991b1b', marginBottom: '0.5rem' }}>
+          Radera salong
+        </h3>
+        <p className="admin-hint" style={{ marginBottom: '1rem' }}>
+          Gör salongen inaktiv. All data sparas och superadmin kan återställa salongen vid behov.
+        </p>
+        <button
+          type="button"
+          className="btn-sm"
+          style={{
+            background: '#dc2626',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '0.5rem 1rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+          onClick={() => {
+            setDeleteErr('');
+            setDeleteDialogOpen(true);
+          }}
+        >
+          🗑️ Radera salong
+        </button>
+      </div>
+
+      {deleteDialogOpen ? (
+        <div className="modal-backdrop" role="presentation" style={{ zIndex: 120 }}>
+          <div
+            className="modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="salon-delete-dialog-title"
+            style={{ maxWidth: '420px' }}
+          >
+            <h3 id="salon-delete-dialog-title" style={{ marginTop: 0, fontSize: '1.15rem', color: '#92400e' }}>
+              ⚠️ Är du säker?
+            </h3>
+            <p style={{ margin: '0.75rem 0', color: '#444', lineHeight: 1.5 }}>
+              Detta kommer att göra salongen inaktiv. All data sparas.
+              <br />
+              Du kan återställa den senare via superadmin.
+            </p>
+            {deleteErr ? (
+              <p className="superadmin-error" style={{ marginBottom: '0.75rem' }}>
+                {deleteErr}
+              </p>
+            ) : null}
+            <div className="superadmin-modal-actions" style={{ marginTop: '1.25rem' }}>
+              <button
+                type="button"
+                className="btn-sm btn-ghost"
+                disabled={deleteBusy}
+                onClick={() => setDeleteDialogOpen(false)}
+              >
+                Avbryt
+              </button>
+              <button
+                type="button"
+                style={{
+                  background: '#dc2626',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.45rem 1rem',
+                  fontWeight: 600,
+                  cursor: deleteBusy ? 'wait' : 'pointer',
+                  opacity: deleteBusy ? 0.7 : 1,
+                }}
+                disabled={deleteBusy}
+                onClick={handleConfirmSoftDelete}
+              >
+                {deleteBusy ? 'Raderar…' : 'Radera salong'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

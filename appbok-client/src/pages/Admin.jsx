@@ -474,8 +474,12 @@ function DashboardTab({
   useEffect(() => {
     if (!showSalonLifecycleBanner) return;
     fetch('/api/salons', { headers: authHeaders(), cache: 'no-store' })
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (r.status === 403 && data?.code === 'SALON_DELETED') {
+          setLifecycleSalon(null);
+          return;
+        }
         if (data && !Array.isArray(data)) setLifecycleSalon(data);
       })
       .catch(() => setLifecycleSalon(null));

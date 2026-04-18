@@ -8,7 +8,8 @@ const PUBLIC_SALON_SELECT =
  * Returnerar uppdaterad rad (eller samma rad om ingen ändring / fel).
  */
 export async function maybeExpireTrialSalonIfNeeded(salon) {
-  if (!salon || salon.status !== 'trial' || !salon.trial_ends_at) return salon;
+  if (!salon || salon.status === 'deleted') return salon;
+  if (salon.status !== 'trial' || !salon.trial_ends_at) return salon;
   const ends = new Date(salon.trial_ends_at);
   if (Number.isNaN(ends.getTime()) || ends >= new Date()) return salon;
 

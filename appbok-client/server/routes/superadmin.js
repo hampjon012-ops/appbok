@@ -122,30 +122,88 @@ function isNonSalonRow(s) {
   return s.plan === 'internal' || s.status === 'internal' ? null : s;
 }
 
-// GET /api/superadmin/salons
-router.get('/salons', async (_req, res) => {
+// GET /api/superadmin/salons?scope=active|inactive — inactive = status deleted (soft delete)
+router.get('/salons', async (req, res) => {
+  const scope = req.query.scope === 'inactive' ? 'inactive' : 'active';
+
   try {
-    const { data, error } = await supabase
+    let q = supabase
       .from('salons')
-      .select('id, name, slug, subdomain, plan, status, created_at')
+      .select('id, name, slug, subdomain, plan, status, created_at, deleted_at')
       .order('created_at', { ascending: false });
+
+    if (scope === 'inactive') {
+      q = q.eq('status', 'deleted');
+    } else {
+      q = q.or('status.is.null,status.neq.deleted');
+    }
+
+    const { data, error } = await q;
 
     if (error && isColumnMissingError(error)) {
       const { data: rows, error: e2 } = await supabase
         .from('salons')
-        .select('id, name, slug, created_at')
+        .select('id, name, slug, created_at, status')
         .order('created_at', { ascending: false });
       if (e2) throw e2;
-      const filtered = (rows || []).filter((r) => r.id !== SYSTEM_SALON_ID);
-      return res.json(filtered.map(enrichSalonRow));
+      let base = (rows || []).filter((r) => r.id !== SYSTEM_SALON_ID);
+      if (scope === 'inactive') {
+        base = base.filter((r) => r.status === 'deleted');
+      } else {
+        base = base.filter((r) => r.status !== 'deleted');
+      }
+      return res.json(base.map(enrichSalonRow));
     }
 
     if (error) throw error;
-    const list = (data || []).map(isNonSalonRow).filter(Boolean);
+    let list = (data || []).map(isNonSalonRow).filter(Boolean);
+    if (scope === 'active') {
+      list = list.filter((s) => s.status !== 'deleted');
+    }
     res.json(list.map(enrichSalonRow));
   } catch (err) {
     console.error('superadmin list salons:', err);
     res.status(500).json({ error: 'Kunde inte hämta salonger.' });
+  }
+});
+
+// PUT /api/superadmin/salons/:id — status / deleted_at (soft delete, återställning)
+router.put('/salons/:id', async (req, res) => {
+  const { status, deleted_at } = req.body || {};
+
+  try {
+    const salon = await salonEditable(req.params.id);
+    if (!salon) return res.status(404).json({ error: 'Salong hittades inte.' });
+
+    const updates = {};
+    if (status !== undefined) {
+      if (typeof status !== 'string' || !status.trim()) {
+        return res.status(400).json({ error: 'Ogiltig status.' });
+      }
+      updates.status = status.trim();
+    }
+    if (deleted_at !== undefined) {
+      if (deleted_at === null || deleted_at === '') {
+        updates.deleted_at = null;
+      } else if (typeof deleted_at === 'string') {
+        updates.deleted_at = deleted_at;
+      } else {
+        return res.status(400).json({ error: 'Ogiltigt deleted_at.' });
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'Inga fält att uppdatera.' });
+    }
+
+    const { data, error } = await supabase.from('salons').update(updates).eq('id', salon.id).select().single();
+
+    if (error) throw error;
+    ensureSalonThemeAccent(data);
+    res.json(enrichSalonRow(data));
+  } catch (err) {
+    console.error('superadmin salon put:', err);
+    res.status(500).json({ error: err?.message || 'Kunde inte uppdatera salongen.' });
   }
 });
 

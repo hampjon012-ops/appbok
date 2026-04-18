@@ -35,6 +35,13 @@ router.get('/', async (req, res) => {
     if (!salon) {
       return res.status(404).json({ error: 'Salong hittades inte.', slots: [], dateClosed: true });
     }
+    if (salon.status === 'deleted') {
+      return res.status(403).json({
+        error: 'Denna salong är inte längre aktiv.',
+        slots: [],
+        dateClosed: true,
+      });
+    }
     if (salon.status === 'expired') {
       return res.status(403).json({
         error: 'Denna salongs testperiod är avslutad.',
@@ -102,6 +109,12 @@ router.get('/closed-dates', async (req, res) => {
     const salon = await loadSalonMaybeExpire(salon_id);
     if (!salon) {
       return res.status(404).json({ error: 'Salong hittades inte.', closedDates: [] });
+    }
+    if (salon.status === 'deleted') {
+      return res.status(403).json({
+        error: 'Denna salong är inte längre aktiv.',
+        closedDates: [],
+      });
     }
     if (salon.status === 'expired') {
       return res.status(403).json({

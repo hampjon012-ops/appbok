@@ -5,6 +5,7 @@ import { ensureSalonThemeAccent } from '../lib/ensureSalonThemeAccent.js';
 import { maybeExpireTrialSalonIfNeeded } from '../lib/expireTrialSalon.js';
 
 const router = Router();
+const SYSTEM_SALON_ID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
 
 // GET /api/salons/public?salon_id=... | ?slug=... — Publik data för bokningssidan (ingen inloggning)
 router.get('/public', async (req, res) => {
@@ -43,6 +44,9 @@ router.get('/public', async (req, res) => {
     if (!data) return res.status(404).json({ error: 'Salong hittades inte.' });
 
     const dataAfterExpire = await maybeExpireTrialSalonIfNeeded(data);
+    if (dataAfterExpire.status === 'deleted') {
+      return res.status(404).json({ error: 'Salong hittades inte.' });
+    }
     ensureSalonThemeAccent(dataAfterExpire);
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json(dataAfterExpire);
@@ -65,6 +69,12 @@ router.get('/', requireAuth, async (req, res) => {
     if (!data) return res.status(404).json({ error: 'Salong hittades inte.' });
 
     const dataAfterExpire = await maybeExpireTrialSalonIfNeeded(data);
+    if (dataAfterExpire.status === 'deleted') {
+      return res.status(403).json({
+        error: 'Salongen är inaktiverad.',
+        code: 'SALON_DELETED',
+      });
+    }
     ensureSalonThemeAccent(dataAfterExpire);
     res.json(dataAfterExpire);
   } catch (err) {
@@ -97,12 +107,15 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { data: current, error: fetchErr } = await supabase
       .from('salons')
-      .select('contact, theme, logo_url, name, tagline, map_url, instagram')
+      .select('contact, theme, logo_url, name, tagline, map_url, instagram, status')
       .eq('id', req.user.salonId)
       .single();
 
     if (fetchErr) throw fetchErr;
     if (!current) return res.status(404).json({ error: 'Salong hittades inte.' });
+    if (current.status === 'deleted') {
+      return res.status(403).json({ error: 'Salongen är inaktiverad.', code: 'SALON_DELETED' });
+    }
 
     const updates = {};
 
@@ -206,6 +219,10 @@ router.post('/current/go-live', requireAuth, requireAdmin, async (req, res) => {
 
     const current = await maybeExpireTrialSalonIfNeeded(row);
 
+    if (current.status === 'deleted') {
+      return res.status(403).json({ error: 'Salongen är inaktiverad.', code: 'SALON_DELETED' });
+    }
+
     if (current.status === 'live') {
       return res.status(400).json({ error: 'Salongen är redan live.' });
     }
@@ -274,6 +291,9 @@ router.post('/current/trial', requireAuth, requireAdmin, async (req, res) => {
           'Testperioden är avslutad. Koppla Stripe och gå live för att ta emot bokningar igen.',
       });
     }
+    if (current.status === 'deleted') {
+      return res.status(403).json({ error: 'Salongen är inaktiverad.', code: 'SALON_DELETED' });
+    }
 
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + 14);
@@ -292,6 +312,42 @@ router.post('/current/trial', requireAuth, requireAdmin, async (req, res) => {
     console.error('[trial] start error:', err);
     const msg = err?.error?.message || err?.message || err?.details || String(err);
     res.status(500).json({ error: `Kunde inte starta trial-period: ${msg}` });
+  }
+});
+
+// POST /api/salons/current/soft-delete — Radera salong mjukt (admin för aktuell salong)
+router.post('/current/soft-delete', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { data: row, error: fetchErr } = await supabase
+      .from('salons')
+      .select('id, status, plan')
+      .eq('id', req.user.salonId)
+      .single();
+
+    if (fetchErr) throw fetchErr;
+    if (!row) return res.status(404).json({ error: 'Salong hittades inte.' });
+    if (row.id === SYSTEM_SALON_ID || row.plan === 'internal') {
+      return res.status(400).json({ error: 'Denna salong kan inte raderas.' });
+    }
+    if (row.status === 'deleted') {
+      return res.status(400).json({ error: 'Salongen är redan inaktiverad.' });
+    }
+
+    const deletedAt = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('salons')
+      .update({ status: 'deleted', deleted_at: deletedAt })
+      .eq('id', req.user.salonId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    ensureSalonThemeAccent(data);
+    res.json(data);
+  } catch (err) {
+    console.error('[soft-delete]', err);
+    const msg = err?.message || err?.details || 'Kunde inte radera salongen.';
+    res.status(500).json({ error: msg });
   }
 });
 
