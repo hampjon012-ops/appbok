@@ -316,6 +316,55 @@ export default function Admin() {
     }
   }, [token]);
 
+  const emailVerifyToastShownRef = useRef(false);
+  useEffect(() => {
+    if (!token) return;
+    const params = new URLSearchParams(location.search);
+    const verified = params.get('verified');
+    const verifyErr = params.get('verify_error');
+
+    if (verified === 'true') {
+      if (!emailVerifyToastShownRef.current) {
+        emailVerifyToastShownRef.current = true;
+        toast.success('✨ Din e-postadress är nu verifierad! Ditt konto är fullt aktiverat.');
+        fetch('/api/salons', { headers: authHeaders(), cache: 'no-store' })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (!data) return;
+            try {
+              localStorage.setItem('sb_salon', JSON.stringify(data));
+              notifySalonConfigUpdated();
+              setSalonStorageBump((b) => b + 1);
+            } catch {
+              /* ignore */
+            }
+          })
+          .catch(() => {});
+      }
+      params.delete('verified');
+      const qs = params.toString();
+      navigate(`${location.pathname}${qs ? `?${qs}` : ''}${location.hash || ''}`, { replace: true });
+      return;
+    }
+
+    if (verifyErr) {
+      if (!emailVerifyToastShownRef.current) {
+        emailVerifyToastShownRef.current = true;
+        if (verifyErr === 'invalid' || verifyErr === 'missing') {
+          toast.error('Denna verifieringslänk är ogiltig eller har redan använts.');
+        } else {
+          toast.error('E-postverifieringen misslyckades. Försök igen eller kontakta support.');
+        }
+      }
+      params.delete('verify_error');
+      const qs = params.toString();
+      navigate(`${location.pathname}${qs ? `?${qs}` : ''}${location.hash || ''}`, { replace: true });
+      return;
+    }
+
+    emailVerifyToastShownRef.current = false;
+  }, [token, location.search, location.pathname, location.hash, navigate]);
+
   const loadScheduleConfiguredForReminder = useCallback(() => {
     if (!token || isSuperAdmin || user?.role !== 'admin') {
       setScheduleConfiguredForReminder(null);

@@ -19,26 +19,14 @@ import cronRemindersRoutes from './routes/cronReminders.js';
 import cronExpireTrialsRoutes from './routes/cronExpireTrials.js';
 import availabilityRoutes from './routes/availability.js';
 import bookingCombosRoutes from './routes/bookingCombos.js';
+import verifyPublicRoutes from './routes/verifyPublic.js';
 import { scrapeBokadirekt, prepareForImport } from './lib/bokadirektScraper.js';
+import { publicAppOrigin } from './lib/publicAppOrigin.js';
+
+export { publicAppOrigin };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '.env') });
-
-/** Publik bas-URL för Stripe m.m. (Vercel sätter VERCEL_URL utan protokoll.) */
-export function publicAppOrigin() {
-  const explicit = process.env.PUBLIC_APP_URL?.trim();
-  if (explicit) {
-    try {
-      return new URL(explicit).origin;
-    } catch {
-      /* ignore */
-    }
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return 'http://localhost:5173';
-}
 
 function corsOrigin(origin, callback) {
   if (!origin) {
@@ -99,6 +87,7 @@ app.use('/api/superadmin', superadminRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/cron/reminders', cronRemindersRoutes);
 app.use('/api/cron/expire-trials', cronExpireTrialsRoutes);
+app.use('/api', verifyPublicRoutes);
 
 // ── Bokadirekt scraper ──────────────────────────────────────────────────────
 app.get('/api/scrape/bokadirekt', async (req, res) => {

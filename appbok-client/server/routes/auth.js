@@ -1,8 +1,10 @@
+import { randomUUID } from 'crypto';
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import supabase from '../lib/supabase.js';
 import { signToken, requireAuth, withEffectiveRole } from '../lib/auth.js';
-import { sendWelcomeEmail } from '../lib/email.js';
+import { sendWelcomeEmail, sendWelcomeVerificationEmail } from '../lib/email.js';
+import { adminDashboardOrigin, publicAppOrigin } from '../lib/publicAppOrigin.js';
 import { scrapeBokadirekt } from '../lib/bokadirektScraper.js';
 
 const router = Router();
@@ -220,22 +222,51 @@ router.post('/register', async (req, res) => {
       bokadirektImport = await importBokadirektServicesForNewSalon(salon, bokadirektUrl);
     }
 
+    // 2.7: Verifieringstoken + välkomstmejl med bekräftelselänk
+    const verificationToken = randomUUID();
+    const { error: verifyTokErr } = await supabase
+      .from('salons')
+      .update({ verification_token: verificationToken, email_verified: false })
+      .eq('id', salon.id);
+
+    if (verifyTokErr) {
+      console.warn('[register] verification_token/email_verified:', verifyTokErr.message || verifyTokErr);
+    }
+
+    const demoUrl = `https://${salon.slug}.appbok.se`;
+    const adminUrlForEmail = `${adminDashboardOrigin()}/admin/dashboard`;
+    const verifyUrl = `${publicAppOrigin()}/api/verify?token=${encodeURIComponent(verificationToken)}`;
+
     // 3. Returnera JWT
     const token = signToken(user);
-    const demoUrl = `https://${salon.slug}.appbok.se`;
 
-    // 4. Skicka välkomstmail (asynkront, blockera inte registration)
-    sendWelcomeEmail({
-      to: email.toLowerCase(),
-      salonName: salon.name,
-      adminUrl: demoUrl.replace('.appbok.se', '.appbok.se/admin'),
-      demoUrl,
-    }).catch(err => console.warn('[register] welcome email failed:', err.message));
+    // 4. Välkomstmejl (Resend → SMTP; fallback legacy om token inte sparades)
+    if (!verifyTokErr) {
+      sendWelcomeVerificationEmail({
+        to: email.toLowerCase(),
+        salonName: salon.name,
+        verifyUrl,
+        adminUrl: adminUrlForEmail,
+        demoUrl,
+      }).catch((err) => console.warn('[register] welcome email failed:', err.message));
+    } else {
+      sendWelcomeEmail({
+        to: email.toLowerCase(),
+        salonName: salon.name,
+        adminUrl: demoUrl.replace('.appbok.se', '.appbok.se/admin'),
+        demoUrl,
+      }).catch((err) => console.warn('[register] welcome email failed:', err.message));
+    }
 
     res.status(201).json({
       token,
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
-      salon: { id: salon.id, name: salon.name, slug: salon.slug },
+      salon: {
+        id: salon.id,
+        name: salon.name,
+        slug: salon.slug,
+        ...(verifyTokErr ? {} : { email_verified: false }),
+      },
       demoUrl,
       ...(bokadirektImport && {
         bokadirekt_import: {
@@ -262,7 +293,7 @@ router.post('/login', async (req, res) => {
   try {
     const { data: user, error } = await supabase
       .from('users')
-      .select('*, salons(id, name, slug)')
+      .select('*, salons(id, name, slug, email_verified)')
       .eq('email', email.toLowerCase())
       .in('role', ['admin', 'staff', 'superadmin'])
       .eq('active', true)

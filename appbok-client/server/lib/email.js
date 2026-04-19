@@ -6,7 +6,7 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '../.env') });
 
-const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
+const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, RESEND_API_KEY, RESEND_FROM } = process.env;
 
 function isPlaceholder(value) {
   if (!value) return false;
@@ -129,7 +129,137 @@ export async function sendInviteEmail({ to, salonName, inviteUrl }) {
   }
 }
 
-// ─── Välkomstmail ───────────────────────────────────────────────────────────
+function escapeHtmlEmail(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Resend HTTP API (ingen extra npm-beroende). Kräver RESEND_API_KEY i .env.
+ * @returns {Promise<{ ok: boolean; error?: string }>}
+ */
+async function sendViaResend({ from, to, subject, html }) {
+  const key = RESEND_API_KEY?.trim();
+  if (!key) return { ok: false, error: 'RESEND_API_KEY missing' };
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ from, to: [to], subject, html }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = body?.message || body?.error || res.statusText || `HTTP ${res.status}`;
+      console.error('[email] Resend API error:', msg, body);
+      return { ok: false, error: msg };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error('[email] Resend fetch:', err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
+function buildVerificationWelcomeHtml({ salonName, verifyUrl, adminUrl, demoUrl }) {
+  const safeName = escapeHtmlEmail(salonName);
+  return `
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e5e5e5;">
+          <tr>
+            <td style="background-color:#171717; padding:28px 40px; text-align:center;">
+              <h1 style="margin:0; color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.02em;">Appbok</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px 40px 32px;">
+              <h2 style="margin:0 0 16px; color:#171717; font-size:22px; font-weight:700; letter-spacing:-0.02em;">Välkommen till Appbok!</h2>
+              <p style="margin:0 0 16px; color:#404040; font-size:16px; line-height:1.6;">
+                Hej! Vi är så glada att du valt Appbok för <strong>${safeName}</strong>. För att aktivera alla funktioner (inklusive SMS-utskick till kunder) behöver vi bara att du bekräftar din e-postadress.
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto 32px;">
+                <tr>
+                  <td style="background-color:#171717; border-radius:8px;">
+                    <a href="${verifyUrl}" target="_blank" rel="noopener noreferrer"
+                       style="display:inline-block; padding:14px 28px; color:#ffffff; text-decoration:none; font-size:16px; font-weight:600;">
+                      Bekräfta e-postadress
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 12px; color:#737373; font-size:14px; line-height:1.5;">
+                Har du frågor? Svara bara på detta mejl så hjälper vi dig direkt.
+              </p>
+              <p style="margin:0; color:#a3a3a3; font-size:12px; line-height:1.5;">
+                Din bokningssida: <a href="${demoUrl}" style="color:#737373;">${escapeHtmlEmail(demoUrl)}</a><br />
+                Admin: <a href="${adminUrl}" style="color:#737373;">${escapeHtmlEmail(adminUrl)}</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#fafafa; padding:20px 40px; text-align:center; border-top:1px solid #eeeeee;">
+              <p style="margin:0; color:#a3a3a3; font-size:12px;">Appbok · Bokning som funkar</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Välkomstmejl med bekräftelselänk. Försöker Resend först, annars SMTP (nodemailer).
+ * @param {{ to: string, salonName: string, verifyUrl: string, adminUrl: string, demoUrl: string }} options
+ */
+export async function sendWelcomeVerificationEmail({ to, salonName, verifyUrl, adminUrl, demoUrl }) {
+  const fromResend = (RESEND_FROM || 'Appbok <hej@appbok.se>').trim();
+  const fromSmtp = SMTP_FROM || fromResend;
+  const subject = 'Välkommen till Appbok! 👋 Bekräfta din e-post';
+  const html = buildVerificationWelcomeHtml({ salonName, verifyUrl, adminUrl, demoUrl });
+
+  const resend = await sendViaResend({ from: fromResend, to, subject, html });
+  if (resend.ok) {
+    console.log('[email] Welcome+verification sent via Resend to', to);
+    return { success: true, via: 'resend' };
+  }
+
+  if (!transporter) {
+    console.warn('[email] Resend failed (' + (resend.error || '?') + ') and SMTP not configured — no welcome email to', to);
+    return { success: false, error: resend.error || 'SMTP not configured' };
+  }
+
+  try {
+    await transporter.sendMail({
+      from: fromSmtp,
+      to,
+      subject,
+      html,
+    });
+    console.log('[email] Welcome+verification sent via SMTP to', to);
+    return { success: true, via: 'smtp' };
+  } catch (err) {
+    console.error('[email] Welcome+verification SMTP failed:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+// ─── Välkomstmail (legacy, utan verifiering) ─────────────────────────────────
 
 function buildWelcomeHtml({ salonName, adminUrl, demoUrl }) {
   return `
