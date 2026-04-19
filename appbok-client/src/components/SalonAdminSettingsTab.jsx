@@ -84,8 +84,21 @@ function SalonThemePanel({ salon, onSaved }) {
         headers: authHeaders(),
         body: fd,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Kunde inte ladda upp logotypen.');
+      const text = await res.text();
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        /* non-JSON body e.g. HTML proxy error */
+      }
+      if (!res.ok) {
+        const apiErr = typeof data.error === 'string' ? data.error : '';
+        throw new Error(
+          apiErr ||
+            (text && !text.trimStart().startsWith('<') ? text.slice(0, 240) : '') ||
+            `Uppladdning misslyckades (HTTP ${res.status}).`,
+        );
+      }
       const uploadedUrl = data.logo_url;
       setLogoUrl(uploadedUrl);
       setLogoPreview(uploadedUrl);

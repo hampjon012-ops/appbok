@@ -374,8 +374,8 @@ router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) 
     if (fetchErr) throw fetchErr;
     if (!salonRow) return res.status(404).json({ error: 'Salong hittades inte.' });
 
-    // Parse multipart body manually (Node.js built-in)
-    const { Readable } = await import('stream');
+    // Parse multipart body manually (no extra deps). Field name is "logo";
+    // browsers send: ... name="logo"; filename="photo.png" (not filename="logo").
     const buf = await new Promise((resolve, reject) => {
       const chunks = [];
       req.on('data', (chunk) => chunks.push(chunk));
@@ -383,38 +383,42 @@ router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) 
       req.on('error', reject);
     });
 
-    // Simple multipart parser (finds boundary, splits parts)
-    const boundaryMatch = contentType.match(/boundary=(.+)$/);
-    if (!boundaryMatch) return res.status(400).json({ error: 'Missing multipart boundary' });
-    const boundary = '--' + boundaryMatch[1];
+    const boundaryRaw = contentType.match(/boundary\s*=\s*([^;\s]+)/i)?.[1]?.trim() || '';
+    const boundaryStripped = boundaryRaw.replace(/^["']|["']$/g, '');
+    if (!boundaryStripped) {
+      return res.status(400).json({ error: 'Saknar multipart boundary i Content-Type.' });
+    }
+    const boundary = `--${boundaryStripped}`;
     const parts = buf.toString('binary').split(boundary);
 
     let fileBuffer = null;
     let fileName = 'logo.png';
-    let mimeType = 'image/png';
+    let mimeType = '';
 
     for (const part of parts) {
-      if (!part.includes('filename="logo"')) continue;
       const headerEnd = part.indexOf('\r\n\r\n');
       if (headerEnd === -1) continue;
       const header = part.substring(0, headerEnd);
+      if (!/name="logo"/i.test(header)) continue;
+      const fnMatch = header.match(/filename="([^"]*)"/i);
+      if (!fnMatch) continue;
+      fileName = fnMatch[1] && fnMatch[1].trim() ? fnMatch[1] : 'logo.png';
+
+      const typeMatch = header.match(/Content-Type:\s*([^\s\r\n]+)/i);
+      mimeType = typeMatch ? typeMatch[1].trim() : '';
+
       const bodyRaw = part.substring(headerEnd + 4);
-      // Remove trailing \r\n that split leaves
-      const trimmed = bodyRaw.endsWith('\r\n') ? bodyRaw.slice(0, -2) : bodyRaw;
+      const trimmed = bodyRaw.replace(/\r\n$/, '');
+      fileBuffer = Buffer.from(trimmed, 'binary');
+    }
 
-      const nameMatch = header.match(/name="logo" filename="([^"]+)"/);
-      const typeMatch = header.match(/Content-Type:\s*([^\s\r\n]+)/);
-
-      if (nameMatch) fileName = nameMatch[1];
-      if (typeMatch) mimeType = typeMatch[1];
-
-      // Strip last padding bytes (trailing \r\n from boundary close)
-      const safeBody = Buffer.from(trimmed, 'binary');
-      // Remove up to 2 trailing bytes (\r\n) that are part of the multipart footer
-      let end = safeBody.length;
-      if (end > 2 && safeBody[end - 1] === 0x0a) end--;
-      if (end > 2 && safeBody[end - 1] === 0x0d) end--;
-      fileBuffer = safeBody.slice(0, end);
+    // Guess MIME if browser omitted Content-Type on the part (uncommon but safe)
+    if (fileBuffer && !mimeType) {
+      const lower = fileName.toLowerCase();
+      if (lower.endsWith('.png')) mimeType = 'image/png';
+      else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) mimeType = 'image/jpeg';
+      else if (lower.endsWith('.svg')) mimeType = 'image/svg+xml';
+      else mimeType = 'image/png';
     }
 
     if (!fileBuffer) {
