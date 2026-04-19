@@ -46,6 +46,16 @@ export function adminApiHeaders() {
 }
 
 /**
+ * Samma som adminApiHeaders men utan Content-Type — använd vid fetch med FormData
+ * så att webbläsaren kan sätta multipart/form-data med korrekt boundary.
+ */
+export function adminApiHeadersForUpload() {
+  const h = adminApiHeaders();
+  delete h['Content-Type'];
+  return h;
+}
+
+/**
  * Salong-ID för GET /api/services?salon_id=…, Personal, m.m.
  * Impersonering först — annars är sb_salon fortfarande HQ och listor för Colorisma blir tomma.
  */

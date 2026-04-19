@@ -400,9 +400,21 @@ router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) 
       if (headerEnd === -1) continue;
       const header = part.substring(0, headerEnd);
       if (!/name="logo"/i.test(header)) continue;
-      const fnMatch = header.match(/filename="([^"]*)"/i);
-      if (!fnMatch) continue;
-      fileName = fnMatch[1] && fnMatch[1].trim() ? fnMatch[1] : 'logo.png';
+
+      let parsedFile = '';
+      const quoted = header.match(/filename="([^"]*)"/i);
+      if (quoted) parsedFile = quoted[1] || '';
+      if (!parsedFile) {
+        const star = header.match(/filename\*=UTF-8''([^;\s\r\n]+)/i);
+        if (star?.[1]) {
+          try {
+            parsedFile = decodeURIComponent(star[1].trim());
+          } catch {
+            parsedFile = star[1].trim();
+          }
+        }
+      }
+      fileName = parsedFile.trim() ? parsedFile.trim() : 'logo.png';
 
       const typeMatch = header.match(/Content-Type:\s*([^\s\r\n]+)/i);
       mimeType = typeMatch ? typeMatch[1].trim() : '';

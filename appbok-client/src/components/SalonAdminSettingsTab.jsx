@@ -7,7 +7,7 @@ import {
   resolvePrimaryAccentHex,
 } from '../lib/salonPublicConfig.js';
 import { DEFAULT_PLATFORM_SALON_THEME } from '../lib/themePresets.js';
-import { adminApiHeaders as authHeaders } from '../lib/adminApiHeaders.js';
+import { adminApiHeaders as authHeaders, adminApiHeadersForUpload } from '../lib/adminApiHeaders.js';
 import { getSalonPublicBookingPreviewUrl, copyTextToClipboard } from '../lib/adminUrls.js';
 
 const DEFAULT_SALON_THEME = DEFAULT_PLATFORM_SALON_THEME;
@@ -81,7 +81,7 @@ function SalonThemePanel({ salon, onSaved }) {
       fd.append('logo', file, file.name);
       const res = await fetch('/api/salons/current/logo-upload', {
         method: 'POST',
-        headers: authHeaders(),
+        headers: adminApiHeadersForUpload(),
         body: fd,
       });
       const text = await res.text();
