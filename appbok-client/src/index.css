@@ -5169,6 +5169,10 @@ textarea.admin-input {
 .logo-upload-btn:hover:not(:disabled) {
   background: var(--admin-ui-primary-hover);
 }
+/* Themed panel sets color on all labels; upload buttons are <label> and need explicit white text. */
+.superadmin-theme-controls--themed .logo-upload-btn {
+  color: #fff;
+}
 .logo-upload-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
