@@ -4,7 +4,8 @@ import { requireAuth, requireAdmin } from '../lib/auth.js';
 import { ensureSalonThemeAccent } from '../lib/ensureSalonThemeAccent.js';
 import { maybeExpireTrialSalonIfNeeded } from '../lib/expireTrialSalon.js';
 import { normalizeLogoMimeType } from '../lib/normalizeLogoMimeType.js';
-import { parseMultipart } from '../lib/parseMultipart.js';
+import { formidable } from 'formidable';
+import { Buffer } from 'buffer';
 
 const router = Router();
 const SYSTEM_SALON_ID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
@@ -376,72 +377,23 @@ router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) 
     if (fetchErr) throw fetchErr;
     if (!salonRow) return res.status(404).json({ error: 'Salong hittades inte.' });
 
-    // Parse multipart body using byte-level approach (works with UTF-8 / SVG).
-    const buf = await new Promise((resolve, reject) => {
-      const chunks = [];
-      req.on('data', (chunk) => chunks.push(chunk));
-      req.on('end', () => resolve(Buffer.concat(chunks)));
-      req.on('error', reject);
-    });
+    // Use formidable for robust multipart parsing (handles UTF-8/SVG correctly).
+    const form = formidable({ maxFileSize: 3 * 1024 * 1024 });
+    const [fields, files] = await form.parse(req);
 
-    const boundaryRaw = contentType.match(/boundary\s*=\s*([^;\s]+)/i)?.[1]?.trim() || '';
-    const boundaryStripped = boundaryRaw.replace(/^["']|["']$/g, '');
-    if (!boundaryStripped) {
-      return res.status(400).json({ error: 'Saknar multipart boundary i Content-Type.' });
-    }
-
-    const parts = parseMultipart(buf, boundaryStripped);
-
-    // DEBUG: log parsed parts to see what we got
-    console.log('[logo-upload] buf length:', buf.length, 'boundary:', boundaryStripped.slice(0, 40), 'parts count:', parts.length);
-    for (const { header } of parts) {
-      console.log('[logo-upload] part header (first 200):', header.slice(0, 200));
-    }
-
-    let fileBuffer = null;
-    let fileName = 'logo.png';
-    let mimeType = '';
-
-    for (const { header, body } of parts) {
-      if (!/name="logo"/i.test(header)) continue;
-
-      let parsedFile = '';
-      const quoted = header.match(/filename="([^"]*)"/i);
-      if (quoted) parsedFile = quoted[1] || '';
-      if (!parsedFile) {
-        const star = header.match(/filename\*=UTF-8''([^;\s\r\n]+)/i);
-        if (star?.[1]) {
-          try {
-            parsedFile = decodeURIComponent(star[1].trim());
-          } catch {
-            parsedFile = star[1].trim();
-          }
-        }
-      }
-      fileName = parsedFile.trim() ? parsedFile.trim() : 'logo.png';
-
-      const typeMatch = header.match(/Content-Type:\s*([^\s\r\n]+)/i);
-      mimeType = typeMatch ? typeMatch[1].trim() : '';
-
-      fileBuffer = body; // Uint8Array — no string conversion
-    }
-
-    // Guess MIME if browser omitted Content-Type on the part (uncommon but safe)
-    if (fileBuffer && !mimeType) {
-      const lower = fileName.toLowerCase();
-      if (lower.endsWith('.png')) mimeType = 'image/png';
-      else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) mimeType = 'image/jpeg';
-      else if (lower.endsWith('.svg')) mimeType = 'image/svg+xml';
-      else mimeType = 'image/png';
-    }
-
-    if (!fileBuffer) {
+    const fileEntry = Array.isArray(files.logo) ? files.logo[0] : files.logo;
+    if (!fileEntry) {
       return res.status(400).json({ error: 'Ingen fil hittades i förfrågan.' });
     }
 
-    mimeType = normalizeLogoMimeType(mimeType, fileName);
+    const fileName = fileEntry.originalFilename || 'logo.png';
+    const mimeType = normalizeLogoMimeType(fileEntry.mimetype || '', fileName);
 
-    // Validate type
+    // Read file content as Buffer (formidable stores it at filepath)
+    const fs = await import('fs');
+    const fileBuffer = fs.readFileSync(fileEntry.filepath);
+
+    // Validate type (normalize handles wrong browser-reported types e.g. octet-stream for SVG)
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
     if (!allowedTypes.includes(mimeType)) {
       return res.status(400).json({ error: `Filtypen ${mimeType} är inte tillåten. Använd PNG, JPG eller SVG.` });
