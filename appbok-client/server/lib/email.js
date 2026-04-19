@@ -175,21 +175,41 @@ export async function sendWelcomeEmail({ to, salonName, adminUrl, demoUrl }) {
 
 function fmtDateSwedish(dateStr) {
   const [y, m, d] = dateStr.split('-');
-  return new Date(y, m - 1, d).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
-}
-
-function buildBookingConfirmationHtml({ customerName, serviceName, stylistName, date, time, salonName }) {
-  const safe = (s) => escapeHtml(String(s ?? ''));
-  return `<!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 0;"><tr><td align="center"><table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;"><tr><td style="background:#6f4e37;padding:30px 40px;text-align:center;"><h1 style="margin:0;color:#fff;font-size:24px;font-weight:600;">${safe(salonName)}</h1></td></tr><tr><td style="padding:40px;"><h2 style="margin:0 0 20px;color:#333;font-size:20px;">Hej ${safe(customerName)}!</h2><p style="margin:0 0 16px;color:#555;font-size:16px;line-height:1.5;">Din bokning är nu bekräftad. Här är sammanfattningen:</p><table role="presentation" cellpadding="0" cellspacing="0" style="background:#f9f9f9;border-radius:8px;padding:20px;margin:20px 0;width:100%;"><tr><td style="padding:12px 0;border-bottom:1px solid #eee;"><strong style="color:#555;">Tjänst:</strong></td><td style="padding:12px 0;border-bottom:1px solid #eee;text-align:right;color:#333;">${safe(serviceName)}</td></tr><tr><td style="padding:12px 0;border-bottom:1px solid #eee;"><strong style="color:#555;">Stylist:</strong></td><td style="padding:12px 0;border-bottom:1px solid #eee;text-align:right;color:#333;">${safe(stylistName)}</td></tr><tr><td style="padding:12px 0;border-bottom:1px solid #eee;"><strong style="color:#555;">Datum:</strong></td><td style="padding:12px 0;border-bottom:1px solid #eee;text-align:right;color:#333;">${fmtDateSwedish(date)}</td></tr><tr><td style="padding:12px 0;"><strong style="color:#555;">Tid:</strong></td><td style="padding:12px 0;text-align:right;color:#333;">${safe(time)}</td></tr></table><p style="margin:24px 0 16px;color:#555;font-size:16px;line-height:1.5;"><strong>Viktigt:</strong> Avbokning måste ske senast 24 timmar före din bokningstid.</p></td></tr><tr><td style="background:#f9f9f9;padding:20px 40px;text-align:center;border-top:1px solid #eee;"><p style="margin:0;color:#aaa;font-size:12px;">Detta mail skickades från ${safe(salonName)} via Appbok.</p></td></tr></table></td></tr></table></body></html>`;
-}
-
-export async function sendBookingConfirmationEmail({ to, customerName, serviceName, stylistName, date, time, salonName }) {
-  const html = buildBookingConfirmationHtml({ customerName, serviceName, stylistName, date, time, salonName });
-  const r = await sendEmail({
-    to,
-    subject: `Bokningsbekräftelse — ${salonName}`,
-    html,
+  return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('sv-SE', {
+    weekday: 'long', day: 'numeric', month: 'long',
   });
+}
+
+function googleCalendarLink({ title, date, time, durationMinutes = 60, location, description }) {
+  const [year, month, day] = date.split('-');
+  const [hour, minute] = time.split(':');
+  const start = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+  const end = new Date(start.getTime() + durationMinutes * 60_000);
+  const fmt = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: title,
+    dates: `${fmt(start)}/${fmt(end)}`,
+    ...(location ? { location } : {}),
+    ...(description ? { details: description } : {}),
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+export async function sendBookingConfirmationEmail({
+  to, customerName, serviceName, stylistName, date, time,
+  salonName, price, bookingId, salonSlug, baseUrl,
+}) {
+  const { BookingConfirmationEmail } = await import('../../emails/BookingConfirmationEmail.jsx');
+  const { render } = await import('@react-email/render');
+  const html = await render(
+    BookingConfirmationEmail({
+      customerName, serviceName, stylistName, date, time,
+      salonName, price, bookingId, salonSlug, baseUrl,
+    }),
+    { pretty: true },
+  );
+  const r = await sendEmail({ to, subject: `Bokningsbekräftelse — ${salonName}`, html });
   if (r.success) console.log('[email] Booking confirmation sent to', to, 'via', r.via);
   return r;
 }

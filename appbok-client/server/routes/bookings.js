@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import supabase from '../lib/supabase.js';
 import { requireAuth } from '../lib/auth.js';
 import { createCalendarEvent, deleteCalendarEvent } from '../lib/google.js';
+import { publicAppOrigin } from '../lib/publicAppOrigin.js';
 import { sendBookingConfirmationEmail, sendCancellationEmail, sendCancellationNotificationEmail, sendStylistNotificationEmail } from '../lib/email.js';
 import { sendBookingSMS, sendCancellationSMS, sendRebookConfirmationSMS } from '../lib/sms.js';
 import { computeSlotsForStylist } from '../lib/stylistAvailability.js';
@@ -507,6 +508,8 @@ router.post('/', async (req, res) => {
     let stylistName = 'Vald stylist';
     let stylistEmail = null;
     let salonName = 'Salongen';
+    let salonSlug = undefined;
+    let salonBaseUrl = '';
 
     try {
       if (booking_services && booking_services.length > 0) {
@@ -533,13 +536,22 @@ router.post('/', async (req, res) => {
         }
       }
 
-      // Fetch salon name
+      // Fetch salon name + slug for booking page links
       const { data: salon } = await supabase
         .from('salons')
-        .select('name')
+        .select('name, slug')
         .eq('id', salon_id)
         .single();
-      if (salon) salonName = salon.name;
+      if (salon) {
+        salonName = salon.name;
+        salonSlug = salon.slug;
+        salonBaseUrl = publicAppOrigin();
+      }
+
+      // Format price string from amount_paid
+      const priceStr = amount_paid > 0
+        ? `${Number(amount_paid).toLocaleString('sv-SE')} kr`
+        : undefined;
 
       // Send confirmation email to customer
       if (customer_email) {
@@ -551,6 +563,10 @@ router.post('/', async (req, res) => {
           date: booking_date,
           time: booking_time,
           salonName,
+          price: priceStr,
+          bookingId: data.id,
+          salonSlug,
+          baseUrl: salonBaseUrl,
         });
       }
 
