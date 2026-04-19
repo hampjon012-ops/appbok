@@ -106,12 +106,12 @@ export async function sendInviteEmail({ to, salonName, inviteUrl }) {
  * @param {{ to: string, name: string, token: string, baseUrl: string, salonSlug: string }} options
  */
 export async function sendWelcomeVerificationEmail({ to, name, token, baseUrl, salonSlug }) {
-  const { WelcomeEmail } = await import('../../../emails/WelcomeEmail.jsx');
+  const { WelcomeEmail } = await import('../../emails/WelcomeEmail.jsx');
   const { render } = await import('@react-email/render');
   const fromResend = (RESEND_FROM || 'Appbok <hej@appbok.se>').trim();
   const fromSmtp = (SMTP_FROM || fromResend).trim();
   const subject = 'Välkommen till Appbok! Bekräfta din e-post';
-  const html = render(WelcomeEmail({ name, token, baseUrl, salonSlug }), { pretty: true });
+  const html = await render(WelcomeEmail({ name, token, baseUrl, salonSlug }), { pretty: true });
 
   if (transporter) {
     try {
