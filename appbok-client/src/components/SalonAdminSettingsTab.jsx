@@ -954,9 +954,6 @@ export default function SalonAdminSettingsTab() {
   const [tab, setTab] = useState('theme');
   const [loading, setLoading] = useState(true);
   const [salonDeletedBlocked, setSalonDeletedBlocked] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteBusy, setDeleteBusy] = useState(false);
-  const [deleteErr, setDeleteErr] = useState('');
 
   const load = useCallback((opts = {}) => {
     const silent = Boolean(opts.silent);
@@ -1026,30 +1023,6 @@ export default function SalonAdminSettingsTab() {
     return <div className="admin-section"><p className="admin-empty">Kunde inte hämta salongsdata.</p></div>;
   }
 
-  const handleConfirmSoftDelete = async () => {
-    setDeleteBusy(true);
-    setDeleteErr('');
-    try {
-      const res = await fetch('/api/salons/current/soft-delete', {
-        method: 'POST',
-        headers: authHeaders(),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Kunde inte radera salongen.');
-      try {
-        localStorage.removeItem('sb_token');
-        localStorage.removeItem('sb_salon');
-      } catch (_) {
-        /* ignore */
-      }
-      window.location.href = '/login';
-    } catch (e) {
-      setDeleteErr(e?.message || 'Ett fel uppstod.');
-    } finally {
-      setDeleteBusy(false);
-    }
-  };
-
   return (
     <div className="admin-section superadmin-section salon-admin-settings">
       <div className="superadmin-editor-top salon-admin-editor-top">
@@ -1093,96 +1066,6 @@ export default function SalonAdminSettingsTab() {
           }}
         />
       )}
-
-      <div
-        className="admin-card salon-admin-danger-zone"
-        style={{
-          marginTop: '2rem',
-          border: '1px solid #fecaca',
-          borderRadius: '12px',
-          padding: '1.25rem',
-          background: '#fef2f2',
-        }}
-      >
-        <h3 className="admin-card-title" style={{ color: '#991b1b', marginBottom: '0.5rem' }}>
-          Radera salong
-        </h3>
-        <p className="admin-hint" style={{ marginBottom: '1rem' }}>
-          Gör salongen inaktiv. All data sparas och superadmin kan återställa salongen vid behov.
-        </p>
-        <button
-          type="button"
-          className="btn-sm"
-          style={{
-            background: '#dc2626',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '0.5rem 1rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-          onClick={() => {
-            setDeleteErr('');
-            setDeleteDialogOpen(true);
-          }}
-        >
-          🗑️ Radera salong
-        </button>
-      </div>
-
-      {deleteDialogOpen ? (
-        <div className="modal-backdrop" role="presentation" style={{ zIndex: 120 }}>
-          <div
-            className="modal-content"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="salon-delete-dialog-title"
-            style={{ maxWidth: '420px' }}
-          >
-            <h3 id="salon-delete-dialog-title" style={{ marginTop: 0, fontSize: '1.15rem', color: '#92400e' }}>
-              ⚠️ Är du säker?
-            </h3>
-            <p style={{ margin: '0.75rem 0', color: '#444', lineHeight: 1.5 }}>
-              Detta kommer att göra salongen inaktiv. All data sparas.
-              <br />
-              Du kan återställa den senare via superadmin.
-            </p>
-            {deleteErr ? (
-              <p className="superadmin-error" style={{ marginBottom: '0.75rem' }}>
-                {deleteErr}
-              </p>
-            ) : null}
-            <div className="superadmin-modal-actions" style={{ marginTop: '1.25rem' }}>
-              <button
-                type="button"
-                className="btn-sm btn-ghost"
-                disabled={deleteBusy}
-                onClick={() => setDeleteDialogOpen(false)}
-              >
-                Avbryt
-              </button>
-              <button
-                type="button"
-                style={{
-                  background: '#dc2626',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '0.45rem 1rem',
-                  fontWeight: 600,
-                  cursor: deleteBusy ? 'wait' : 'pointer',
-                  opacity: deleteBusy ? 0.7 : 1,
-                }}
-                disabled={deleteBusy}
-                onClick={handleConfirmSoftDelete}
-              >
-                {deleteBusy ? 'Raderar…' : 'Radera salong'}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
