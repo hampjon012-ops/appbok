@@ -63,18 +63,17 @@ function SalonThemePanel({ salon, onSaved }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setLogoUploadErr('');
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
     const lowerName = file.name.toLowerCase();
     const extOk =
       lowerName.endsWith('.png') ||
       lowerName.endsWith('.jpg') ||
-      lowerName.endsWith('.jpeg') ||
-      lowerName.endsWith('.svg');
+      lowerName.endsWith('.jpeg');
     const typeOk =
       allowedTypes.includes(file.type) ||
       (extOk && (file.type === '' || file.type === 'application/octet-stream'));
     if (!typeOk || !extOk) {
-      setLogoUploadErr('Filtypen är inte tillåten. Använd PNG, JPG eller SVG.');
+      setLogoUploadErr('Filtypen är inte tillåten. Använd PNG eller JPG.');
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
@@ -235,7 +234,7 @@ function SalonThemePanel({ salon, onSaved }) {
         <label>
           Logotyp
           <span className="admin-hint admin-hint--field">
-            PNG, JPG eller SVG. Max 2 MB. Visas i hero (ovanför tagline).
+            PNG eller JPG. Max 2 MB. Visas i hero (ovanför tagline).
           </span>
           <div className="logo-upload-area">
             {logoPreview && (
@@ -248,7 +247,7 @@ function SalonThemePanel({ salon, onSaved }) {
                 {logoUploading ? 'Laddar upp…' : 'Välj logotyp'}
                 <input
                   type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                  accept="image/png,image/jpeg,image/jpg"
                   className="logo-upload-input"
                   onChange={handleLogoFileChange}
                   disabled={logoUploading}

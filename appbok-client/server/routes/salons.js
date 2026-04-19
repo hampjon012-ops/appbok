@@ -394,7 +394,7 @@ router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) 
     const fileBuffer = fs.readFileSync(fileEntry.filepath);
 
     // Validate type (normalize handles wrong browser-reported types e.g. octet-stream for SVG)
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
     if (!allowedTypes.includes(mimeType)) {
       return res.status(400).json({ error: `Filtypen ${mimeType} är inte tillåten. Använd PNG, JPG eller SVG.` });
     }
