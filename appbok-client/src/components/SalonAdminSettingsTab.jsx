@@ -821,8 +821,14 @@ function SalonCalendarPanel() {
         <div className="calendar-status-box not-configured">
           <span className="cal-status-icon">⚙️</span>
           <div>
-            <strong>Google Calendar ej konfigurerat</strong>
-            <p>Administratören behöver konfigurera Google OAuth på servern.</p>
+            <strong>Google Kalender är inte aktiverat på servern</strong>
+            <p>
+              API:t saknar miljövariablerna <code>GOOGLE_CLIENT_ID</code> och{' '}
+              <code>GOOGLE_CLIENT_SECRET</code> (eller de är satta till platshållare). Lägg in riktiga värden i
+              Vercel → Project → Environment Variables (eller <code>server/.env</code> lokalt) och sätt{' '}
+              <code>GOOGLE_REDIRECT_URI</code> till samma callback-URL som i Google Cloud Console, t.ex.{' '}
+              <code>https://…/api/calendar/callback</code>. Se <code>server/.env.example</code>.
+            </p>
           </div>
         </div>
       ) : calStatus?.connected ? (

@@ -2703,8 +2703,12 @@ function StaffSettingsTab() {
           <div className="calendar-status-box not-configured">
             <span className="cal-status-icon">⚙️</span>
             <div>
-              <strong>Google Calendar ej konfigurerat</strong>
-              <p>Administratören behöver konfigurera Google OAuth på servern.</p>
+              <strong>Google Kalender är inte aktiverat på servern</strong>
+              <p>
+                API:t saknar <code>GOOGLE_CLIENT_ID</code> och <code>GOOGLE_CLIENT_SECRET</code> i miljön (t.ex.
+                Vercel Environment Variables). Be administratören lägga in OAuth-uppgifterna och rätt{' '}
+                <code>GOOGLE_REDIRECT_URI</code> enligt <code>server/.env.example</code>.
+              </p>
             </div>
           </div>
         ) : calStatus?.connected ? (

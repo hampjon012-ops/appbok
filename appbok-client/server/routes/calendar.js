@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { requireAuth } from '../lib/auth.js';
+import { adminDashboardOrigin } from '../lib/publicAppOrigin.js';
 import {
   isConfigured,
   getConsentUrl,
@@ -79,8 +80,8 @@ router.get('/callback', async (req, res) => {
       return res.status(500).send('Kunde inte spara kalenderkoppling.');
     }
 
-    // Redirect user back to admin dashboard
-    res.redirect('http://localhost:5173/admin?calendar=connected');
+    const adminBase = adminDashboardOrigin().replace(/\/$/, '');
+    res.redirect(`${adminBase}/admin?calendar=connected`);
   } catch (err) {
     console.error('Google Calendar callback error:', err.message);
     res.status(500).send('Kunde inte slutföra Google-koppling.');
