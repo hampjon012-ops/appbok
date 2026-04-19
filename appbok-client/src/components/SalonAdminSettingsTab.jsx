@@ -307,35 +307,35 @@ function SalonThemePanel({ salon, onSaved }) {
         <div className="flex flex-col gap-6 mb-8">
           <label>
             Bakgrundsfärg
-            <span className="admin-hint admin-hint--field">
+            <span className="admin-hint admin-hint--field text-sm text-gray-500 mt-1">
               Yta bakom &quot;Våra mest populära tjänster&quot;, innehållskortet under hero och Instagram-rutnätet.
             </span>
             <input type="color" className="admin-input color-input" value={background} onChange={(e) => setBackground(e.target.value)} />
           </label>
           <label>
             Sekundärfärg
-            <span className="admin-hint admin-hint--field">
+            <span className="admin-hint admin-hint--field text-sm text-gray-500 mt-1">
               Yta bakom &quot;Träffa vårt team&quot;, kontakt/karta, sidfot och ljusare paneler i bokningsfönstret.
             </span>
             <input type="color" className="admin-input color-input" value={secondary} onChange={(e) => setSecondary(e.target.value)} />
           </label>
           <label>
             Knappfärg
-            <span className="admin-hint admin-hint--field">
+            <span className="admin-hint admin-hint--field text-sm text-gray-500 mt-1">
               Färg på Boka tid, Välj vid tjänster, markerade steg i bokningsflödet och andra tydliga knappar/länkar.
             </span>
             <input type="color" className="admin-input color-input" value={accent} onChange={(e) => setAccent(e.target.value)} />
           </label>
           <label>
             Textfärg
-            <span className="admin-hint admin-hint--field">
+            <span className="admin-hint admin-hint--field text-sm text-gray-500 mt-1">
               Huvudsaklig textfärg på bokningssidan: rubriker, brödtext och etiketter (inte hero-texten ovanför kortet).
             </span>
             <input type="color" className="admin-input color-input" value={text} onChange={(e) => setText(e.target.value)} />
           </label>
         </div>
 
-        <hr className="my-6 border-gray-200" />
+        <hr className="my-10 border-gray-200" />
 
         <div className="flex flex-col gap-8 mb-8">
           {/*
@@ -350,11 +350,10 @@ function SalonThemePanel({ salon, onSaved }) {
             </label>
 
             {logoPreview ? (
-              /* Fyllt läge */
               <div className="border border-gray-200 rounded-lg p-4 bg-white flex flex-col items-center gap-4">
-                <img src={logoPreview} alt="Logotypförhandsvisning" className="w-24 h-24 object-contain" decoding="async" />
+                <img src={logoPreview} alt="Logotypförhandsvisning" className="h-24 w-auto object-contain" decoding="async" />
                 <div className="flex gap-3">
-                  <label className="bg-white border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-50 shadow-sm inline-flex items-center gap-2">
+                  <label className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">
                     {logoUploading ? 'Laddar upp…' : 'Byt bild'}
                     <input
                       type="file"
@@ -366,7 +365,7 @@ function SalonThemePanel({ salon, onSaved }) {
                   </label>
                   <button
                     type="button"
-                    className="border border-red-200 text-red-600 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-50"
+                    className="text-red-600 px-4 py-2 rounded-md text-sm font-medium hover:bg-red-50 transition-colors"
                     onClick={handleLogoRemove}
                     disabled={logoUploading}
                   >
@@ -376,10 +375,9 @@ function SalonThemePanel({ salon, onSaved }) {
                 {logoUploadErr && <p className="logo-upload-error">{logoUploadErr}</p>}
               </div>
             ) : (
-              /* Dropzone – tomt läge */
-              <label className="border-dashed border-2 border-gray-300 rounded-lg p-8 bg-gray-50 hover:bg-gray-100 flex flex-col items-center justify-center gap-3 cursor-pointer">
-                <Upload className="w-8 h-8 text-gray-400" />
-                <span className="text-sm text-gray-500">Klicka för att ladda upp</span>
+              <label className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 hover:border-gray-400 cursor-pointer transition-all">
+                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                <span className="text-sm text-gray-500">Klicka för att ladda upp bild</span>
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/jpg"
@@ -387,7 +385,7 @@ function SalonThemePanel({ salon, onSaved }) {
                   onChange={handleLogoFileChange}
                   disabled={logoUploading}
                 />
-                {logoUploading && <span className="text-sm text-gray-500">Laddar upp…</span>}
+                {logoUploading && <span className="text-sm text-gray-500 mt-2">Laddar upp…</span>}
                 {logoUploadErr && <p className="logo-upload-error">{logoUploadErr}</p>}
               </label>
             )}
@@ -405,11 +403,10 @@ function SalonThemePanel({ salon, onSaved }) {
             </label>
 
             {bgImagePreview ? (
-              /* Fyllt läge */
               <div className="border border-gray-200 rounded-lg p-4 bg-white flex flex-col items-center gap-4">
-                <img src={bgImagePreview} alt="Bakgrundsbild-förhandsvisning" className="w-full h-28 object-cover rounded" decoding="async" />
+                <img src={bgImagePreview} alt="Bakgrundsbild-förhandsvisning" className="h-24 w-auto object-contain" decoding="async" />
                 <div className="flex gap-3">
-                  <label className="bg-white border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-50 shadow-sm inline-flex items-center gap-2">
+                  <label className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">
                     {bgImageUploading ? 'Laddar upp…' : 'Byt bild'}
                     <input
                       type="file"
@@ -421,7 +418,7 @@ function SalonThemePanel({ salon, onSaved }) {
                   </label>
                   <button
                     type="button"
-                    className="border border-red-200 text-red-600 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-50"
+                    className="text-red-600 px-4 py-2 rounded-md text-sm font-medium hover:bg-red-50 transition-colors"
                     onClick={handleBgImageRemove}
                     disabled={bgImageUploading}
                   >
@@ -431,10 +428,9 @@ function SalonThemePanel({ salon, onSaved }) {
                 {bgImageUploadErr && <p className="logo-upload-error">{bgImageUploadErr}</p>}
               </div>
             ) : (
-              /* Dropzone – tomt läge */
-              <label className="border-dashed border-2 border-gray-300 rounded-lg p-8 bg-gray-50 hover:bg-gray-100 flex flex-col items-center justify-center gap-3 cursor-pointer">
-                <Upload className="w-8 h-8 text-gray-400" />
-                <span className="text-sm text-gray-500">Klicka för att ladda upp</span>
+              <label className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 hover:border-gray-400 cursor-pointer transition-all">
+                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                <span className="text-sm text-gray-500">Klicka för att ladda upp bild</span>
                 <input
                   type="file"
                   accept="image/jpeg,image/webp,image/png"
@@ -442,14 +438,14 @@ function SalonThemePanel({ salon, onSaved }) {
                   onChange={handleBgImageFileChange}
                   disabled={bgImageUploading}
                 />
-                {bgImageUploading && <span className="text-sm text-gray-500">Laddar upp…</span>}
+                {bgImageUploading && <span className="text-sm text-gray-500 mt-2">Laddar upp…</span>}
                 {bgImageUploadErr && <p className="logo-upload-error">{bgImageUploadErr}</p>}
               </label>
             )}
           </div>
         </div>
 
-        <hr className="my-6 border-gray-200" />
+        <hr className="my-10 border-gray-200" />
 
         <p className="admin-hint admin-hint--field superadmin-theme-save-hint mb-4 text-sm text-gray-500">
           Knappen Spara skriver alla värden ovan till er salong och uppdaterar bokningssidan för besökare (även andra flikar efter en kort stund).
