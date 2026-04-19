@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { Upload } from 'lucide-react';
+import { UploadCloud } from 'lucide-react';
 import ThemeLivePreviewColumn from './ThemeLivePreviewColumn.jsx';
 import {
   displaySalonName,
@@ -304,68 +304,65 @@ function SalonThemePanel({ salon, onSaved }) {
       >
         <h3 className="admin-card-title">Kontroller</h3>
 
-        <div className="flex flex-col gap-6 mb-8">
+        <div className="theme-colors-stack">
           <label>
             Bakgrundsfärg
-            <span className="admin-hint admin-hint--field text-sm text-gray-500 mt-1">
+            <span className="admin-hint admin-hint--field theme-hint-subtle">
               Yta bakom &quot;Våra mest populära tjänster&quot;, innehållskortet under hero och Instagram-rutnätet.
             </span>
             <input type="color" className="admin-input color-input" value={background} onChange={(e) => setBackground(e.target.value)} />
           </label>
           <label>
             Sekundärfärg
-            <span className="admin-hint admin-hint--field text-sm text-gray-500 mt-1">
+            <span className="admin-hint admin-hint--field theme-hint-subtle">
               Yta bakom &quot;Träffa vårt team&quot;, kontakt/karta, sidfot och ljusare paneler i bokningsfönstret.
             </span>
             <input type="color" className="admin-input color-input" value={secondary} onChange={(e) => setSecondary(e.target.value)} />
           </label>
           <label>
             Knappfärg
-            <span className="admin-hint admin-hint--field text-sm text-gray-500 mt-1">
+            <span className="admin-hint admin-hint--field theme-hint-subtle">
               Färg på Boka tid, Välj vid tjänster, markerade steg i bokningsflödet och andra tydliga knappar/länkar.
             </span>
             <input type="color" className="admin-input color-input" value={accent} onChange={(e) => setAccent(e.target.value)} />
           </label>
           <label>
             Textfärg
-            <span className="admin-hint admin-hint--field text-sm text-gray-500 mt-1">
+            <span className="admin-hint admin-hint--field theme-hint-subtle">
               Huvudsaklig textfärg på bokningssidan: rubriker, brödtext och etiketter (inte hero-texten ovanför kortet).
             </span>
             <input type="color" className="admin-input color-input" value={text} onChange={(e) => setText(e.target.value)} />
           </label>
         </div>
 
-        <hr className="my-10 border-gray-200" />
+        <hr className="theme-section-hr" />
 
-        <div className="flex flex-col gap-8 mb-8">
-          {/*
-           * ── Logotyp ────────────────────────────────────────────────
-           */}
-          <div className="flex flex-col gap-3">
+        <div className="theme-upload-stack">
+          <div className="theme-upload-region">
             <label>
               Logotyp
-              <span className="admin-hint admin-hint--field text-sm text-gray-500 mt-1">
+              <span className="admin-hint admin-hint--field theme-hint-subtle">
                 PNG eller JPG. Max 2 MB. Visas i hero (ovanför tagline).
               </span>
             </label>
 
             {logoPreview ? (
-              <div className="border border-gray-200 rounded-lg p-4 bg-white flex flex-col items-center gap-4">
-                <img src={logoPreview} alt="Logotypförhandsvisning" className="h-24 w-auto object-contain" decoding="async" />
-                <div className="flex gap-3">
-                  <label className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">
+              <div className="theme-upload-preview-card">
+                <img src={logoPreview} alt="Logotypförhandsvisning" className="theme-upload-preview-img" decoding="async" />
+                <div className="theme-upload-actions-row">
+                  <label className="theme-upload-btn-secondary">
                     {logoUploading ? 'Laddar upp…' : 'Byt bild'}
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/jpg"
-                      className="hidden"
+                      className="theme-upload-file-input"
                       onChange={handleLogoFileChange}
                       disabled={logoUploading}
                     />
                   </label>
                   <button
                     type="button"
-                    className="text-red-600 px-4 py-2 rounded-md text-sm font-medium hover:bg-red-50 transition-colors"
+                    className="theme-upload-btn-danger"
                     onClick={handleLogoRemove}
                     disabled={logoUploading}
                   >
@@ -375,50 +372,47 @@ function SalonThemePanel({ salon, onSaved }) {
                 {logoUploadErr && <p className="logo-upload-error">{logoUploadErr}</p>}
               </div>
             ) : (
-              <label className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 hover:border-gray-400 cursor-pointer transition-all">
-                <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-sm text-gray-500">Klicka för att ladda upp bild</span>
+              <label className="theme-upload-dropzone">
+                <UploadCloud className="theme-upload-dropzone__icon" aria-hidden />
+                <span className="theme-upload-dropzone__text">Klicka för att ladda upp bild</span>
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/jpg"
-                  className="hidden"
+                  className="theme-upload-file-input"
                   onChange={handleLogoFileChange}
                   disabled={logoUploading}
                 />
-                {logoUploading && <span className="text-sm text-gray-500 mt-2">Laddar upp…</span>}
+                {logoUploading && <span className="theme-upload-dropzone__text">Laddar upp…</span>}
                 {logoUploadErr && <p className="logo-upload-error">{logoUploadErr}</p>}
               </label>
             )}
           </div>
 
-          {/*
-           * ── Bakgrundsbild ─────────────────────────────────────────
-           */}
-          <div className="flex flex-col gap-3">
+          <div className="theme-upload-region">
             <label>
               Bakgrundsbild
-              <span className="admin-hint admin-hint--field text-sm text-gray-500 mt-1">
+              <span className="admin-hint admin-hint--field theme-hint-subtle">
                 Bild som ligger bakom hero (överst på sidan). För foton rekommenderas JPG eller WEBP för snabbare laddningstid. Max 5 MB.
               </span>
             </label>
 
             {bgImagePreview ? (
-              <div className="border border-gray-200 rounded-lg p-4 bg-white flex flex-col items-center gap-4">
-                <img src={bgImagePreview} alt="Bakgrundsbild-förhandsvisning" className="h-24 w-auto object-contain" decoding="async" />
-                <div className="flex gap-3">
-                  <label className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">
+              <div className="theme-upload-preview-card">
+                <img src={bgImagePreview} alt="Bakgrundsbild-förhandsvisning" className="theme-upload-preview-img" decoding="async" />
+                <div className="theme-upload-actions-row">
+                  <label className="theme-upload-btn-secondary">
                     {bgImageUploading ? 'Laddar upp…' : 'Byt bild'}
                     <input
                       type="file"
                       accept="image/jpeg,image/webp,image/png"
-                      className="hidden"
+                      className="theme-upload-file-input"
                       onChange={handleBgImageFileChange}
                       disabled={bgImageUploading}
                     />
                   </label>
                   <button
                     type="button"
-                    className="text-red-600 px-4 py-2 rounded-md text-sm font-medium hover:bg-red-50 transition-colors"
+                    className="theme-upload-btn-danger"
                     onClick={handleBgImageRemove}
                     disabled={bgImageUploading}
                   >
@@ -428,26 +422,26 @@ function SalonThemePanel({ salon, onSaved }) {
                 {bgImageUploadErr && <p className="logo-upload-error">{bgImageUploadErr}</p>}
               </div>
             ) : (
-              <label className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 hover:border-gray-400 cursor-pointer transition-all">
-                <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-sm text-gray-500">Klicka för att ladda upp bild</span>
+              <label className="theme-upload-dropzone">
+                <UploadCloud className="theme-upload-dropzone__icon" aria-hidden />
+                <span className="theme-upload-dropzone__text">Klicka för att ladda upp bild</span>
                 <input
                   type="file"
                   accept="image/jpeg,image/webp,image/png"
-                  className="hidden"
+                  className="theme-upload-file-input"
                   onChange={handleBgImageFileChange}
                   disabled={bgImageUploading}
                 />
-                {bgImageUploading && <span className="text-sm text-gray-500 mt-2">Laddar upp…</span>}
+                {bgImageUploading && <span className="theme-upload-dropzone__text">Laddar upp…</span>}
                 {bgImageUploadErr && <p className="logo-upload-error">{bgImageUploadErr}</p>}
               </label>
             )}
           </div>
         </div>
 
-        <hr className="my-10 border-gray-200" />
+        <hr className="theme-section-hr" />
 
-        <p className="admin-hint admin-hint--field superadmin-theme-save-hint mb-4 text-sm text-gray-500">
+        <p className="admin-hint admin-hint--field superadmin-theme-save-hint theme-hint-subtle">
           Knappen Spara skriver alla värden ovan till er salong och uppdaterar bokningssidan för besökare (även andra flikar efter en kort stund).
         </p>
         <button
