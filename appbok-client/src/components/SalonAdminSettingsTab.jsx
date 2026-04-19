@@ -337,105 +337,69 @@ function SalonThemePanel({ salon, onSaved }) {
 
         <hr className="theme-section-hr" />
 
-        <div className="theme-upload-stack">
-          <div className="theme-upload-region">
-            <label>
-              Logotyp
-              <span className="admin-hint admin-hint--field theme-hint-subtle">
-                PNG eller JPG. Max 2 MB. Visas i hero (ovanför tagline).
-              </span>
-            </label>
-
-            {logoPreview ? (
-              <div className="theme-upload-preview-card">
-                <img src={logoPreview} alt="Logotypförhandsvisning" className="theme-upload-preview-img" decoding="async" />
-                <div className="theme-upload-actions-row">
-                  <label className="theme-upload-btn-secondary">
-                    {logoUploading ? 'Laddar upp…' : 'Byt bild'}
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg"
-                      className="theme-upload-file-input"
-                      onChange={handleLogoFileChange}
-                      disabled={logoUploading}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="theme-upload-btn-danger"
-                    onClick={handleLogoRemove}
-                    disabled={logoUploading}
-                  >
-                    Ta bort
-                  </button>
-                </div>
-                {logoUploadErr && <p className="logo-upload-error">{logoUploadErr}</p>}
-              </div>
-            ) : (
-              <label className="theme-upload-dropzone">
-                <UploadCloud className="theme-upload-dropzone__icon" aria-hidden />
-                <span className="theme-upload-dropzone__text">Klicka för att ladda upp bild</span>
+        <div className="theme-upload-compact-sections">
+          <div className="theme-upload-compact-block">
+            <span className="theme-upload-field-label">Logotyp</span>
+            <span className="admin-hint admin-hint--field theme-hint-subtle">
+              PNG eller JPG. Max 2 MB. Visas i hero (ovanför tagline). Förhandsvisning till höger.
+            </span>
+            <div className="theme-upload-compact-row">
+              <label className="theme-upload-btn-upload">
+                <UploadCloud className="theme-upload-btn-upload__icon" aria-hidden />
+                {logoUploading ? 'Laddar upp…' : 'Ladda upp ny bild'}
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/jpg"
                   className="theme-upload-file-input"
+                  style={{ display: 'none' }}
                   onChange={handleLogoFileChange}
                   disabled={logoUploading}
                 />
-                {logoUploading && <span className="theme-upload-dropzone__text">Laddar upp…</span>}
-                {logoUploadErr && <p className="logo-upload-error">{logoUploadErr}</p>}
               </label>
-            )}
+              {(logoUrl || logoPreview) && (
+                <button
+                  type="button"
+                  className="theme-upload-btn-remove-inline"
+                  onClick={handleLogoRemove}
+                  disabled={logoUploading}
+                >
+                  Ta bort
+                </button>
+              )}
+            </div>
+            {logoUploadErr && <p className="logo-upload-error">{logoUploadErr}</p>}
           </div>
 
-          <div className="theme-upload-region">
-            <label>
-              Bakgrundsbild
-              <span className="admin-hint admin-hint--field theme-hint-subtle">
-                Bild som ligger bakom hero (överst på sidan). För foton rekommenderas JPG eller WEBP för snabbare laddningstid. Max 5 MB.
-              </span>
-            </label>
-
-            {bgImagePreview ? (
-              <div className="theme-upload-preview-card">
-                <img src={bgImagePreview} alt="Bakgrundsbild-förhandsvisning" className="theme-upload-preview-img" decoding="async" />
-                <div className="theme-upload-actions-row">
-                  <label className="theme-upload-btn-secondary">
-                    {bgImageUploading ? 'Laddar upp…' : 'Byt bild'}
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/webp,image/png"
-                      className="theme-upload-file-input"
-                      onChange={handleBgImageFileChange}
-                      disabled={bgImageUploading}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="theme-upload-btn-danger"
-                    onClick={handleBgImageRemove}
-                    disabled={bgImageUploading}
-                  >
-                    Ta bort
-                  </button>
-                </div>
-                {bgImageUploadErr && <p className="logo-upload-error">{bgImageUploadErr}</p>}
-              </div>
-            ) : (
-              <label className="theme-upload-dropzone">
-                <UploadCloud className="theme-upload-dropzone__icon" aria-hidden />
-                <span className="theme-upload-dropzone__text">Klicka för att ladda upp bild</span>
+          <div className="theme-upload-compact-block">
+            <span className="theme-upload-field-label">Bakgrundsbild</span>
+            <span className="admin-hint admin-hint--field theme-hint-subtle">
+              Bild som ligger bakom hero (överst på sidan). JPG eller WEBP rekommenderas. Max 5 MB. Förhandsvisning till höger.
+            </span>
+            <div className="theme-upload-compact-row">
+              <label className="theme-upload-btn-upload">
+                <UploadCloud className="theme-upload-btn-upload__icon" aria-hidden />
+                {bgImageUploading ? 'Laddar upp…' : 'Ladda upp ny bild'}
                 <input
                   type="file"
                   accept="image/jpeg,image/webp,image/png"
                   className="theme-upload-file-input"
+                  style={{ display: 'none' }}
                   onChange={handleBgImageFileChange}
                   disabled={bgImageUploading}
                 />
-                {bgImageUploading && <span className="theme-upload-dropzone__text">Laddar upp…</span>}
-                {bgImageUploadErr && <p className="logo-upload-error">{bgImageUploadErr}</p>}
               </label>
-            )}
+              {(bgImage || bgImagePreview) && (
+                <button
+                  type="button"
+                  className="theme-upload-btn-remove-inline"
+                  onClick={handleBgImageRemove}
+                  disabled={bgImageUploading}
+                >
+                  Ta bort
+                </button>
+              )}
+            </div>
+            {bgImageUploadErr && <p className="logo-upload-error">{bgImageUploadErr}</p>}
           </div>
         </div>
 

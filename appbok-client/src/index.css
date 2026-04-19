@@ -5242,17 +5242,38 @@ textarea.admin-input {
   border-top: 1px solid #e5e7eb;
 }
 
-.theme-upload-stack {
+/* Kompakt knapprad — ingen bild i formuläret (live preview till höger) */
+.theme-upload-compact-sections {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
   margin-bottom: 2rem;
 }
 
-.theme-upload-region {
+.theme-upload-compact-block {
+  margin-bottom: 2rem;
+}
+
+.theme-upload-compact-block:last-child {
+  margin-bottom: 0;
+}
+
+.theme-upload-field-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 0.15rem;
+}
+
+.superadmin-theme-controls--themed .theme-upload-field-label {
+  color: var(--panel-text);
+}
+
+.theme-upload-compact-row {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.75rem;
+  margin-top: 0.75rem;
 }
 
 /* Dold filväljare — native \"Välj fil\" ska aldrig visas */
@@ -5260,100 +5281,46 @@ textarea.admin-input {
   display: none !important;
 }
 
-.theme-upload-dropzone {
-  box-sizing: border-box;
-  width: 100%;
-  border: 2px dashed #d1d5db;
-  border-radius: 0.5rem;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: #f9fafb;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.theme-upload-dropzone:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
-}
-
-.theme-upload-dropzone__icon {
-  width: 2rem;
-  height: 2rem;
-  color: #9ca3af;
-  margin-bottom: 0.5rem;
-  flex-shrink: 0;
-}
-
-.theme-upload-dropzone__text {
-  font-size: 0.875rem;
-  color: #6b7280;
-  text-align: center;
-}
-
-.theme-upload-preview-card {
-  box-sizing: border-box;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.theme-upload-preview-img {
-  max-height: 6rem;
-  width: auto;
-  max-width: 100%;
-  object-fit: contain;
-  display: block;
-}
-
-.theme-upload-actions-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.theme-upload-btn-secondary {
+.theme-upload-btn-upload {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.35rem;
   box-sizing: border-box;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  color: #374151;
-  padding: 0.5rem 1rem;
+  cursor: pointer;
   border-radius: 0.375rem;
   font-size: 0.875rem;
   font-weight: 500;
   font-family: var(--font-sans);
-  cursor: pointer;
-  transition: background 0.15s ease;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  padding: 0.5rem 1rem;
+  color: #374151;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
-.theme-upload-btn-secondary:hover {
+.theme-upload-btn-upload:hover {
   background: #f9fafb;
 }
 
-/* Temat sätter color på alla label — återställ för våra knappar */
-.superadmin-theme-controls--themed .theme-upload-btn-secondary {
+.theme-upload-btn-upload__icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.superadmin-theme-controls--themed .theme-upload-btn-upload {
   color: #374151;
 }
 
-.theme-upload-btn-danger {
+.theme-upload-btn-remove-inline {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 0.375rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -5362,14 +5329,17 @@ textarea.admin-input {
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
-.theme-upload-btn-danger:hover:not(:disabled) {
+.theme-upload-btn-remove-inline:hover:not(:disabled) {
+  color: #b91c1c;
   background: #fef2f2;
 }
 
-.theme-upload-btn-danger:disabled {
+.theme-upload-btn-remove-inline:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
