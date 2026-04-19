@@ -42,6 +42,7 @@ export default function LandingPage() {
         <Route path="/onboarding" element={<SignupPage />} />
         <Route path="/signup" element={<Navigate to="/onboarding" replace />} />
         <Route path="/admin" element={<AdminApexRedirect />} />
+        <Route path="/admin/dashboard" element={<AdminApexRedirect />} />
         <Route path="/cancel/:id" element={<BookingCancel />} />
         <Route path="/invite/:token" element={<Invite />} />
       </Routes>

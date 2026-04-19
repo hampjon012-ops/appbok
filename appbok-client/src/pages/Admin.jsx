@@ -1,4 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import toast, { Toaster } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { MessageSquare } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -231,8 +233,10 @@ function ImpersonationBanner({ salonName, staffName }) {
 }
 
 export default function Admin() {
+  const location = useLocation();
   const { token, user, salon } = getAuth();
   const isSuperAdmin = user?.role === 'superadmin';
+  const [servicesRefreshKey, setServicesRefreshKey] = useState(0);
   const isStaffImpersonation = user?.originalRole === 'superadmin' && user?.role === 'staff';
   const [activeTab, setActiveTab] = useState(() => {
     try {
@@ -255,6 +259,27 @@ export default function Admin() {
     }
     document.title = `Admin — ${salon?.name || 'Appbok'}`;
   }, [token, salon]);
+
+  useEffect(() => {
+    const p = location.pathname || '';
+    if (p === '/admin/dashboard' || p.endsWith('/admin/dashboard')) {
+      setActiveTab('dashboard');
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!token) return;
+    try {
+      if (sessionStorage.getItem('sb_onboarding_bokadirekt_toast') === '1') {
+        sessionStorage.removeItem('sb_onboarding_bokadirekt_toast');
+        toast.success('✨ Magiskt! Vi hittade och importerade dina tjänster från Bokadirekt.');
+        setServicesRefreshKey((k) => k + 1);
+        window.dispatchEvent(new CustomEvent('appbok-services-updated'));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [token]);
 
   const handleLogout = () => {
     localStorage.removeItem('sb_token');
@@ -312,6 +337,7 @@ export default function Admin() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f4f2' }}>
+      <Toaster position="top-center" toastOptions={{ duration: 5500 }} />
       {user?.originalRole === 'superadmin' && (
         <ImpersonationBanner
           salonName={salon?.name || 'Salong'}
@@ -374,6 +400,7 @@ export default function Admin() {
       <main className="admin-main">
         {activeTab === 'dashboard' && (
           <DashboardTab
+            servicesRefreshKey={servicesRefreshKey}
             showNewBookingButton={canOpenBookingsModal}
             showSalonLifecycleBanner={!isSuperAdmin && user?.role === 'admin'}
             onGoToSalonPaymentsSettings={() => {
@@ -388,6 +415,7 @@ export default function Admin() {
               setActiveTab('bookings');
               setNewBookingOpen(true);
             }}
+            onOpenServicesTab={() => setActiveTab('services')}
           />
         )}
         {activeTab === 'bookings' && (
@@ -419,6 +447,8 @@ function DashboardTab({
   showNewBookingButton,
   showSalonLifecycleBanner,
   onGoToSalonPaymentsSettings,
+  servicesRefreshKey = 0,
+  onOpenServicesTab,
 }) {
   const [stats, setStats] = useState(null);
   const [monthlyStats, setMonthlyStats] = useState([]);
@@ -436,6 +466,12 @@ function DashboardTab({
   const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [unreadNotificationsCount] = useState(0);
+
+  const [servicePreview, setServicePreview] = useState({
+    loading: true,
+    categories: [],
+    error: '',
+  });
 
   const bellAnchorRef = useRef(null);
   const dateAnchorRef = useRef(null);
@@ -511,6 +547,36 @@ function DashboardTab({
       setLoading(false);
     });
   }, []);
+
+  const loadServicePreview = useCallback(() => {
+    const sid = getSalonIdForPublicApi();
+    if (!sid) {
+      setServicePreview({ loading: false, categories: [], error: '' });
+      return;
+    }
+    setServicePreview((prev) => ({ ...prev, loading: true, error: '' }));
+    fetch(`/api/services?salon_id=${encodeURIComponent(sid)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((cats) => {
+        setServicePreview({
+          loading: false,
+          categories: Array.isArray(cats) ? cats : [],
+          error: '',
+        });
+      })
+      .catch(() => {
+        setServicePreview({ loading: false, categories: [], error: 'Kunde inte ladda tjänster' });
+      });
+  }, []);
+
+  useEffect(() => {
+    loadServicePreview();
+  }, [loadServicePreview, servicesRefreshKey]);
+
+  const dashboardServiceCount = useMemo(() => {
+    const cats = servicePreview.categories || [];
+    return cats.reduce((n, c) => n + (Array.isArray(c.services) ? c.services.length : 0), 0);
+  }, [servicePreview.categories]);
 
   if (loading) return <div className="admin-loading">Laddar...</div>;
   if (statsError) return <div className="admin-empty">{statsError}</div>;
@@ -975,6 +1041,42 @@ function DashboardTab({
           </div>
         </div>
       </div>
+
+      {servicePreview.error ? (
+        <p className="dashboard-services-preview-error" style={{ margin: '0.75rem 0 0', fontSize: '0.85rem', color: '#b45309' }}>
+          {servicePreview.error}
+        </p>
+      ) : null}
+
+      {!servicePreview.loading && dashboardServiceCount > 0 ? (
+        <div className="admin-card dashboard-services-preview" style={{ marginTop: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+            <h3 className="dashboard-upcoming-title" style={{ margin: 0 }}>
+              Dina tjänster ({dashboardServiceCount})
+            </h3>
+            {onOpenServicesTab ? (
+              <button type="button" className="btn-sm" onClick={onOpenServicesTab}>
+                Hantera tjänster
+              </button>
+            ) : null}
+          </div>
+          <ul style={{ margin: 0, paddingLeft: '1.15rem', fontSize: '0.9rem', color: '#374151', lineHeight: 1.5 }}>
+            {(servicePreview.categories || []).flatMap((cat) =>
+              (cat.services || []).map((s) => (
+                <li key={`${cat.id}-${s.id}`}>
+                  <strong>{s.name}</strong>
+                  {s.price_label ? <span style={{ color: '#6b7280' }}> · {s.price_label}</span> : null}
+                  <span style={{ color: '#9ca3af', fontSize: '0.82rem' }}> ({cat.name})</span>
+                </li>
+              )),
+            )}
+          </ul>
+        </div>
+      ) : servicePreview.loading ? (
+        <div className="admin-card" style={{ marginTop: '1.25rem', fontSize: '0.9rem', color: '#6b7280' }}>
+          Laddar tjänster…
+        </div>
+      ) : null}
 
       {stats.upcomingBookings?.length > 0 && (
         <div className="admin-card dashboard-upcoming-card">
@@ -1950,6 +2052,12 @@ function ServicesTab() {
 
   useEffect(() => {
     loadServices();
+  }, [loadServices]);
+
+  useEffect(() => {
+    const onServicesUpdated = () => loadServices();
+    window.addEventListener('appbok-services-updated', onServicesUpdated);
+    return () => window.removeEventListener('appbok-services-updated', onServicesUpdated);
   }, [loadServices]);
 
   const handleEdit = (svc) => {

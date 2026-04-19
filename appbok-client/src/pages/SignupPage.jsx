@@ -143,8 +143,18 @@ export default function SignupPage() {
       localStorage.setItem('sb_token', data.token);
       localStorage.setItem('sb_user', JSON.stringify(data.user));
       localStorage.setItem('sb_salon', JSON.stringify(data.salon));
-      
-      navigate('/admin');
+
+      const bdImp = data.bokadirekt_import;
+      if (bdImp?.ok && typeof bdImp.imported === 'number' && bdImp.imported > 0) {
+        try {
+          sessionStorage.setItem('sb_onboarding_bokadirekt_toast', '1');
+        } catch {
+          /* ignore */
+        }
+      }
+
+      setLoading(false);
+      navigate('/admin/dashboard');
       
     } catch (err) {
       setError(err.message);
@@ -305,7 +315,7 @@ export default function SignupPage() {
                   Flytta från Bokadirekt?
                 </h4>
                 <p style={{ fontSize: '0.875rem', color: '#737373', margin: '0 0 1rem', lineHeight: 1.5 }}>
-                  Klistra in din nuvarande bokningslänk så konfigurerar vi hela ditt tjänsteutbud åt dig inom 24 timmar.
+                  Klistra in din nuvarande bokningslänk så hämtar vi och konfigurerar hela ditt tjänsteutbud automatiskt på några sekunder.
                 </p>
                 <input
                   type="url"
