@@ -94,8 +94,8 @@ export default function MarketingLanding() {
               maxWidth: '600px',
               margin: '0 auto 2.5rem'
             }}>
-              Appbok ger dig allt du behöver för att driva din verksamhet. Bokningssida i världsklass, 
-              sömlösa betalningar med Stripe och automatisk kalendersynk.
+              Appbok ger dig allt du behöver för att driva din verksamhet. Bokningssida i världsklass,
+              sömlösa betalningar med Stripe och möjlighet för varje stylist att koppla sin egen Google Kalender.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -176,7 +176,7 @@ export default function MarketingLanding() {
               <FeatureCard 
                 icon="🔄"
                 title="Google Kalender"
-                desc="Automatisk tvåvägssynkronisering med Google Kalender för all din personal. Aldrig mer dubbelbokningar."
+                desc="Varje stylist kopplar sin egen Google Kalender när de vill — tvåvägssynk som minskar risken för dubbelbokningar."
               />
               <FeatureCard 
                 icon="📊"
@@ -264,7 +264,7 @@ export default function MarketingLanding() {
                     'Obegränsade bokningar',
                     'White-label bokningssida med eget tema',
                     'Stripe-betalningar & förskottsbetalning',
-                    'Google Kalender-synkronisering',
+                    'Google Kalender per stylist (valfritt)',
                     'Obegränsad personal & roller',
                     'E-postbekräftelser till kunder',
                     'Admin-dashboard med statistik',
