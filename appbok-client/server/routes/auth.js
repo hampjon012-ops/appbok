@@ -240,34 +240,33 @@ router.post('/register', async (req, res) => {
     // 3. Returnera JWT
     const token = signToken(user);
 
-    // 4. Välkomstmejl (SMTP prioriteras; Resend som alternativ — se sendWelcomeVerificationEmail)
-    if (!verifyTokErr) {
-      sendWelcomeVerificationEmail({
-        to: email.toLowerCase(),
-        salonName: salon.name,
-        verifyUrl,
-        adminUrl: adminUrlForEmail,
-        demoUrl,
-      })
-        .then((r) => {
-          if (!r?.success) {
-            console.warn('[register] welcome email not sent:', r?.error || 'unknown');
-          }
-        })
-        .catch((err) => console.warn('[register] welcome email failed:', err.message));
-    } else {
-      sendWelcomeEmail({
-        to: email.toLowerCase(),
-        salonName: salon.name,
-        adminUrl: demoUrl.replace('.appbok.se', '.appbok.se/admin'),
-        demoUrl,
-      })
-        .then((r) => {
-          if (!r?.success) {
-            console.warn('[register] legacy welcome email not sent:', r?.error || 'unknown');
-          }
-        })
-        .catch((err) => console.warn('[register] welcome email failed:', err.message));
+    // 4. Välkomstmejl — måste await:as på Vercel serverless; annars avslutas funktionen när svaret skickats
+    // och bakgrundsmail hinner aldrig skickas (bokningsmejl await:as därför de fungerar).
+    try {
+      if (!verifyTokErr) {
+        const r = await sendWelcomeVerificationEmail({
+          to: email.toLowerCase(),
+          salonName: salon.name,
+          verifyUrl,
+          adminUrl: adminUrlForEmail,
+          demoUrl,
+        });
+        if (!r?.success) {
+          console.warn('[register] welcome email not sent:', r?.error || 'unknown');
+        }
+      } else {
+        const r = await sendWelcomeEmail({
+          to: email.toLowerCase(),
+          salonName: salon.name,
+          adminUrl: demoUrl.replace('.appbok.se', '.appbok.se/admin'),
+          demoUrl,
+        });
+        if (!r?.success) {
+          console.warn('[register] legacy welcome email not sent:', r?.error || 'unknown');
+        }
+      }
+    } catch (err) {
+      console.warn('[register] welcome email failed:', err?.message || err);
     }
 
     res.status(201).json({
