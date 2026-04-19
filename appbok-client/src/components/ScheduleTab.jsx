@@ -259,6 +259,11 @@ export default function ScheduleTab({ user }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Kunde inte spara.');
       setMsg('Sparat!');
+      try {
+        window.dispatchEvent(new CustomEvent('appbok-staff-schedule-saved'));
+      } catch {
+        /* ignore */
+      }
       setTimeout(() => setMsg(''), 2500);
     } catch (err) {
       setMsg(err.message || 'Fel');

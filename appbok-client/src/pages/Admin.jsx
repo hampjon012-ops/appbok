@@ -2,7 +2,7 @@ import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } fr
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
-import { MessageSquare } from 'lucide-react';
+import { AlertTriangle, MessageSquare, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
 import SuperadminTab from './SuperadminTab.jsx';
@@ -252,6 +252,10 @@ export default function Admin() {
   const { token, user, salon } = getAuth();
   const isSuperAdmin = user?.role === 'superadmin';
   const [servicesRefreshKey, setServicesRefreshKey] = useState(0);
+  /** Bumpar så getAuth() + sidomeny (schema-påminnelse) läser om efter onboarding / DB-uppdatering. */
+  const [salonStorageBump, setSalonStorageBump] = useState(0);
+  /** null = laddar; true = minst en har sparat schema; false = inget schema */
+  const [scheduleConfiguredForReminder, setScheduleConfiguredForReminder] = useState(null);
   const isStaffImpersonation = user?.originalRole === 'superadmin' && user?.role === 'staff';
   const [activeTab, setActiveTab] = useState(() => {
     try {
@@ -312,6 +316,58 @@ export default function Admin() {
     }
   }, [token]);
 
+  const loadScheduleConfiguredForReminder = useCallback(() => {
+    if (!token || isSuperAdmin || user?.role !== 'admin') {
+      setScheduleConfiguredForReminder(null);
+      return;
+    }
+    const sid = getSalonIdForPublicApi();
+    if (!sid) {
+      setScheduleConfiguredForReminder(null);
+      return;
+    }
+    fetch(`/api/staff?salon_id=${encodeURIComponent(sid)}`, { headers: authHeaders(), cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('bad status'))))
+      .then((staff) => setScheduleConfiguredForReminder(staffHasSavedSchedule(staff)))
+      .catch(() => setScheduleConfiguredForReminder(false));
+  }, [token, isSuperAdmin, user?.role]);
+
+  useEffect(() => {
+    loadScheduleConfiguredForReminder();
+  }, [loadScheduleConfiguredForReminder, activeTab, salonStorageBump, servicesRefreshKey]);
+
+  useEffect(() => {
+    if (!token || isSuperAdmin || user?.role !== 'admin') return undefined;
+    const h = () => loadScheduleConfiguredForReminder();
+    window.addEventListener('appbok-staff-schedule-saved', h);
+    return () => window.removeEventListener('appbok-staff-schedule-saved', h);
+  }, [token, isSuperAdmin, user?.role, loadScheduleConfiguredForReminder]);
+
+  /** Synka salong från API (t.ex. hide_onboarding_widget) vid inladdning. */
+  useEffect(() => {
+    if (!token || isSuperAdmin || user?.role !== 'admin') return undefined;
+    let cancelled = false;
+    fetch('/api/salons', { headers: authHeaders(), cache: 'no-store' })
+      .then(async (r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .then((data) => {
+        if (cancelled || !data) return;
+        try {
+          localStorage.setItem('sb_salon', JSON.stringify(data));
+          notifySalonConfigUpdated();
+          setSalonStorageBump((b) => b + 1);
+        } catch {
+          /* ignore */
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [token, isSuperAdmin, user?.role]);
+
   const handleLogout = () => {
     localStorage.removeItem('sb_token');
     localStorage.removeItem('sb_user');
@@ -351,6 +407,12 @@ export default function Admin() {
 
   const [newBookingOpen, setNewBookingOpen] = useState(false);
   const canOpenBookingsModal = useMemo(() => tabs.some((t) => t.id === 'bookings'), [tabs]);
+
+  const showScheduleReminder =
+    !isSuperAdmin &&
+    user?.role === 'admin' &&
+    salon?.hide_onboarding_widget === true &&
+    scheduleConfiguredForReminder === false;
 
   useEffect(() => {
     if (activeTab !== 'bookings') setNewBookingOpen(false);
@@ -395,14 +457,31 @@ export default function Admin() {
             />
           </div>
           <nav className="admin-nav">
-            {tabs.map(tab => (
+            {tabs.map((tab) => (
               <button
                 key={tab.id}
+                type="button"
                 className={`admin-nav-btn ${activeTab === tab.id ? 'active' : ''}`}
                 onClick={() => setActiveTab(tab.id)}
               >
                 <span className="admin-nav-icon">{tab.icon}</span>
-                <span>{tab.label.split(' ').slice(1).join(' ')}</span>
+                <span className="admin-nav-btn-label">
+                  {tab.label.split(' ').slice(1).join(' ')}
+                  {tab.id === 'schedule' && showScheduleReminder ? (
+                    <span
+                      className="admin-nav-schedule-warning"
+                      title="Ställ in arbetsschema så kunder kan boka."
+                      aria-label="Påminnelse: ställ in schema"
+                    >
+                      <AlertTriangle
+                        size={15}
+                        strokeWidth={2.25}
+                        className="admin-nav-schedule-warning-icon"
+                        aria-hidden
+                      />
+                    </span>
+                  ) : null}
+                </span>
               </button>
             ))}
           </nav>
@@ -435,6 +514,16 @@ export default function Admin() {
             showNewBookingButton={canOpenBookingsModal}
             showSalonLifecycleBanner={!isSuperAdmin && user?.role === 'admin'}
             showOnboardingWidget={!isSuperAdmin && user?.role === 'admin'}
+            salonHideOnboardingWidget={Boolean(salon?.hide_onboarding_widget)}
+            onOnboardingDismissed={(data) => {
+              try {
+                localStorage.setItem('sb_salon', JSON.stringify(data));
+              } catch {
+                /* ignore */
+              }
+              notifySalonConfigUpdated();
+              setSalonStorageBump((b) => b + 1);
+            }}
             onGoToSalonPaymentsSettings={() => {
               try {
                 sessionStorage.setItem('salonAdminInitialTab', 'payments');
@@ -488,6 +577,8 @@ function DashboardTab({
   onGoToSalonPaymentsSettings,
   servicesRefreshKey = 0,
   showOnboardingWidget = false,
+  salonHideOnboardingWidget = false,
+  onOnboardingDismissed,
   onNavigateToSchedule,
   onNavigateToServices,
 }) {
@@ -514,6 +605,8 @@ function DashboardTab({
     error: '',
   });
   const [scheduleConfigured, setScheduleConfigured] = useState(false);
+  const [showOnboardingCard, setShowOnboardingCard] = useState(() => !salonHideOnboardingWidget);
+  const [onboardingLeaving, setOnboardingLeaving] = useState(false);
 
   const bellAnchorRef = useRef(null);
   const dateAnchorRef = useRef(null);
@@ -623,6 +716,29 @@ function DashboardTab({
   useEffect(() => {
     loadOnboardingDashboardData();
   }, [loadOnboardingDashboardData, servicesRefreshKey]);
+
+  useEffect(() => {
+    setShowOnboardingCard(!salonHideOnboardingWidget);
+  }, [salonHideOnboardingWidget]);
+
+  const handleDismissOnboarding = useCallback(async () => {
+    setOnboardingLeaving(true);
+    try {
+      const res = await fetch('/api/salons', {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hide_onboarding_widget: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Kunde inte spara.');
+      await new Promise((r) => setTimeout(r, 280));
+      onOnboardingDismissed?.(data);
+      setShowOnboardingCard(false);
+    } catch (e) {
+      setOnboardingLeaving(false);
+      toast.error(e?.message || 'Kunde inte spara.');
+    }
+  }, [onOnboardingDismissed]);
 
   const dashboardServiceCount = useMemo(() => {
     const cats = servicePreview.categories || [];
@@ -1099,68 +1215,85 @@ function DashboardTab({
         </p>
       ) : null}
 
-      {showOnboardingWidget && servicePreview.loading ? (
+      {showOnboardingWidget && showOnboardingCard && servicePreview.loading ? (
         <div className="admin-card" style={{ marginTop: '1.25rem', fontSize: '0.9rem', color: '#6b7280' }}>
           Laddar kom igång…
         </div>
       ) : null}
 
       {showOnboardingWidget &&
+      showOnboardingCard &&
       !servicePreview.loading &&
       !(dashboardServiceCount > 0 && scheduleConfigured) ? (
         <div
-          className="admin-card dashboard-onboarding-widget"
-          style={{
-            marginTop: '1.25rem',
-            padding: '1.35rem 1.5rem',
-            background: 'linear-gradient(135deg, rgba(250, 245, 240, 0.95) 0%, #ffffff 55%, rgba(255, 255, 255, 1) 100%)',
-            border: '1px solid #e7e5e4',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 14px rgba(0,0,0,0.04)',
-            borderRadius: '14px',
-          }}
+          className={`dashboard-onboarding-widget-shell${onboardingLeaving ? ' dashboard-onboarding-widget-shell--leave' : ''}`}
         >
-          {dashboardServiceCount === 0 ? (
-            <>
-              <h3 className="dashboard-upcoming-title" style={{ margin: '0 0 1rem' }}>
-                Nästa steg: Lägg till dina tjänster för att kunna ta emot bokningar.
-              </h3>
-              {onNavigateToServices ? (
-                <button
-                  type="button"
-                  className="dashboard-onboarding-primary-btn"
-                  onClick={onNavigateToServices}
-                >
-                  Lägg till tjänster
-                </button>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <h3 className="dashboard-upcoming-title" style={{ margin: '0 0 0.5rem' }}>
-                ✨ Dina tjänster är redo!
-              </h3>
-              <p style={{ margin: '0 0 1.125rem', fontSize: '0.92rem', color: '#57534e', lineHeight: 1.55 }}>
-                Vi har importerat {dashboardServiceCount} tjänster åt dig. Ta gärna en titt och dubbelkolla priserna, eller
-                fortsätt med att ställa in ditt schema.
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', alignItems: 'center' }}>
-                {onNavigateToSchedule ? (
+          <div
+            className="admin-card dashboard-onboarding-widget"
+            style={{
+              marginTop: 0,
+              padding: '1.35rem 1.5rem',
+              paddingRight: '2.75rem',
+              position: 'relative',
+              background:
+                'linear-gradient(135deg, rgba(250, 245, 240, 0.95) 0%, #ffffff 55%, rgba(255, 255, 255, 1) 100%)',
+              border: '1px solid #e7e5e4',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 14px rgba(0,0,0,0.04)',
+              borderRadius: '14px',
+            }}
+          >
+            <button
+              type="button"
+              className="dashboard-onboarding-dismiss"
+              onClick={handleDismissOnboarding}
+              aria-label="Stäng kom igång"
+              disabled={onboardingLeaving}
+            >
+              <X size={18} strokeWidth={2} aria-hidden />
+            </button>
+            {dashboardServiceCount === 0 ? (
+              <>
+                <h3 className="dashboard-upcoming-title" style={{ margin: '0 0 1rem' }}>
+                  Nästa steg: Lägg till dina tjänster för att kunna ta emot bokningar.
+                </h3>
+                {onNavigateToServices ? (
                   <button
                     type="button"
                     className="dashboard-onboarding-primary-btn"
-                    onClick={onNavigateToSchedule}
+                    onClick={onNavigateToServices}
                   >
-                    Ställ in schema
+                    Lägg till tjänster
                   </button>
                 ) : null}
-                {onNavigateToServices ? (
-                  <button type="button" className="dashboard-onboarding-secondary-btn" onClick={onNavigateToServices}>
-                    Granska tjänster
-                  </button>
-                ) : null}
-              </div>
-            </>
-          )}
+              </>
+            ) : (
+              <>
+                <h3 className="dashboard-upcoming-title" style={{ margin: '0 0 0.5rem' }}>
+                  ✨ Dina tjänster är redo!
+                </h3>
+                <p style={{ margin: '0 0 1.125rem', fontSize: '0.92rem', color: '#57534e', lineHeight: 1.55 }}>
+                  Vi har importerat {dashboardServiceCount} tjänster åt dig. Ta gärna en titt och dubbelkolla priserna, eller
+                  fortsätt med att ställa in ditt schema.
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', alignItems: 'center' }}>
+                  {onNavigateToSchedule ? (
+                    <button
+                      type="button"
+                      className="dashboard-onboarding-primary-btn"
+                      onClick={onNavigateToSchedule}
+                    >
+                      Ställ in schema
+                    </button>
+                  ) : null}
+                  {onNavigateToServices ? (
+                    <button type="button" className="dashboard-onboarding-secondary-btn" onClick={onNavigateToServices}>
+                      Granska tjänster
+                    </button>
+                  ) : null}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       ) : null}
 

@@ -101,6 +101,7 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
     map_url,
     instagram,
     allow_pay_on_site,
+    hide_onboarding_widget,
     contact: contactMerge,
   } = req.body;
 
@@ -174,6 +175,10 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
     if (logo_url !== undefined) updates.logo_url = logo_url;
 
     if (allow_pay_on_site !== undefined) updates.allow_pay_on_site = Boolean(allow_pay_on_site);
+
+    if (hide_onboarding_widget !== undefined) {
+      updates.hide_onboarding_widget = Boolean(hide_onboarding_widget);
+    }
 
     if (Object.keys(updates).length === 0) {
       const { data: full, error: fullErr } = await supabase

@@ -2262,6 +2262,25 @@ html.preview-embed-mode [role='button'] {
   text-align: center;
 }
 
+.admin-nav-btn-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-nav-schedule-warning {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.admin-nav-schedule-warning-icon {
+  color: #eab308;
+  filter: drop-shadow(0 0 3px rgba(234, 179, 8, 0.35));
+}
+
 .admin-sidebar-footer {
   padding: 1.2rem 1.5rem;
   border-top: 1px solid rgba(255,255,255,0.08);
@@ -3543,6 +3562,51 @@ html.preview-embed-mode [role='button'] {
   border-color: #a3a3a3;
   background: #fafafa;
   color: #171717;
+}
+
+.dashboard-onboarding-widget-shell {
+  margin-top: 1.25rem;
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease,
+    margin-top 0.28s ease,
+    margin-bottom 0.28s ease;
+}
+
+.dashboard-onboarding-widget-shell--leave {
+  opacity: 0;
+  transform: translateY(-8px);
+  margin-top: 0;
+  margin-bottom: 0;
+  pointer-events: none;
+}
+
+.dashboard-onboarding-dismiss {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.dashboard-onboarding-dismiss:hover:not(:disabled) {
+  color: #4b5563;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-onboarding-dismiss:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 /* Dashboard — KPI (text-3xl / text-sm neutral) */
