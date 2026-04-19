@@ -63,6 +63,31 @@ async function sendViaResend({ from, to, subject, html }) {
   }
 }
 
+/**
+ * Skicka e-post: SMTP först → Resend som fallback.
+ * Alla e-posttyper (booking, cancellation, stylist, go-live, invite) använder denna.
+ * @param {{ to: string, subject: string, html: string, smtpFrom?: string, resendFrom?: string }} options
+ */
+async function sendEmail({ to, subject, html, smtpFrom, resendFrom }) {
+  const fromSmtp = (smtpFrom || SMTP_FROM || 'Appbok <hej@appbok.se>').trim();
+  const fromResend = (resendFrom || RESEND_FROM || 'Appbok <hej@appbok.se>').trim();
+
+  if (transporter) {
+    try {
+      await transporter.sendMail({ from: fromSmtp, to, subject, html });
+      return { success: true, via: 'smtp' };
+    } catch (err) {
+      console.error('[email] SMTP send failed:', err.message, '— trying Resend');
+    }
+  }
+
+  const resend = await sendViaResend({ from: fromResend, to, subject, html });
+  if (resend.ok) return { success: true, via: 'resend' };
+
+  console.warn('[email] All email sending methods failed to', to, ':', resend.error);
+  return { success: false, error: resend.error || 'SMTP failed and Resend failed' };
+}
+
 // ─── Shared ───────────────────────────────────────────────────────────────────
 
 function escapeHtml(s) {
@@ -80,22 +105,14 @@ function buildInviteHtml({ salonName, inviteUrl }) {
 }
 
 export async function sendInviteEmail({ to, salonName, inviteUrl }) {
-  if (!transporter) {
-    console.warn('[email] SMTP not configured — skipping invite email to', to);
-    return { success: false, error: 'SMTP not configured' };
-  }
-  try {
-    await transporter.sendMail({
-      from: SMTP_FROM,
-      to,
-      subject: `Du är inbjuden till ${salonName} på Appbok!`,
-      html: buildInviteHtml({ salonName, inviteUrl }),
-    });
-    return { success: true };
-  } catch (err) {
-    console.error('[email] Failed to send invite email to', to, ':', err.message);
-    return { success: false, error: err.message };
-  }
+  const html = buildInviteHtml({ salonName, inviteUrl });
+  const r = await sendEmail({
+    to,
+    subject: `Du är inbjuden till ${salonName} på Appbok!`,
+    html,
+  });
+  if (r.success) console.log('[email] Invite email sent to', to, 'via', r.via);
+  return r;
 }
 
 // ─── Welcome + Verification email (react-email) ───────────────────────────────
@@ -144,23 +161,14 @@ function buildWelcomeHtml({ salonName, adminUrl, demoUrl }) {
 }
 
 export async function sendWelcomeEmail({ to, salonName, adminUrl, demoUrl }) {
-  if (!transporter) {
-    console.warn('[email] SMTP not configured — skipping welcome email to', to);
-    return { success: false, error: 'SMTP not configured' };
-  }
-  try {
-    await transporter.sendMail({
-      from: SMTP_FROM,
-      to,
-      subject: `Välkommen till Appbok, ${salonName}!`,
-      html: buildWelcomeHtml({ salonName, adminUrl, demoUrl }),
-    });
-    console.log('[email] Welcome email sent to', to);
-    return { success: true };
-  } catch (err) {
-    console.error('[email] Failed to send welcome email to', to, ':', err.message);
-    return { success: false, error: err.message };
-  }
+  const html = buildWelcomeHtml({ salonName, adminUrl, demoUrl });
+  const r = await sendEmail({
+    to,
+    subject: `Välkommen till Appbok, ${salonName}!`,
+    html,
+  });
+  if (r.success) console.log('[email] Welcome email sent to', to, 'via', r.via);
+  return r;
 }
 
 // ─── Booking emails ─────────────────────────────────────────────────────────────
@@ -176,22 +184,14 @@ function buildBookingConfirmationHtml({ customerName, serviceName, stylistName, 
 }
 
 export async function sendBookingConfirmationEmail({ to, customerName, serviceName, stylistName, date, time, salonName }) {
-  if (!transporter) {
-    console.warn('[email] SMTP not configured — skipping booking confirmation to', to);
-    return { success: false, error: 'SMTP not configured' };
-  }
-  try {
-    await transporter.sendMail({
-      from: SMTP_FROM, to,
-      subject: `Bokningsbekräftelse — ${salonName}`,
-      html: buildBookingConfirmationHtml({ customerName, serviceName, stylistName, date, time, salonName }),
-    });
-    console.log('[email] Booking confirmation sent to', to);
-    return { success: true };
-  } catch (err) {
-    console.error('[email] Failed to send booking confirmation to', to, ':', err.message);
-    return { success: false, error: err.message };
-  }
+  const html = buildBookingConfirmationHtml({ customerName, serviceName, stylistName, date, time, salonName });
+  const r = await sendEmail({
+    to,
+    subject: `Bokningsbekräftelse — ${salonName}`,
+    html,
+  });
+  if (r.success) console.log('[email] Booking confirmation sent to', to, 'via', r.via);
+  return r;
 }
 
 function buildCancellationHtml({ customerName, serviceName, date, time, salonName }) {
@@ -200,22 +200,14 @@ function buildCancellationHtml({ customerName, serviceName, date, time, salonNam
 }
 
 export async function sendCancellationEmail({ to, customerName, serviceName, date, time, salonName }) {
-  if (!transporter) {
-    console.warn('[email] SMTP not configured — skipping cancellation email to', to);
-    return { success: false, error: 'SMTP not configured' };
-  }
-  try {
-    await transporter.sendMail({
-      from: SMTP_FROM, to,
-      subject: `Avbokning — ${salonName}`,
-      html: buildCancellationHtml({ customerName, serviceName, date, time, salonName }),
-    });
-    console.log('[email] Cancellation confirmation sent to', to);
-    return { success: true };
-  } catch (err) {
-    console.error('[email] Failed to send cancellation email to', to, ':', err.message);
-    return { success: false, error: err.message };
-  }
+  const html = buildCancellationHtml({ customerName, serviceName, date, time, salonName });
+  const r = await sendEmail({
+    to,
+    subject: `Avbokning — ${salonName}`,
+    html,
+  });
+  if (r.success) console.log('[email] Cancellation confirmation sent to', to, 'via', r.via);
+  return r;
 }
 
 function buildStylistNotificationHtml({ stylistName, customerName, serviceName, date, time, customerPhone, salonName }) {
@@ -224,22 +216,14 @@ function buildStylistNotificationHtml({ stylistName, customerName, serviceName, 
 }
 
 export async function sendStylistNotificationEmail({ to, stylistName, customerName, serviceName, date, time, customerPhone, salonName }) {
-  if (!transporter) {
-    console.warn('[email] SMTP not configured — skipping stylist notification to', to);
-    return { success: false, error: 'SMTP not configured' };
-  }
-  try {
-    await transporter.sendMail({
-      from: SMTP_FROM, to,
-      subject: `Ny bokning — ${customerName} | ${date} ${time}`,
-      html: buildStylistNotificationHtml({ stylistName, customerName, serviceName, date, time, customerPhone, salonName }),
-    });
-    console.log('[email] Stylist notification sent to', to);
-    return { success: true };
-  } catch (err) {
-    console.error('[email] Failed to send stylist notification to', to, ':', err.message);
-    return { success: false, error: err.message };
-  }
+  const html = buildStylistNotificationHtml({ stylistName, customerName, serviceName, date, time, customerPhone, salonName });
+  const r = await sendEmail({
+    to,
+    subject: `Ny bokning — ${customerName} | ${date} ${time}`,
+    html,
+  });
+  if (r.success) console.log('[email] Stylist notification sent to', to, 'via', r.via);
+  return r;
 }
 
 // ─── Go-live email ────────────────────────────────────────────────────────────
@@ -250,42 +234,25 @@ function buildGoLiveHtml({ salonName, liveUrl }) {
 }
 
 export async function sendGoLiveEmail({ to, salonName, liveUrl }) {
-  if (!transporter) {
-    console.warn('[email] SMTP not configured — skipping go-live email to', to);
-    return { success: false, error: 'SMTP not configured' };
-  }
-  try {
-    await transporter.sendMail({
-      from: SMTP_FROM, to,
-      subject: `🎉 ${salonName} är nu live på Appbok!`,
-      html: buildGoLiveHtml({ salonName, liveUrl }),
-    });
-    console.log('[email] Go-live email sent to', to);
-    return { success: true };
-  } catch (err) {
-    console.error('[email] Failed to send go-live email to', to, ':', err.message);
-    return { success: false, error: err.message };
-  }
+  const html = buildGoLiveHtml({ salonName, liveUrl });
+  const r = await sendEmail({
+    to,
+    subject: `🎉 ${salonName} är nu live på Appbok!`,
+    html,
+  });
+  if (r.success) console.log('[email] Go-live email sent to', to, 'via', r.via);
+  return r;
 }
 
 // ─── Cancellation notification to salon ─────────────────────────────────────────
 
 export async function sendCancellationNotificationEmail({ to, customerName, serviceName, date, time, salonName }) {
-  if (!transporter) {
-    console.warn('[email] SMTP not configured — skipping cancellation notification to', to);
-    return { success: false, error: 'SMTP not configured' };
-  }
-  try {
-    await transporter.sendMail({
-      from: SMTP_FROM, to,
-      subject: `Avbokning: ${serviceName} den ${date} kl ${time}`,
-      text: `En kund har avbokat.\nKund: ${customerName}\nTid: ${date} kl ${time}.\nBokningen är borttagen från systemet och kunden har återbetalats.`,
-      html: `<!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 0;"><tr><td align="center"><table width="480" cellpadding="0" cellspacing="0" style="background:white;border-radius:12px;padding:32px;"><tr><td style="font-size:24px;font-weight:bold;margin-bottom:16px;">Avbokning</td></tr><tr><td style="color:#666;font-size:15px;line-height:1.6;"><p><strong>En kund har avbokat</strong></p><p>Kund: ${escapeHtml(customerName)}<br>Tid: ${escapeHtml(date)} kl ${escapeHtml(time)}<br>Tjänst: ${escapeHtml(serviceName)}</p><p>Bokningen är borttagen från systemet och kunden har återbetalats.</p></td></tr></table></td></tr></table></body></html>`,
-    });
-    console.log('[email] Cancellation notification sent to', to);
-    return { success: true };
-  } catch (err) {
-    console.error('[email] Failed to send cancellation notification to', to, ':', err.message);
-    return { success: false, error: err.message };
-  }
+  const html = `<!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 0;"><tr><td align="center"><table width="480" cellpadding="0" cellspacing="0" style="background:white;border-radius:12px;padding:32px;"><tr><td style="font-size:24px;font-weight:bold;margin-bottom:16px;">Avbokning</td></tr><tr><td style="color:#666;font-size:15px;line-height:1.6;"><p><strong>En kund har avbokat</strong></p><p>Kund: ${escapeHtml(customerName)}<br>Tid: ${escapeHtml(date)} kl ${escapeHtml(time)}<br>Tjänst: ${escapeHtml(serviceName)}</p><p>Bokningen är borttagen från systemet och kunden har återbetalats.</p></td></tr></table></td></tr></table></body></html>`;
+  const r = await sendEmail({
+    to,
+    subject: `Avbokning: ${serviceName} den ${date} kl ${time}`,
+    html,
+  });
+  if (r.success) console.log('[email] Cancellation notification sent to', to, 'via', r.via);
+  return r;
 }
