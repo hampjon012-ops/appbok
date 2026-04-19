@@ -15,6 +15,7 @@ import { adminApiHeaders as authHeaders, getSalonIdForPublicApi } from '../lib/a
 import { notifySalonConfigUpdated } from '../lib/salonPublicConfig.js';
 import {
   replaceWithAdminLogin,
+  applyBootstrapAuthFromHash,
   getSalonPublicBookingPreviewUrl,
   copyTextToClipboard,
 } from '../lib/adminUrls.js';
@@ -234,6 +235,7 @@ function ImpersonationBanner({ salonName, staffName }) {
 
 export default function Admin() {
   const location = useLocation();
+  applyBootstrapAuthFromHash();
   const { token, user, salon } = getAuth();
   const isSuperAdmin = user?.role === 'superadmin';
   const [servicesRefreshKey, setServicesRefreshKey] = useState(0);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
+import { ADMIN_PUBLIC_ORIGIN } from '../lib/domainConfig.js';
 
 /** price_amount lagras i öre (API/databas); användaren skriver kronor i fälten. */
 const DEFAULT_SERVICES = [
@@ -139,13 +140,40 @@ export default function SignupPage() {
         throw new Error('Registreringen lyckades men inget inloggningsbevis kom tillbaka. Kontakta support.');
       }
 
-      // Spara inloggning och gå till admin dashboard (som är demo mode initialt)
+      const bdImp = data.bokadirekt_import;
+      const toastBokadirekt =
+        bdImp?.ok && typeof bdImp.imported === 'number' && bdImp.imported > 0;
+
+      const hostname =
+        typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+      const isApexMarketing = hostname === 'appbok.se' || hostname === 'www.appbok.se';
+
+      // På apex ligger admin på admin.appbok.se — annan origin, localStorage följer inte med.
+      // Skicka session i hash så Admin kan läsa in innan auth-kontroll.
+      if (isApexMarketing) {
+        try {
+          const adminOrigin = import.meta.env.VITE_ADMIN_ORIGIN || ADMIN_PUBLIC_ORIGIN;
+          const payload = encodeURIComponent(
+            JSON.stringify({
+              t: data.token,
+              u: data.user,
+              s: data.salon,
+              toastBokadirekt,
+            }),
+          );
+          window.location.href = `${adminOrigin}/admin/dashboard#sb=${payload}`;
+        } catch {
+          setLoading(false);
+          setError('Kunde inte öppna admin-panelen. Försök logga in manuellt.');
+        }
+        return;
+      }
+
       localStorage.setItem('sb_token', data.token);
       localStorage.setItem('sb_user', JSON.stringify(data.user));
       localStorage.setItem('sb_salon', JSON.stringify(data.salon));
 
-      const bdImp = data.bokadirekt_import;
-      if (bdImp?.ok && typeof bdImp.imported === 'number' && bdImp.imported > 0) {
+      if (toastBokadirekt) {
         try {
           sessionStorage.setItem('sb_onboarding_bokadirekt_toast', '1');
         } catch {

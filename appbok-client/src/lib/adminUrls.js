@@ -75,6 +75,35 @@ export function getAdminDashboardUrl() {
   return `${window.location.origin}/admin`;
 }
 
+/**
+ * Efter registrering på appbok.se sparas JWT i localStorage på apex — men admin-panelen
+ * ligger på admin.appbok.se (annan origin). Signup skickar då hit: #sb=<urlencoded JSON>.
+ * Körs synkront i Admin innan getAuth() så token finns vid första render.
+ */
+export function applyBootstrapAuthFromHash() {
+  if (typeof window === 'undefined') return false;
+  const h = window.location.hash;
+  if (!h.startsWith('#sb=')) return false;
+  try {
+    const raw = decodeURIComponent(h.slice(4));
+    const parsed = JSON.parse(raw);
+    if (parsed.t) localStorage.setItem('sb_token', parsed.t);
+    if (parsed.u) localStorage.setItem('sb_user', JSON.stringify(parsed.u));
+    if (parsed.s) localStorage.setItem('sb_salon', JSON.stringify(parsed.s));
+    if (parsed.toastBokadirekt) {
+      try {
+        sessionStorage.setItem('sb_onboarding_bokadirekt_toast', '1');
+      } catch {
+        /* ignore */
+      }
+    }
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function replaceWithAdminLogin() {
   if (typeof window === 'undefined') return;
   window.location.replace(getAdminLoginUrl());
