@@ -19,6 +19,8 @@ export default function AdminApp() {
         <Route path="/" element={<Admin />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/admin/dashboard" element={<Admin />} />
+        <Route path="/admin/schema" element={<Admin />} />
+        <Route path="/admin/tjanster" element={<Admin />} />
         <Route path="/preview/mobile" element={<MobileBookingFrontend />} />
         <Route path="/login" element={<Login />} />
         <Route path="/invite/:token" element={<Invite />} />

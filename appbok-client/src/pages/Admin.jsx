@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { MessageSquare } from 'lucide-react';
@@ -75,6 +75,18 @@ function getAuth() {
 function fmtKr(öre) {
   const n = typeof öre === 'number' && !Number.isNaN(öre) ? öre : 0;
   return `${(n / 100).toLocaleString('sv-SE')} kr`;
+}
+
+/** True om minst en i personalen har sparat arbetsschema (work_schedule i DB). */
+function staffHasSavedSchedule(staffList) {
+  if (!Array.isArray(staffList)) return false;
+  return staffList.some((u) => {
+    const ws = u?.work_schedule;
+    if (ws == null || typeof ws !== 'object') return false;
+    const days = ws.days;
+    if (!Array.isArray(days)) return false;
+    return days.some((d) => d && d.enabled);
+  });
 }
 
 const CHART_AXIS_TICK = { fontSize: 12, fill: '#737373' };
@@ -235,6 +247,7 @@ function ImpersonationBanner({ salonName, staffName }) {
 
 export default function Admin() {
   const location = useLocation();
+  const navigate = useNavigate();
   applyBootstrapAuthFromHash();
   const { token, user, salon } = getAuth();
   const isSuperAdmin = user?.role === 'superadmin';
@@ -266,6 +279,22 @@ export default function Admin() {
     const p = location.pathname || '';
     if (p === '/admin/dashboard' || p.endsWith('/admin/dashboard')) {
       setActiveTab('dashboard');
+    }
+    if (
+      p === '/admin/schema' ||
+      p.endsWith('/admin/schema') ||
+      p === '/admin/schedule' ||
+      p.endsWith('/admin/schedule')
+    ) {
+      setActiveTab('schedule');
+    }
+    if (
+      p === '/admin/tjanster' ||
+      p.endsWith('/admin/tjanster') ||
+      p === '/admin/services' ||
+      p.endsWith('/admin/services')
+    ) {
+      setActiveTab('services');
     }
   }, [location.pathname]);
 
@@ -405,6 +434,7 @@ export default function Admin() {
             servicesRefreshKey={servicesRefreshKey}
             showNewBookingButton={canOpenBookingsModal}
             showSalonLifecycleBanner={!isSuperAdmin && user?.role === 'admin'}
+            showOnboardingWidget={!isSuperAdmin && user?.role === 'admin'}
             onGoToSalonPaymentsSettings={() => {
               try {
                 sessionStorage.setItem('salonAdminInitialTab', 'payments');
@@ -417,7 +447,14 @@ export default function Admin() {
               setActiveTab('bookings');
               setNewBookingOpen(true);
             }}
-            onOpenServicesTab={() => setActiveTab('services')}
+            onNavigateToSchedule={() => {
+              setActiveTab('schedule');
+              navigate('/admin/schema');
+            }}
+            onNavigateToServices={() => {
+              setActiveTab('services');
+              navigate('/admin/tjanster');
+            }}
           />
         )}
         {activeTab === 'bookings' && (
@@ -450,7 +487,9 @@ function DashboardTab({
   showSalonLifecycleBanner,
   onGoToSalonPaymentsSettings,
   servicesRefreshKey = 0,
-  onOpenServicesTab,
+  showOnboardingWidget = false,
+  onNavigateToSchedule,
+  onNavigateToServices,
 }) {
   const [stats, setStats] = useState(null);
   const [monthlyStats, setMonthlyStats] = useState([]);
@@ -474,6 +513,7 @@ function DashboardTab({
     categories: [],
     error: '',
   });
+  const [scheduleConfigured, setScheduleConfigured] = useState(false);
 
   const bellAnchorRef = useRef(null);
   const dateAnchorRef = useRef(null);
@@ -550,30 +590,39 @@ function DashboardTab({
     });
   }, []);
 
-  const loadServicePreview = useCallback(() => {
+  const loadOnboardingDashboardData = useCallback(() => {
     const sid = getSalonIdForPublicApi();
     if (!sid) {
       setServicePreview({ loading: false, categories: [], error: '' });
+      setScheduleConfigured(false);
       return;
     }
     setServicePreview((prev) => ({ ...prev, loading: true, error: '' }));
-    fetch(`/api/services?salon_id=${encodeURIComponent(sid)}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((cats) => {
+    Promise.all([
+      fetch(`/api/services?salon_id=${encodeURIComponent(sid)}`).then((r) =>
+        r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)),
+      ),
+      fetch(`/api/staff?salon_id=${encodeURIComponent(sid)}`, { headers: authHeaders() }).then((r) =>
+        r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)),
+      ),
+    ])
+      .then(([cats, staff]) => {
         setServicePreview({
           loading: false,
           categories: Array.isArray(cats) ? cats : [],
           error: '',
         });
+        setScheduleConfigured(staffHasSavedSchedule(staff));
       })
       .catch(() => {
-        setServicePreview({ loading: false, categories: [], error: 'Kunde inte ladda tjänster' });
+        setServicePreview({ loading: false, categories: [], error: 'Kunde inte ladda tjänster och schema.' });
+        setScheduleConfigured(false);
       });
   }, []);
 
   useEffect(() => {
-    loadServicePreview();
-  }, [loadServicePreview, servicesRefreshKey]);
+    loadOnboardingDashboardData();
+  }, [loadOnboardingDashboardData, servicesRefreshKey]);
 
   const dashboardServiceCount = useMemo(() => {
     const cats = servicePreview.categories || [];
@@ -1050,74 +1099,70 @@ function DashboardTab({
         </p>
       ) : null}
 
-      {!servicePreview.loading && dashboardServiceCount > 0 ? (
-        <div className="admin-card dashboard-services-preview" style={{ marginTop: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-            <h3 className="dashboard-upcoming-title" style={{ margin: 0 }}>
-              Dina tjänster ({dashboardServiceCount})
-            </h3>
-            {onOpenServicesTab ? (
-              <button type="button" className="btn-sm" onClick={onOpenServicesTab}>
-                Hantera tjänster
-              </button>
-            ) : null}
-          </div>
-          <ul style={{ margin: 0, paddingLeft: '1.15rem', fontSize: '0.9rem', color: '#374151', lineHeight: 1.5 }}>
-            {(servicePreview.categories || []).flatMap((cat) =>
-              (cat.services || []).map((s) => (
-                <li key={`${cat.id}-${s.id}`}>
-                  <strong>{s.name}</strong>
-                  {s.price_label ? <span style={{ color: '#6b7280' }}> · {s.price_label}</span> : null}
-                  <span style={{ color: '#9ca3af', fontSize: '0.82rem' }}> ({cat.name})</span>
-                </li>
-              )),
-            )}
-          </ul>
-        </div>
-      ) : servicePreview.loading ? (
+      {showOnboardingWidget && servicePreview.loading ? (
         <div className="admin-card" style={{ marginTop: '1.25rem', fontSize: '0.9rem', color: '#6b7280' }}>
-          Laddar tjänster…
+          Laddar kom igång…
         </div>
       ) : null}
 
-      {stats.upcomingBookings?.length > 0 && (
-        <div className="admin-card dashboard-upcoming-card">
-          <h3 className="dashboard-upcoming-title">Kommande bokningar</h3>
-          <div className="booking-list dashboard-upcoming-list">
-            {stats.upcomingBookings.map((b) => {
-              const { timeStr, dateStr } = formatUpcomingBookingWhen(b.booking_date, b.booking_time);
-              const st = upcomingBookingStatusMeta(b.status);
-              return (
-                <div key={b.id} className="booking-row dashboard-upcoming-row">
-                  <div className="booking-row-left">
-                    <div className="booking-datetime">
-                      <span className="booking-time">{timeStr}</span>
-                      {dateStr ? <span className="booking-date-part">{dateStr}</span> : null}
-                    </div>
-                    <span className="booking-customer">{b.customer_name}</span>
-                  </div>
-                  <div className="booking-row-right">
-                    <div className="booking-service-row">
-                      <span className="booking-service">{b.services?.name}</span>
-                      <span
-                        className={`dashboard-status-badge dashboard-status-badge--${st.variant}`}
-                        title={st.label}
-                      >
-                        <span className="dashboard-status-dot" aria-hidden />
-                        <span className="dashboard-status-label">{st.label}</span>
-                      </span>
-                    </div>
-                    <span className="booking-stylist">
-                      {b.stylist?.name || 'Valfri'}
-                      {b.salons?.name ? ` · ${b.salons.name}` : ''}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {showOnboardingWidget &&
+      !servicePreview.loading &&
+      !(dashboardServiceCount > 0 && scheduleConfigured) ? (
+        <div
+          className="admin-card dashboard-onboarding-widget"
+          style={{
+            marginTop: '1.25rem',
+            padding: '1.35rem 1.5rem',
+            background: 'linear-gradient(135deg, rgba(250, 245, 240, 0.95) 0%, #ffffff 55%, rgba(255, 255, 255, 1) 100%)',
+            border: '1px solid #e7e5e4',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 14px rgba(0,0,0,0.04)',
+            borderRadius: '14px',
+          }}
+        >
+          {dashboardServiceCount === 0 ? (
+            <>
+              <h3 className="dashboard-upcoming-title" style={{ margin: '0 0 1rem' }}>
+                Nästa steg: Lägg till dina tjänster för att kunna ta emot bokningar.
+              </h3>
+              {onNavigateToServices ? (
+                <button
+                  type="button"
+                  className="dashboard-onboarding-primary-btn"
+                  onClick={onNavigateToServices}
+                >
+                  Lägg till tjänster
+                </button>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <h3 className="dashboard-upcoming-title" style={{ margin: '0 0 0.5rem' }}>
+                ✨ Dina tjänster är redo!
+              </h3>
+              <p style={{ margin: '0 0 1.125rem', fontSize: '0.92rem', color: '#57534e', lineHeight: 1.55 }}>
+                Vi har importerat {dashboardServiceCount} tjänster åt dig. Ta gärna en titt och dubbelkolla priserna, eller
+                fortsätt med att ställa in ditt schema.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', alignItems: 'center' }}>
+                {onNavigateToSchedule ? (
+                  <button
+                    type="button"
+                    className="dashboard-onboarding-primary-btn"
+                    onClick={onNavigateToSchedule}
+                  >
+                    Ställ in schema
+                  </button>
+                ) : null}
+                {onNavigateToServices ? (
+                  <button type="button" className="dashboard-onboarding-secondary-btn" onClick={onNavigateToServices}>
+                    Granska tjänster
+                  </button>
+                ) : null}
+              </div>
+            </>
+          )}
         </div>
-      )}
+      ) : null}
 
       {/* ── Charts ───────────────────────────────────────────── */}
       <div className="charts-grid">
@@ -1201,6 +1246,45 @@ function DashboardTab({
           </div>
         </div>
       </div>
+
+      {stats.upcomingBookings?.length > 0 && (
+        <div className="admin-card dashboard-upcoming-card">
+          <h3 className="dashboard-upcoming-title">Kommande bokningar</h3>
+          <div className="booking-list dashboard-upcoming-list">
+            {stats.upcomingBookings.map((b) => {
+              const { timeStr, dateStr } = formatUpcomingBookingWhen(b.booking_date, b.booking_time);
+              const st = upcomingBookingStatusMeta(b.status);
+              return (
+                <div key={b.id} className="booking-row dashboard-upcoming-row">
+                  <div className="booking-row-left">
+                    <div className="booking-datetime">
+                      <span className="booking-time">{timeStr}</span>
+                      {dateStr ? <span className="booking-date-part">{dateStr}</span> : null}
+                    </div>
+                    <span className="booking-customer">{b.customer_name}</span>
+                  </div>
+                  <div className="booking-row-right">
+                    <div className="booking-service-row">
+                      <span className="booking-service">{b.services?.name}</span>
+                      <span
+                        className={`dashboard-status-badge dashboard-status-badge--${st.variant}`}
+                        title={st.label}
+                      >
+                        <span className="dashboard-status-dot" aria-hidden />
+                        <span className="dashboard-status-label">{st.label}</span>
+                      </span>
+                    </div>
+                    <span className="booking-stylist">
+                      {b.stylist?.name || 'Valfri'}
+                      {b.salons?.name ? ` · ${b.salons.name}` : ''}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
