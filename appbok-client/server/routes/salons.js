@@ -392,6 +392,12 @@ router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) 
 
     const parts = parseMultipart(buf, boundaryStripped);
 
+    // DEBUG: log parsed parts to see what we got
+    console.log('[logo-upload] buf length:', buf.length, 'boundary:', boundaryStripped.slice(0, 40), 'parts count:', parts.length);
+    for (const { header } of parts) {
+      console.log('[logo-upload] part header (first 200):', header.slice(0, 200));
+    }
+
     let fileBuffer = null;
     let fileName = 'logo.png';
     let mimeType = '';
