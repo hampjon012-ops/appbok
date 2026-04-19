@@ -7,6 +7,32 @@ import { scrapeBokadirekt } from '../lib/bokadirektScraper.js';
 
 const router = Router();
 
+/** Normaliserar tjänster från onboarding (klient kan skicka tom duration eller strängar). */
+function normalizeRegisterServices(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const s of raw) {
+    const name = String(s?.name ?? '').trim();
+    if (!name) continue;
+    const price = Math.round(Number(s?.price_amount));
+    if (!Number.isFinite(price) || price <= 0) continue;
+    let dm = parseInt(String(s?.duration_minutes ?? '').trim(), 10);
+    if (!Number.isFinite(dm) || dm <= 0) dm = 60;
+    const row = {
+      name,
+      price_amount: price,
+      duration_minutes: dm,
+    };
+    if (s?.price_label && String(s.price_label).trim()) {
+      row.price_label = String(s.price_label).trim();
+    }
+    const durStr = s?.duration && String(s.duration).trim();
+    if (durStr) row.duration = durStr;
+    out.push(row);
+  }
+  return out;
+}
+
 // ── POST /api/auth/register — Skapa admin-konto ─────────────────────────────
 router.post('/register', async (req, res) => {
   const { email, password, name, salonName, salonSlug, bokadirektUrl, services } = req.body;
@@ -71,33 +97,33 @@ router.post('/register', async (req, res) => {
     if (userErr) throw userErr;
 
     // 2.5: Skapa tjänster om de skickades med
-    if (services && Array.isArray(services) && services.length > 0) {
-      const validServices = services.filter(s => s.name && s.price_amount >= 0 && s.duration_minutes > 0);
-      if (validServices.length > 0) {
-        // Skapa en standardkategori
-        const { data: cat } = await supabase
-          .from('categories')
-          .insert({ salon_id: salon.id, name: 'Våra Tjänster', sort_order: 1 })
-          .select('id')
-          .single();
+    const validServices = normalizeRegisterServices(services);
+    if (validServices.length > 0) {
+      const { data: cat, error: catInsErr } = await supabase
+        .from('categories')
+        .insert({ salon_id: salon.id, name: 'Våra Tjänster', sort_order: 1 })
+        .select('id')
+        .single();
 
-        if (cat) {
-          // Förbered tjänstobjekten
-          const svcRows = validServices.map((s, index) => ({
-            salon_id: salon.id,
-            category_id: cat.id,
-            name: s.name,
-            price_amount: s.price_amount,
-            price_label:
-              s.price_label ||
-              `${Math.round(Number(s.price_amount) / 100)} kr`,
-            duration_minutes: s.duration_minutes,
-            duration: s.duration || `${s.duration_minutes} min`,
-            sort_order: index + 1,
-            active: true
-          }));
+      if (catInsErr) {
+        console.error('[register] categories insert failed:', catInsErr.message || catInsErr);
+      } else if (cat?.id) {
+        const svcRows = validServices.map((s, index) => ({
+          salon_id: salon.id,
+          category_id: cat.id,
+          name: s.name,
+          price_amount: s.price_amount,
+          price_label:
+            s.price_label || `${Math.round(Number(s.price_amount) / 100)} kr`,
+          duration_minutes: s.duration_minutes,
+          duration: s.duration || `${s.duration_minutes} min`,
+          sort_order: index + 1,
+          active: true,
+        }));
 
-          await supabase.from('services').insert(svcRows);
+        const { error: svcInsErr } = await supabase.from('services').insert(svcRows);
+        if (svcInsErr) {
+          console.error('[register] services insert failed:', svcInsErr.message || svcInsErr);
         }
       }
     }

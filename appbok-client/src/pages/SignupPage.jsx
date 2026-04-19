@@ -31,6 +31,25 @@ function handlePriceKrFieldChange(index, rawString, setServices) {
   });
 }
 
+/** Skicka alltid heltal för price (ör) och duration till register — undvik tomma strängar som gör serverfiltrering tom. */
+function servicesPayloadForRegister(rows) {
+  return rows
+    .filter((s) => {
+      const name = String(s.name || '').trim();
+      const price = Number(s.price_amount);
+      return name && Number.isFinite(price) && price > 0;
+    })
+    .map((s) => {
+      let dm = parseInt(String(s.duration_minutes ?? '').trim(), 10);
+      if (!Number.isFinite(dm) || dm <= 0) dm = 60;
+      return {
+        name: String(s.name).trim(),
+        price_amount: Math.round(Number(s.price_amount)),
+        duration_minutes: dm,
+      };
+    });
+}
+
 export default function SignupPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -89,7 +108,7 @@ export default function SignupPage() {
         salonName: salonName.trim(),
         salonSlug: subdomain.trim(),
         bokadirektUrl: bokadirektUrl.trim(),
-        services: services.filter(s => s.name && s.price_amount > 0)
+        services: servicesPayloadForRegister(services),
       };
 
       const res = await fetch('/api/auth/register', {
