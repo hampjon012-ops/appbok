@@ -19,7 +19,6 @@ const SALON_ADMIN_TABS = [
   { id: 'hours', label: '⏰ Öppettider' },
   { id: 'instagram', label: '📸 Instagram' },
   { id: 'texts', label: '✍️ Texter' },
-  { id: 'calendar', label: '📅 Google Kalender' },
   { id: 'payments', label: '💳 Betalningar' },
 ];
 
@@ -775,89 +774,6 @@ function SalonTextsPanel({ salon, onSaved, onSalonNameLive }) {
   );
 }
 
-function SalonCalendarPanel() {
-  const [calStatus, setCalStatus] = useState(null);
-  const [calLoading, setCalLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/calendar/status', { headers: authHeaders() })
-      .then((r) => r.json())
-      .then((d) => {
-        setCalStatus(d);
-        setCalLoading(false);
-      })
-      .catch(() => setCalLoading(false));
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('calendar') === 'connected') {
-      setCalStatus((prev) => ({ ...prev, connected: true }));
-      window.history.replaceState({}, '', '/admin');
-    }
-  }, []);
-
-  const handleConnect = async () => {
-    const res = await fetch('/api/calendar/connect', { headers: authHeaders() });
-    const data = await res.json();
-    if (data.url) window.location.href = data.url;
-  };
-
-  const handleDisconnect = async () => {
-    await fetch('/api/calendar/disconnect', { headers: authHeaders() });
-    setCalStatus((prev) => ({ ...prev, connected: false }));
-  };
-
-  return (
-    <div className="admin-card">
-      <h3 className="admin-card-title">📅 Google Kalender</h3>
-      <p className="admin-card-desc">
-        Koppla din Google Kalender för att automatiskt synka bokningar och blockera privata tider.
-      </p>
-
-      {calLoading ? (
-        <p className="admin-hint">Kontrollerar kalenderanslutning...</p>
-      ) : !calStatus?.configured ? (
-        <div className="calendar-status-box not-configured">
-          <span className="cal-status-icon">⚙️</span>
-          <div>
-            <strong>Google Kalender är inte aktiverat på servern</strong>
-            <p>
-              API:t saknar miljövariablerna <code>GOOGLE_CLIENT_ID</code> och{' '}
-              <code>GOOGLE_CLIENT_SECRET</code> (eller de är satta till platshållare). Lägg in riktiga värden i
-              Vercel → Project → Environment Variables (eller <code>server/.env</code> lokalt) och sätt{' '}
-              <code>GOOGLE_REDIRECT_URI</code> till samma callback-URL som i Google Cloud Console, t.ex.{' '}
-              <code>https://…/api/calendar/callback</code>. Se <code>server/.env.example</code>.
-            </p>
-          </div>
-        </div>
-      ) : calStatus?.connected ? (
-        <div className="calendar-status-box connected">
-          <span className="cal-status-icon">✅</span>
-          <div>
-            <strong>Kalender kopplad</strong>
-            <p>Din Google Calendar är ansluten. Bokningar synkas automatiskt.</p>
-          </div>
-          <button type="button" className="btn-sm btn-ghost" onClick={handleDisconnect}>
-            Koppla från
-          </button>
-        </div>
-      ) : (
-        <div className="calendar-status-box disconnected">
-          <span className="cal-status-icon">🔗</span>
-          <div>
-            <strong>Ej ansluten</strong>
-            <p>Koppla din kalender för att få bokningar synkade.</p>
-          </div>
-          <button type="button" className="btn-admin-primary" onClick={handleConnect}>
-            Koppla Google Kalender
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function StripeMark() {
   return (
     <svg className="salon-stripe-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden>
@@ -1231,6 +1147,7 @@ export default function SalonAdminSettingsTab() {
     try {
       let t = sessionStorage.getItem('salonAdminInitialTab');
       if (t === 'maps') t = 'contact';
+      if (t === 'calendar') t = 'theme';
       if (t && SALON_ADMIN_TABS.some((x) => x.id === t)) {
         setTab(t);
       }
@@ -1274,7 +1191,7 @@ export default function SalonAdminSettingsTab() {
       <div className="superadmin-editor-top salon-admin-editor-top">
         <h2 className="admin-section-title">Redigerar: {displaySalonName(salon.name)}</h2>
         <p className="admin-hint salon-admin-lead">
-          Uppdatera er bokningssida, kontakt och kalender. Personal och tjänster hanterar du via menyn till vänster.
+          Uppdatera er bokningssida och kontakt. Personal, tjänster och Google Kalender per medlem hanterar du via menyn till vänster.
         </p>
       </div>
 
@@ -1296,7 +1213,6 @@ export default function SalonAdminSettingsTab() {
       {tab === 'hours' && <SalonHoursPanel salon={salon} onSaved={onSaved} />}
       {tab === 'instagram' && <SalonInstagramPanel salon={salon} onSaved={onSaved} />}
       {tab === 'texts' && <SalonTextsPanel salon={salon} onSaved={onSaved} onSalonNameLive={onSalonNameLive} />}
-      {tab === 'calendar' && <SalonCalendarPanel />}
       {tab === 'payments' && (
         <SalonPaymentsPanel
           salon={salon}
