@@ -422,6 +422,7 @@ router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) 
 
     if (updateErr) throw updateErr;
 
+    console.log('[logo-upload] success → logo_url saved:', updated.logo_url);
     res.json({ logo_url: updated.logo_url });
   } catch (err) {
     console.error('[logo-upload]', err);

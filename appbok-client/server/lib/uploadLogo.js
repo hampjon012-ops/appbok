@@ -62,5 +62,6 @@ export async function uploadLogoToSupabase({ salonId, fileBuffer, fileName, mime
     throw new Error(`Could not get public URL: ${urlError.message}`);
   }
 
+  console.log('[uploadLogo] storagePath:', storagePath, '→ publicUrl:', urlData.publicUrl);
   return urlData.publicUrl;
 }
