@@ -240,7 +240,7 @@ router.post('/register', async (req, res) => {
     // 3. Returnera JWT
     const token = signToken(user);
 
-    // 4. Välkomstmejl (Resend → SMTP; fallback legacy om token inte sparades)
+    // 4. Välkomstmejl (SMTP prioriteras; Resend som alternativ — se sendWelcomeVerificationEmail)
     if (!verifyTokErr) {
       sendWelcomeVerificationEmail({
         to: email.toLowerCase(),
@@ -248,14 +248,26 @@ router.post('/register', async (req, res) => {
         verifyUrl,
         adminUrl: adminUrlForEmail,
         demoUrl,
-      }).catch((err) => console.warn('[register] welcome email failed:', err.message));
+      })
+        .then((r) => {
+          if (!r?.success) {
+            console.warn('[register] welcome email not sent:', r?.error || 'unknown');
+          }
+        })
+        .catch((err) => console.warn('[register] welcome email failed:', err.message));
     } else {
       sendWelcomeEmail({
         to: email.toLowerCase(),
         salonName: salon.name,
         adminUrl: demoUrl.replace('.appbok.se', '.appbok.se/admin'),
         demoUrl,
-      }).catch((err) => console.warn('[register] welcome email failed:', err.message));
+      })
+        .then((r) => {
+          if (!r?.success) {
+            console.warn('[register] legacy welcome email not sent:', r?.error || 'unknown');
+          }
+        })
+        .catch((err) => console.warn('[register] welcome email failed:', err.message));
     }
 
     res.status(201).json({

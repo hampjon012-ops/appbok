@@ -224,14 +224,32 @@ function buildVerificationWelcomeHtml({ salonName, verifyUrl, adminUrl, demoUrl 
 }
 
 /**
- * Välkomstmejl med bekräftelselänk. Försöker Resend först, annars SMTP (nodemailer).
+ * Välkomstmejl med bekräftelselänk.
+ * Prioriterar SMTP (samma som bokningsmejl) när det är konfigurerat — annars Resend.
+ * Tidigare försökte vi Resend först; om RESEND_API_KEY fanns kunde API svara OK utan leverans
+ * och SMTP kördes aldrig.
  * @param {{ to: string, salonName: string, verifyUrl: string, adminUrl: string, demoUrl: string }} options
  */
 export async function sendWelcomeVerificationEmail({ to, salonName, verifyUrl, adminUrl, demoUrl }) {
   const fromResend = (RESEND_FROM || 'Appbok <hej@appbok.se>').trim();
-  const fromSmtp = SMTP_FROM || fromResend;
-  const subject = 'Välkommen till Appbok! 👋 Bekräfta din e-post';
+  const fromSmtp = (SMTP_FROM || fromResend).trim();
+  const subject = 'Välkommen till Appbok! Bekräfta din e-post';
   const html = buildVerificationWelcomeHtml({ salonName, verifyUrl, adminUrl, demoUrl });
+
+  if (transporter) {
+    try {
+      await transporter.sendMail({
+        from: fromSmtp,
+        to,
+        subject,
+        html,
+      });
+      console.log('[email] Welcome+verification sent via SMTP to', to);
+      return { success: true, via: 'smtp' };
+    } catch (err) {
+      console.error('[email] Welcome+verification SMTP failed:', err.message, '— trying Resend if configured');
+    }
+  }
 
   const resend = await sendViaResend({ from: fromResend, to, subject, html });
   if (resend.ok) {
@@ -240,23 +258,16 @@ export async function sendWelcomeVerificationEmail({ to, salonName, verifyUrl, a
   }
 
   if (!transporter) {
-    console.warn('[email] Resend failed (' + (resend.error || '?') + ') and SMTP not configured — no welcome email to', to);
+    console.warn(
+      '[email] No welcome email to',
+      to,
+      '— SMTP not configured and Resend:',
+      resend.error || 'failed',
+    );
     return { success: false, error: resend.error || 'SMTP not configured' };
   }
 
-  try {
-    await transporter.sendMail({
-      from: fromSmtp,
-      to,
-      subject,
-      html,
-    });
-    console.log('[email] Welcome+verification sent via SMTP to', to);
-    return { success: true, via: 'smtp' };
-  } catch (err) {
-    console.error('[email] Welcome+verification SMTP failed:', err.message);
-    return { success: false, error: err.message };
-  }
+  return { success: false, error: resend.error || 'SMTP failed and Resend failed' };
 }
 
 // ─── Välkomstmail (legacy, utan verifiering) ─────────────────────────────────
