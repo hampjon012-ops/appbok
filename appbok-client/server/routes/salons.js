@@ -4,6 +4,7 @@ import { requireAuth, requireAdmin } from '../lib/auth.js';
 import { ensureSalonThemeAccent } from '../lib/ensureSalonThemeAccent.js';
 import { maybeExpireTrialSalonIfNeeded } from '../lib/expireTrialSalon.js';
 import { normalizeLogoMimeType } from '../lib/normalizeLogoMimeType.js';
+import { parseMultipart } from '../lib/parseMultipart.js';
 
 const router = Router();
 const SYSTEM_SALON_ID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
@@ -375,8 +376,7 @@ router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) 
     if (fetchErr) throw fetchErr;
     if (!salonRow) return res.status(404).json({ error: 'Salong hittades inte.' });
 
-    // Parse multipart body manually (no extra deps). Field name is "logo";
-    // browsers send: ... name="logo"; filename="photo.png" (not filename="logo").
+    // Parse multipart body using byte-level approach (works with UTF-8 / SVG).
     const buf = await new Promise((resolve, reject) => {
       const chunks = [];
       req.on('data', (chunk) => chunks.push(chunk));
@@ -389,17 +389,14 @@ router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) 
     if (!boundaryStripped) {
       return res.status(400).json({ error: 'Saknar multipart boundary i Content-Type.' });
     }
-    const boundary = `--${boundaryStripped}`;
-    const parts = buf.toString('binary').split(boundary);
+
+    const parts = parseMultipart(buf, boundaryStripped);
 
     let fileBuffer = null;
     let fileName = 'logo.png';
     let mimeType = '';
 
-    for (const part of parts) {
-      const headerEnd = part.indexOf('\r\n\r\n');
-      if (headerEnd === -1) continue;
-      const header = part.substring(0, headerEnd);
+    for (const { header, body } of parts) {
       if (!/name="logo"/i.test(header)) continue;
 
       let parsedFile = '';
@@ -420,9 +417,7 @@ router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) 
       const typeMatch = header.match(/Content-Type:\s*([^\s\r\n]+)/i);
       mimeType = typeMatch ? typeMatch[1].trim() : '';
 
-      const bodyRaw = part.substring(headerEnd + 4);
-      const trimmed = bodyRaw.replace(/\r\n$/, '');
-      fileBuffer = Buffer.from(trimmed, 'binary');
+      fileBuffer = body; // Uint8Array — no string conversion
     }
 
     // Guess MIME if browser omitted Content-Type on the part (uncommon but safe)
