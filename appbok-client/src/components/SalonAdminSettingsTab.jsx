@@ -45,6 +45,9 @@ function SalonThemePanel({ salon, onSaved }) {
   const [text, setText] = useState(t.textColor || DEFAULT_SALON_THEME.textColor);
   const [secondary, setSecondary] = useState(t.secondaryColor || DEFAULT_SALON_THEME.secondaryColor);
   const [bgImage, setBgImage] = useState(t.backgroundImageUrl || '');
+  const [bgImagePreview, setBgImagePreview] = useState(t.backgroundImageUrl || '');
+  const [bgImageUploading, setBgImageUploading] = useState(false);
+  const [bgImageUploadErr, setBgImageUploadErr] = useState('');
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -56,7 +59,9 @@ function SalonThemePanel({ salon, onSaved }) {
     setBackground(th.backgroundColor || DEFAULT_SALON_THEME.backgroundColor);
     setText(th.textColor || DEFAULT_SALON_THEME.textColor);
     setSecondary(th.secondaryColor || DEFAULT_SALON_THEME.secondaryColor);
-    setBgImage(th.backgroundImageUrl || '');
+    const bg = th.backgroundImageUrl || '';
+    setBgImage(bg);
+    setBgImagePreview(bg);
   }, [salon]);
 
   const handleLogoFileChange = async (e) => {
@@ -153,6 +158,100 @@ function SalonThemePanel({ salon, onSaved }) {
       setLogoUploadErr(err.message);
     } finally {
       setLogoUploading(false);
+    }
+  };
+
+  const handleBgImageFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBgImageUploadErr('');
+    const lowerName = file.name.toLowerCase();
+    const extOk =
+      lowerName.endsWith('.jpg') ||
+      lowerName.endsWith('.jpeg') ||
+      lowerName.endsWith('.webp') ||
+      lowerName.endsWith('.png');
+    const allowedTypes = ['image/jpeg', 'image/webp', 'image/png'];
+    const typeOk = allowedTypes.includes(file.type) || (extOk && (file.type === '' || file.type === 'application/octet-stream'));
+    if (!typeOk || !extOk) {
+      setBgImageUploadErr('Filtypen är inte tillåten. Använd JPG, WEBP eller PNG.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setBgImageUploadErr('Filen är för stor. Max 5 MB.');
+      return;
+    }
+    let blobPreviewUrl = null;
+    try {
+      blobPreviewUrl = URL.createObjectURL(file);
+      setBgImagePreview(blobPreviewUrl);
+    } catch {
+      /* ignore blob preview failure */
+    }
+    setBgImageUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('background', file, file.name);
+      const res = await fetch('/api/salons/current/background-upload', {
+        method: 'POST',
+        headers: adminApiHeadersForUpload(),
+        body: fd,
+      });
+      const responseText = await res.text();
+      let data = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        /* non-JSON body */
+      }
+      if (!res.ok) {
+        const apiErr = typeof data.error === 'string' ? data.error : '';
+        throw new Error(
+          apiErr ||
+            (responseText && !responseText.trimStart().startsWith('<') ? responseText.slice(0, 240) : '') ||
+            `Uppladdning misslyckades (HTTP ${res.status}).`,
+        );
+      }
+      const uploadedUrl = data.background_url || '';
+      setBgImage(uploadedUrl);
+      setBgImagePreview(uploadedUrl);
+      toast.success('Bakgrundsbilden har sparats!');
+      onSaved?.(data);
+    } catch (err) {
+      setBgImageUploadErr(err.message);
+      setBgImagePreview(salon.theme?.backgroundImageUrl || '');
+    } finally {
+      setBgImageUploading(false);
+      if (blobPreviewUrl) {
+        try {
+          URL.revokeObjectURL(blobPreviewUrl);
+        } catch {
+          /* ignore */
+        }
+      }
+      e.target.value = '';
+    }
+  };
+
+  const handleBgImageRemove = async () => {
+    setBgImageUploadErr('');
+    setBgImageUploading(true);
+    try {
+      const res = await fetch('/api/salons', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ theme_background_image_url: '' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Kunde inte ta bort bakgrundsbilden.');
+      setBgImage('');
+      setBgImagePreview('');
+      toast.success('Bakgrundsbilden har tagits bort.');
+      onSaved?.(data);
+    } catch (err) {
+      setBgImageUploadErr(err.message);
+    } finally {
+      setBgImageUploading(false);
     }
   };
 
@@ -268,11 +367,40 @@ function SalonThemePanel({ salon, onSaved }) {
           </div>
         </label>
         <label>
-          Bakgrundsbild URL
+          Bakgrundsbild
           <span className="admin-hint admin-hint--field">
-            Bild som ligger bakom hero (överst på sidan). Om fältet är tomt används en standardbild. Använd https-länk eller relativ sökväg.
+            Bild som ligger bakom hero (överst på sidan). För foton rekommenderas JPG eller WEBP för snabbare laddningstid. Max 5 MB.
           </span>
-          <input className="admin-input" value={bgImage} onChange={(e) => setBgImage(e.target.value)} placeholder="https://..." />
+          <div className="logo-upload-area">
+            {bgImagePreview && (
+              <div className="bg-upload-preview">
+                <img src={bgImagePreview} alt="Bakgrundsbild-förhandsvisning" decoding="async" />
+              </div>
+            )}
+            <div className="logo-upload-actions">
+              <label className="logo-upload-btn">
+                {bgImageUploading ? 'Laddar upp…' : 'Välj bakgrundsbild'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/webp,image/png"
+                  className="logo-upload-input"
+                  onChange={handleBgImageFileChange}
+                  disabled={bgImageUploading}
+                />
+              </label>
+              {bgImagePreview && (
+                <button
+                  type="button"
+                  className="logo-remove-btn"
+                  onClick={handleBgImageRemove}
+                  disabled={bgImageUploading}
+                >
+                  Ta bort
+                </button>
+              )}
+            </div>
+            {bgImageUploadErr && <p className="logo-upload-error">{bgImageUploadErr}</p>}
+          </div>
         </label>
         <p className="admin-hint admin-hint--field superadmin-theme-save-hint">
           Knappen Spara skriver alla värden ovan till er salong och uppdaterar bokningssidan för besökare (även andra flikar efter en kort stund).

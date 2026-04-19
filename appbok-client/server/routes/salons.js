@@ -431,5 +431,81 @@ router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) 
   }
 });
 
+// POST /api/salons/current/background-upload — Ladda upp hero-bakgrundsbild (multipart file)
+router.post('/current/background-upload', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const contentType = req.headers['content-type'] || '';
+
+    if (!contentType.includes('multipart/form-data')) {
+      return res.status(400).json({ error: 'Content-Type must be multipart/form-data' });
+    }
+
+    const { data: salonRow, error: fetchErr } = await supabase
+      .from('salons')
+      .select('id')
+      .eq('id', req.user.salonId)
+      .single();
+
+    if (fetchErr) throw fetchErr;
+    if (!salonRow) return res.status(404).json({ error: 'Salong hittades inte.' });
+
+    const form = formidable({ maxFileSize: 6 * 1024 * 1024 });
+    const [fields, files] = await form.parse(req);
+
+    const fileEntry = Array.isArray(files.background) ? files.background[0] : files.background;
+    if (!fileEntry) {
+      return res.status(400).json({ error: 'Ingen fil hittades i förfrågan.' });
+    }
+
+    const fileName = fileEntry.originalFilename || 'background.jpg';
+    const mimeType = String(fileEntry.mimetype || '').trim().toLowerCase();
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/webp', 'image/png'];
+    if (!allowedTypes.includes(mimeType)) {
+      return res.status(400).json({ error: `Filtypen ${mimeType} är inte tillåten. Använd JPG, WEBP eller PNG.` });
+    }
+
+    if (fileEntry.size > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Filen är för stor. Max 5 MB.' });
+    }
+
+    const fs = await import('fs');
+    const fileBuffer = fs.readFileSync(fileEntry.filepath);
+
+    const { uploadBackgroundToSupabase } = await import('../lib/uploadBackground.js');
+    const publicUrl = await uploadBackgroundToSupabase({
+      salonId: salonRow.id,
+      fileBuffer,
+      fileName,
+      mimeType,
+    });
+
+    // Save as theme.backgroundImageUrl via PUT (same column as existing field)
+    const { data: current } = await supabase
+      .from('salons')
+      .select('theme')
+      .eq('id', salonRow.id)
+      .single();
+
+    const theme = { ...(current?.theme && typeof current.theme === 'object' ? current.theme : {}) };
+    theme.backgroundImageUrl = publicUrl;
+
+    const { data: updated, error: updateErr } = await supabase
+      .from('salons')
+      .update({ theme })
+      .eq('id', salonRow.id)
+      .select('theme')
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    res.json({ background_url: updated.theme?.backgroundImageUrl });
+  } catch (err) {
+    console.error('[background-upload]', err);
+    const msg = err?.message || err?.details || 'Kunde inte ladda upp bakgrundsbilden.';
+    res.status(500).json({ error: msg });
+  }
+});
+
 export default router;
 
