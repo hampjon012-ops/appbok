@@ -35,16 +35,24 @@ export function WelcomeEmail({ name, token, baseUrl, salonSlug }: WelcomeEmailPr
       <Tailwind>
         <Body className="bg-white font-sans my-0 mx-auto py-12 px-4">
           <Container className="max-w-[480px] bg-white rounded-xl p-8">
-            {/* ── Logo ── */}
-            <Section className="text-center mb-10">
-              <Img
-                src={`${baseUrl}/logo-web.svg`}
-                alt="Appbok"
-                width={120}
-                height={40}
-                className="inline-block"
-                style={{ width: '120px', height: 'auto' }}
-              />
+            {/* ── Logo: svart lockup som appbok.se (ikon + "appbok") ── */}
+            <Section className="mb-10">
+              <Row>
+                <Column className="w-10 align-middle pr-2">
+                  <Img
+                    src={`${baseUrl}/logo-email-mark.svg`}
+                    alt=""
+                    width={32}
+                    height={32}
+                    className="block"
+                  />
+                </Column>
+                <Column className="align-middle">
+                  <Text className="m-0 p-0 text-[22px] font-semibold text-black lowercase tracking-tight leading-8">
+                    appbok
+                  </Text>
+                </Column>
+              </Row>
             </Section>
 
             {/* ── Rubrik ── */}
