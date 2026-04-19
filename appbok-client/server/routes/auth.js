@@ -33,6 +33,92 @@ function normalizeRegisterServices(raw) {
   return out;
 }
 
+/**
+ * Importerar tjänster från Bokadirekt vid registrering.
+ * Måste await:as i samma HTTP-request — annars avbryts arbetet på serverless när svaret skickats.
+ * @returns {{ ok: boolean; imported: number; message?: string }}
+ */
+async function importBokadirektServicesForNewSalon(salon, bokadirektUrl) {
+  if (!bokadirektUrl || typeof bokadirektUrl !== 'string' || !bokadirektUrl.includes('bokadirekt.se')) {
+    return { ok: true, imported: 0 };
+  }
+  try {
+    const result = await scrapeBokadirekt(bokadirektUrl.trim());
+    const { categories } = result;
+    if (!categories || categories.length === 0) {
+      return { ok: true, imported: 0, message: 'Inga kategorier hittades på länken.' };
+    }
+
+    const { data: cats, error: catsErr } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('salon_id', salon.id);
+    if (catsErr) throw catsErr;
+
+    const catMap = {};
+    if (cats) {
+      cats.forEach((c) => {
+        catMap[String(c.name || '').toLowerCase()] = c.id;
+      });
+    }
+
+    let imported = 0;
+    for (const cat of categories) {
+      const catNameKey = String(cat.name || '').toLowerCase();
+      let catId = catMap[catNameKey];
+      if (!catId) {
+        const { data: newCat, error: newCatErr } = await supabase
+          .from('categories')
+          .insert({ salon_id: salon.id, name: cat.name, sort_order: 999 })
+          .select('id')
+          .single();
+        if (newCatErr) {
+          console.error('[register] Bokadirekt category insert:', newCatErr.message || newCatErr);
+          continue;
+        }
+        if (newCat?.id) {
+          catId = newCat.id;
+          catMap[catNameKey] = catId;
+        }
+      }
+      if (!catId) continue;
+
+      const svcs = cat.services || [];
+      for (const svc of svcs) {
+        if (!svc?.name || String(svc.name).trim() === '') continue;
+        const pa = Number(svc.price_amount);
+        const pl = svc.price_label ? String(svc.price_label).trim() : '';
+        // Samma idé som bokadirektScraper: intervall kan vara 0 öre men med price_label
+        if (!pl && (!Number.isFinite(pa) || pa <= 0)) continue;
+
+        const { error: insErr } = await supabase.from('services').insert({
+          salon_id: salon.id,
+          category_id: catId,
+          name: String(svc.name).trim(),
+          price_amount: Number.isFinite(pa) && pa >= 0 ? Math.round(pa) : 0,
+          price_label:
+            pl || (pa > 0 ? `${(pa / 100).toLocaleString('sv-SE')} kr` : ''),
+          duration_minutes: svc.duration_minutes || 60,
+          duration: svc.duration || `${svc.duration_minutes || 60} min`,
+          sort_order: 999,
+          active: true,
+        });
+        if (insErr) {
+          console.error('[register] Bokadirekt service insert:', insErr.message || insErr);
+        } else {
+          imported += 1;
+        }
+      }
+    }
+
+    return { ok: true, imported };
+  } catch (err) {
+    const msg = err?.message || String(err);
+    console.warn('[register] Bokadirekt import failed:', msg);
+    return { ok: false, imported: 0, message: msg };
+  }
+}
+
 // ── POST /api/auth/register — Skapa admin-konto ─────────────────────────────
 router.post('/register', async (req, res) => {
   const { email, password, name, salonName, salonSlug, bokadirektUrl, services } = req.body;
@@ -128,60 +214,10 @@ router.post('/register', async (req, res) => {
       }
     }
 
-    // 2.6: Auto-importera från Bokadirekt om URL angavs
+    // 2.6: Bokadirekt — kör klart i samma request (serverless stoppar annars bakgrundsjobbet)
+    let bokadirektImport = null;
     if (bokadirektUrl && typeof bokadirektUrl === 'string' && bokadirektUrl.includes('bokadirekt.se')) {
-      (async () => {
-        try {
-          const result = await scrapeBokadirekt(bokadirektUrl);
-          const { categories } = result;
-          if (!categories || categories.length === 0) return;
-
-          const { data: cats, error: catsErr } = await supabase
-            .from('categories')
-            .select('id, name')
-            .eq('salon_id', salon.id);
-          if (catsErr) throw catsErr;
-
-          const catMap = {};
-          if (cats) {
-            cats.forEach((c) => {
-              catMap[c.name.toLowerCase()] = c.id;
-            });
-          }
-
-          for (const cat of categories) {
-            let catId = catMap[cat.name.toLowerCase()];
-            if (!catId) {
-              const { data: newCat, error: newCatErr } = await supabase
-                .from('categories')
-                .insert({ salon_id: salon.id, name: cat.name, sort_order: 999 })
-                .select('id')
-                .single();
-              if (newCatErr) throw newCatErr;
-              if (newCat) catId = newCat.id;
-            }
-            if (!catId) continue;
-
-            for (const svc of cat.services) {
-              if (!svc.name || svc.price_amount === 0) continue;
-              await supabase.from('services').insert({
-                salon_id: salon.id,
-                category_id: catId,
-                name: svc.name,
-                price_amount: svc.price_amount,
-                price_label:
-                  svc.price_label || `${(svc.price_amount / 100).toLocaleString('sv-SE')} kr`,
-                duration_minutes: svc.duration_minutes || 60,
-                duration: svc.duration || `${svc.duration_minutes || 60} min`,
-                sort_order: 999,
-                active: true,
-              });
-            }
-          }
-        } catch (err) {
-          console.warn('[register] Bokadirekt import failed:', err.message);
-        }
-      })();
+      bokadirektImport = await importBokadirektServicesForNewSalon(salon, bokadirektUrl);
     }
 
     // 3. Returnera JWT
@@ -201,6 +237,13 @@ router.post('/register', async (req, res) => {
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
       salon: { id: salon.id, name: salon.name, slug: salon.slug },
       demoUrl,
+      ...(bokadirektImport && {
+        bokadirekt_import: {
+          ok: bokadirektImport.ok,
+          imported: bokadirektImport.imported,
+          ...(bokadirektImport.message && { message: bokadirektImport.message }),
+        },
+      }),
     });
   } catch (err) {
     console.error('Register error:', err);

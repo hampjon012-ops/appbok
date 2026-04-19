@@ -223,6 +223,12 @@ export default function SignupPage() {
 
           {step === 2 && (
             <form onSubmit={(e) => { e.preventDefault(); setStep(3); }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {services.length === 0 ? (
+                <p style={{ fontSize: '0.9rem', color: '#525252', lineHeight: 1.55, margin: 0 }}>
+                  Du har valt att inte lägga in snabbtjänster nu. Efter registrering hittar du allt under{' '}
+                  <strong>Tjänster</strong> i admin. Du behöver inga rader här för att gå vidare.
+                </p>
+              ) : null}
               {services.map((svc, i) => (
                 <div key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <div style={{ flex: 2 }}>
@@ -256,7 +262,10 @@ export default function SignupPage() {
               <button
                 type="button"
                 className="signup-onboarding-skip"
-                onClick={() => setStep(3)}
+                onClick={() => {
+                  setServices([]);
+                  setStep(3);
+                }}
               >
                 Hoppa över, jag lägger in tjänster senare
               </button>
