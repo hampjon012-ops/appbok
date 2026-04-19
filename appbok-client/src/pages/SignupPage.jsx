@@ -1,12 +1,35 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 
+/** price_amount lagras i öre (API/databas); användaren skriver kronor i fälten. */
 const DEFAULT_SERVICES = [
   { name: 'Klippning', price_amount: 35000, duration_minutes: 45 },
   { name: 'Färg', price_amount: 80000, duration_minutes: 120 },
   { name: 'Styling', price_amount: 40000, duration_minutes: 45 },
-  { name: 'Barnklippning', price_amount: 20000, duration_minutes: 30 }
+  { name: 'Barnklippning', price_amount: 20000, duration_minutes: 30 },
 ];
+
+function priceOreToKrInputValue(ore) {
+  if (ore === '' || ore === null || ore === undefined) return '';
+  const n = Number(ore);
+  if (!Number.isFinite(n)) return '';
+  return String(Math.round(n / 100));
+}
+
+function handlePriceKrFieldChange(index, rawString, setServices) {
+  setServices((prev) => {
+    const next = [...prev];
+    if (rawString === '') {
+      next[index] = { ...next[index], price_amount: '' };
+      return next;
+    }
+    const kr = parseInt(String(rawString), 10);
+    if (Number.isNaN(kr) || kr < 0) return prev;
+    next[index] = { ...next[index], price_amount: kr * 100 };
+    return next;
+  });
+}
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -42,8 +65,8 @@ export default function SignupPage() {
 
   const updateService = (index, field, value) => {
     const newServices = [...services];
-    if (field === 'price_amount' || field === 'duration_minutes') {
-      newServices[index][field] = value ? parseInt(value, 10) : '';
+    if (field === 'duration_minutes') {
+      newServices[index][field] = value !== '' && value != null ? parseInt(value, 10) : '';
     } else {
       newServices[index][field] = value;
     }
@@ -189,7 +212,16 @@ export default function SignupPage() {
                   </div>
                   <div style={{ flex: 1 }}>
                     {i === 0 && <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#737373', marginBottom: '0.2rem' }}>Pris (kr)</div>}
-                    <input type="number" value={svc.price_amount} onChange={e => updateService(i, 'price_amount', e.target.value)} style={inputStyle} placeholder={DEFAULT_SERVICES[i]?.price_amount} />
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      inputMode="numeric"
+                      value={priceOreToKrInputValue(svc.price_amount)}
+                      onChange={(e) => handlePriceKrFieldChange(i, e.target.value, setServices)}
+                      style={inputStyle}
+                      placeholder={DEFAULT_SERVICES[i] != null ? String(Math.round(DEFAULT_SERVICES[i].price_amount / 100)) : ''}
+                    />
                   </div>
                   <div style={{ flex: 1 }}>
                     {i === 0 && <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#737373', marginBottom: '0.2rem' }}>Tid (min)</div>}
@@ -202,30 +234,76 @@ export default function SignupPage() {
                 <button type="button" onClick={() => setStep(1)} style={{ ...buttonBase, background: '#F5F5F5', color: '#1A1A1A', flex: 1 }}>← Tillbaka</button>
                 <button type="submit" style={{ ...primaryButtonStyle, flex: 2 }}>Nästa steg →</button>
               </div>
+              <button
+                type="button"
+                className="signup-onboarding-skip"
+                onClick={() => setStep(3)}
+              >
+                Hoppa över, jag lägger in tjänster senare
+              </button>
             </form>
           )}
 
           {step === 3 && (
-            <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ padding: '1rem', background: '#F9FAFB', border: '1px dashed #D1D5DB', borderRadius: '12px', textAlign: 'center', marginBottom: '1rem' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>✂️</div>
-                <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 600 }}>Flytta från Bokadirekt?</h4>
-                <p style={{ fontSize: '0.85rem', color: '#737373', margin: 0 }}>
-                  Li in din nuvarande bokningslänk så konfigurerar vi hela ditt tjänsteutbud åt dig inom 24 timmar. (Frivilligt)
+            <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div
+                style={{
+                  padding: '1.35rem 1.25rem 1.5rem',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  textAlign: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    marginBottom: '0.5rem',
+                    color: '#6366f1',
+                  }}
+                  aria-hidden
+                >
+                  <Sparkles size={24} strokeWidth={2} />
+                </div>
+                <h4
+                  style={{
+                    margin: '0 0 0.5rem 0',
+                    fontWeight: 600,
+                    fontSize: '1.05rem',
+                    color: '#171717',
+                  }}
+                >
+                  Flytta från Bokadirekt?
+                </h4>
+                <p style={{ fontSize: '0.875rem', color: '#737373', margin: '0 0 1rem', lineHeight: 1.5 }}>
+                  Klistra in din nuvarande bokningslänk så konfigurerar vi hela ditt tjänsteutbud åt dig inom 24 timmar.
                 </p>
+                <input
+                  type="url"
+                  value={bokadirektUrl}
+                  onChange={(e) => setBokadirektUrl(e.target.value)}
+                  style={{ ...inputStyle, textAlign: 'left' }}
+                  placeholder="https://www.bokadirekt.se/places/..."
+                  autoComplete="url"
+                  inputMode="url"
+                />
               </div>
 
-              <label>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Länk till Bokadirekt (Frivilligt)</div>
-                <input type="url" value={bokadirektUrl} onChange={e => setBokadirektUrl(e.target.value)} style={inputStyle} placeholder="https://www.bokadirekt.se/places/..." />
-              </label>
-
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.25rem' }}>
                 <button type="button" onClick={() => setStep(2)} disabled={loading} style={{ ...buttonBase, background: '#F5F5F5', color: '#1A1A1A', flex: 1 }}>← Tillbaka</button>
                 <button type="submit" disabled={loading} style={{ ...primaryButtonStyle, flex: 2, justifyContent: 'center' }}>
-                  {loading ? 'Skapar konto...' : 'Slutför \u2713'}
+                  {loading ? 'Skapar konto...' : 'Skicka in & Slutför'}
                 </button>
               </div>
+              <button
+                type="button"
+                className="signup-onboarding-skip"
+                disabled={loading}
+                onClick={() => void submitForm()}
+              >
+                Nej tack, jag sätter upp allt själv
+              </button>
             </form>
           )}
 

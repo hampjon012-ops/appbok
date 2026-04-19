@@ -88,7 +88,9 @@ router.post('/register', async (req, res) => {
             category_id: cat.id,
             name: s.name,
             price_amount: s.price_amount,
-            price_label: s.price_label || `${s.price_amount} kr`,
+            price_label:
+              s.price_label ||
+              `${Math.round(Number(s.price_amount) / 100)} kr`,
             duration_minutes: s.duration_minutes,
             duration: s.duration || `${s.duration_minutes} min`,
             sort_order: index + 1,

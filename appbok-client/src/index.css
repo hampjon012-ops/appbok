@@ -5631,3 +5631,31 @@ textarea.admin-input {
 .btn-floating:hover:not(:disabled) {
   filter: brightness(0.9);
 }
+
+/* Onboarding (SignupPage): diskret ”hoppa över” under steg 2 */
+.signup-onboarding-skip {
+  display: block;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.5rem 0.25rem;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #737373;
+  text-underline-offset: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.signup-onboarding-skip:hover:not(:disabled) {
+  text-decoration: underline;
+  color: #525252;
+}
+
+.signup-onboarding-skip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
