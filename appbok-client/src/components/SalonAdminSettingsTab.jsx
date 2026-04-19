@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
+import { Upload } from 'lucide-react';
 import ThemeLivePreviewColumn from './ThemeLivePreviewColumn.jsx';
 import {
   displaySalonName,
@@ -302,107 +303,155 @@ function SalonThemePanel({ salon, onSaved }) {
         onSubmit={save}
       >
         <h3 className="admin-card-title">Kontroller</h3>
-        <label>
-          Bakgrundsfärg
-          <span className="admin-hint admin-hint--field">
-            Yta bakom &quot;Våra mest populära tjänster&quot;, innehållskortet under hero och Instagram-rutnätet.
-          </span>
-          <input type="color" className="admin-input color-input" value={background} onChange={(e) => setBackground(e.target.value)} />
-        </label>
-        <label>
-          Sekundärfärg
-          <span className="admin-hint admin-hint--field">
-            Yta bakom &quot;Träffa vårt team&quot;, kontakt/karta, sidfot och ljusare paneler i bokningsfönstret.
-          </span>
-          <input type="color" className="admin-input color-input" value={secondary} onChange={(e) => setSecondary(e.target.value)} />
-        </label>
-        <label>
-          Knappfärg
-          <span className="admin-hint admin-hint--field">
-            Färg på Boka tid, Välj vid tjänster, markerade steg i bokningsflödet och andra tydliga knappar/länkar.
-          </span>
-          <input type="color" className="admin-input color-input" value={accent} onChange={(e) => setAccent(e.target.value)} />
-        </label>
-        <label>
-          Textfärg
-          <span className="admin-hint admin-hint--field">
-            Huvudsaklig textfärg på bokningssidan: rubriker, brödtext och etiketter (inte hero-texten ovanför kortet).
-          </span>
-          <input type="color" className="admin-input color-input" value={text} onChange={(e) => setText(e.target.value)} />
-        </label>
-        <label>
-          Logotyp
-          <span className="admin-hint admin-hint--field">
-            PNG eller JPG. Max 2 MB. Visas i hero (ovanför tagline).
-          </span>
-          <div className="logo-upload-area">
-            {logoPreview && (
-              <div className="logo-upload-preview">
-                <img src={logoPreview} alt="Logotypförhandsvisning" decoding="async" />
+
+        <div className="flex flex-col gap-6 mb-8">
+          <label>
+            Bakgrundsfärg
+            <span className="admin-hint admin-hint--field">
+              Yta bakom &quot;Våra mest populära tjänster&quot;, innehållskortet under hero och Instagram-rutnätet.
+            </span>
+            <input type="color" className="admin-input color-input" value={background} onChange={(e) => setBackground(e.target.value)} />
+          </label>
+          <label>
+            Sekundärfärg
+            <span className="admin-hint admin-hint--field">
+              Yta bakom &quot;Träffa vårt team&quot;, kontakt/karta, sidfot och ljusare paneler i bokningsfönstret.
+            </span>
+            <input type="color" className="admin-input color-input" value={secondary} onChange={(e) => setSecondary(e.target.value)} />
+          </label>
+          <label>
+            Knappfärg
+            <span className="admin-hint admin-hint--field">
+              Färg på Boka tid, Välj vid tjänster, markerade steg i bokningsflödet och andra tydliga knappar/länkar.
+            </span>
+            <input type="color" className="admin-input color-input" value={accent} onChange={(e) => setAccent(e.target.value)} />
+          </label>
+          <label>
+            Textfärg
+            <span className="admin-hint admin-hint--field">
+              Huvudsaklig textfärg på bokningssidan: rubriker, brödtext och etiketter (inte hero-texten ovanför kortet).
+            </span>
+            <input type="color" className="admin-input color-input" value={text} onChange={(e) => setText(e.target.value)} />
+          </label>
+        </div>
+
+        <hr className="my-6 border-gray-200" />
+
+        <div className="flex flex-col gap-8 mb-8">
+          {/*
+           * ── Logotyp ────────────────────────────────────────────────
+           */}
+          <div className="flex flex-col gap-3">
+            <label>
+              Logotyp
+              <span className="admin-hint admin-hint--field text-sm text-gray-500 mt-1">
+                PNG eller JPG. Max 2 MB. Visas i hero (ovanför tagline).
+              </span>
+            </label>
+
+            {logoPreview ? (
+              /* Fyllt läge */
+              <div className="border border-gray-200 rounded-lg p-4 bg-white flex flex-col items-center gap-4">
+                <img src={logoPreview} alt="Logotypförhandsvisning" className="w-24 h-24 object-contain" decoding="async" />
+                <div className="flex gap-3">
+                  <label className="bg-white border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-50 shadow-sm inline-flex items-center gap-2">
+                    {logoUploading ? 'Laddar upp…' : 'Byt bild'}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg"
+                      className="hidden"
+                      onChange={handleLogoFileChange}
+                      disabled={logoUploading}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="border border-red-200 text-red-600 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-50"
+                    onClick={handleLogoRemove}
+                    disabled={logoUploading}
+                  >
+                    Ta bort
+                  </button>
+                </div>
+                {logoUploadErr && <p className="logo-upload-error">{logoUploadErr}</p>}
               </div>
-            )}
-            <div className="logo-upload-actions">
-              <label className="logo-upload-btn">
-                {logoUploading ? 'Laddar upp…' : 'Välj logotyp'}
+            ) : (
+              /* Dropzone – tomt läge */
+              <label className="border-dashed border-2 border-gray-300 rounded-lg p-8 bg-gray-50 hover:bg-gray-100 flex flex-col items-center justify-center gap-3 cursor-pointer">
+                <Upload className="w-8 h-8 text-gray-400" />
+                <span className="text-sm text-gray-500">Klicka för att ladda upp</span>
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/jpg"
-                  className="logo-upload-input"
+                  className="hidden"
                   onChange={handleLogoFileChange}
                   disabled={logoUploading}
                 />
+                {logoUploading && <span className="text-sm text-gray-500">Laddar upp…</span>}
+                {logoUploadErr && <p className="logo-upload-error">{logoUploadErr}</p>}
               </label>
-              {logoPreview && (
-                <button
-                  type="button"
-                  className="logo-remove-btn"
-                  onClick={handleLogoRemove}
-                  disabled={logoUploading}
-                >
-                  Ta bort
-                </button>
-              )}
-            </div>
-            {logoUploadErr && <p className="logo-upload-error">{logoUploadErr}</p>}
-          </div>
-        </label>
-        <label>
-          Bakgrundsbild
-          <span className="admin-hint admin-hint--field">
-            Bild som ligger bakom hero (överst på sidan). För foton rekommenderas JPG eller WEBP för snabbare laddningstid. Max 5 MB.
-          </span>
-          <div className="logo-upload-area">
-            {bgImagePreview && (
-              <div className="bg-upload-preview">
-                <img src={bgImagePreview} alt="Bakgrundsbild-förhandsvisning" decoding="async" />
-              </div>
             )}
-            <div className="logo-upload-actions">
-              <label className="logo-upload-btn">
-                {bgImageUploading ? 'Laddar upp…' : 'Välj bakgrundsbild'}
+          </div>
+
+          {/*
+           * ── Bakgrundsbild ─────────────────────────────────────────
+           */}
+          <div className="flex flex-col gap-3">
+            <label>
+              Bakgrundsbild
+              <span className="admin-hint admin-hint--field text-sm text-gray-500 mt-1">
+                Bild som ligger bakom hero (överst på sidan). För foton rekommenderas JPG eller WEBP för snabbare laddningstid. Max 5 MB.
+              </span>
+            </label>
+
+            {bgImagePreview ? (
+              /* Fyllt läge */
+              <div className="border border-gray-200 rounded-lg p-4 bg-white flex flex-col items-center gap-4">
+                <img src={bgImagePreview} alt="Bakgrundsbild-förhandsvisning" className="w-full h-28 object-cover rounded" decoding="async" />
+                <div className="flex gap-3">
+                  <label className="bg-white border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-50 shadow-sm inline-flex items-center gap-2">
+                    {bgImageUploading ? 'Laddar upp…' : 'Byt bild'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/webp,image/png"
+                      className="hidden"
+                      onChange={handleBgImageFileChange}
+                      disabled={bgImageUploading}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="border border-red-200 text-red-600 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-50"
+                    onClick={handleBgImageRemove}
+                    disabled={bgImageUploading}
+                  >
+                    Ta bort
+                  </button>
+                </div>
+                {bgImageUploadErr && <p className="logo-upload-error">{bgImageUploadErr}</p>}
+              </div>
+            ) : (
+              /* Dropzone – tomt läge */
+              <label className="border-dashed border-2 border-gray-300 rounded-lg p-8 bg-gray-50 hover:bg-gray-100 flex flex-col items-center justify-center gap-3 cursor-pointer">
+                <Upload className="w-8 h-8 text-gray-400" />
+                <span className="text-sm text-gray-500">Klicka för att ladda upp</span>
                 <input
                   type="file"
                   accept="image/jpeg,image/webp,image/png"
-                  className="logo-upload-input"
+                  className="hidden"
                   onChange={handleBgImageFileChange}
                   disabled={bgImageUploading}
                 />
+                {bgImageUploading && <span className="text-sm text-gray-500">Laddar upp…</span>}
+                {bgImageUploadErr && <p className="logo-upload-error">{bgImageUploadErr}</p>}
               </label>
-              {bgImagePreview && (
-                <button
-                  type="button"
-                  className="logo-remove-btn"
-                  onClick={handleBgImageRemove}
-                  disabled={bgImageUploading}
-                >
-                  Ta bort
-                </button>
-              )}
-            </div>
-            {bgImageUploadErr && <p className="logo-upload-error">{bgImageUploadErr}</p>}
+            )}
           </div>
-        </label>
-        <p className="admin-hint admin-hint--field superadmin-theme-save-hint">
+        </div>
+
+        <hr className="my-6 border-gray-200" />
+
+        <p className="admin-hint admin-hint--field superadmin-theme-save-hint mb-4 text-sm text-gray-500">
           Knappen Spara skriver alla värden ovan till er salong och uppdaterar bokningssidan för besökare (även andra flikar efter en kort stund).
         </p>
         <button
