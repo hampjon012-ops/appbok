@@ -241,15 +241,14 @@ router.post('/register', async (req, res) => {
     const token = signToken(user);
 
     // 4. Välkomstmejl — måste await:as på Vercel serverless; annars avslutas funktionen när svaret skickats
-    // och bakgrundsmail hinner aldrig skickas (bokningsmejl await:as därför de fungerar).
     try {
       if (!verifyTokErr) {
         const r = await sendWelcomeVerificationEmail({
           to: email.toLowerCase(),
-          salonName: salon.name,
-          verifyUrl,
-          adminUrl: adminUrlForEmail,
-          demoUrl,
+          name,
+          token: verificationToken,
+          baseUrl: publicAppOrigin(),
+          salonSlug: salon.slug,
         });
         if (!r?.success) {
           console.warn('[register] welcome email not sent:', r?.error || 'unknown');
