@@ -8,6 +8,7 @@ import { sendBookingConfirmationEmail, sendCancellationEmail, sendCancellationNo
 import { sendBookingSMS, sendCancellationSMS, sendRebookConfirmationSMS } from '../lib/sms.js';
 import { computeSlotsForStylist } from '../lib/stylistAvailability.js';
 import { loadSalonMaybeExpire } from '../lib/expireTrialSalon.js';
+import { salonAcceptsPublicBookings, SALON_PREVIEW_FORBIDDEN_MESSAGE } from '../lib/salonPublicBookingGate.js';
 
 const router = Router();
 
@@ -191,6 +192,12 @@ router.post('/rebook', async (req, res) => {
     if (salonRow?.status === 'expired') {
       return res.status(403).json({
         error: 'Denna salongs testperiod är avslutad. Ombokning är inte möjlig.',
+      });
+    }
+    if (!salonAcceptsPublicBookings(salonRow?.status)) {
+      return res.status(403).json({
+        error: SALON_PREVIEW_FORBIDDEN_MESSAGE,
+        code: 'SALON_PREVIEW',
       });
     }
 
@@ -388,6 +395,12 @@ router.post('/', async (req, res) => {
     if (salon.status === 'expired') {
       return res.status(403).json({
         error: 'Denna salongs testperiod är avslutad. Bokning är inte möjlig.',
+      });
+    }
+    if (!salonAcceptsPublicBookings(salon.status)) {
+      return res.status(403).json({
+        error: SALON_PREVIEW_FORBIDDEN_MESSAGE,
+        code: 'SALON_PREVIEW',
       });
     }
 

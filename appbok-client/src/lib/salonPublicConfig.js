@@ -97,6 +97,15 @@ function mergeThemeObjects(apiTheme, baseTheme) {
   };
 }
 
+/**
+ * Salong i förhandsgranskning (före startad testperiod) — inga riktiga bokningar.
+ * Matchar server: salonAcceptsPublicBookings (trial/live tillåts).
+ */
+export function isSalonPreviewBookingMode(status) {
+  const s = String(status || '').toLowerCase();
+  return s === 'demo' || s === 'draft' || s === 'active';
+}
+
 /** Namn från API-svar (olika klienter kan skicka name / salon_name). */
 function extractSalonNameFromApi(api) {
   if (!api || typeof api !== 'object') return undefined;

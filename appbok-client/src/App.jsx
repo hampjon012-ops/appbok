@@ -9,6 +9,7 @@ import {
   SALON_CONFIG_UPDATED,
   SALON_CONFIG_STORAGE_KEY,
   resolvePrimaryAccentHex,
+  isSalonPreviewBookingMode,
 } from './lib/salonPublicConfig';
 import './App.css';
 import { usePreviewEmbedUi } from './hooks/usePreviewEmbedUi.js';
@@ -317,28 +318,17 @@ function App() {
     return <SalonTenantNotFoundView attemptedSlug={config.attemptedSlug} />;
   }
 
-  const isDemo = config.salonStatus === 'demo';
-  const isTrial = config.salonStatus === 'trial';
-  const isLive = config.salonStatus === 'live';
+  const isSalonPreviewMode = isSalonPreviewBookingMode(config.salonStatus);
   const isExpired = config.salonStatus === 'expired';
-  // Banner visas ENDAST i demo/draft/active — alltså INTE under trial, live eller expired
-  const showDemoBanner = !isTrial && !isLive && !isExpired && !previewEmbed;
 
   return (
     <div className="app-wrapper">
       {previewEmbed ? <PreviewDeviceStatusBar /> : null}
-      {/* ── DEMO BANNER (visas endast innan testperioden är startad) ── */}
-      {showDemoBanner && isDemo && (
-        <div className="demo-status-banner">
-          <span className="demo-status-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" stroke="#92400E" strokeWidth="2"/>
-              <line x1="12" y1="8" x2="12" y2="13" stroke="#92400E" strokeWidth="2" strokeLinecap="round"/>
-              <circle cx="12" cy="16.5" r="1" fill="#92400E"/>
-            </svg>
-          </span>
-          <span className="demo-status-text">
-            <strong>Förhandsvisning</strong> — Din sajt är under utveckling. Boka-knappen är inaktiverad tills du startar din testperiod.
+      {/* ── Förhandsgranskning: ingen riktig bokning förrän testperiod startats ── */}
+      {isSalonPreviewMode && !previewEmbed && (
+        <div className="preview-booking-banner" role="status">
+          <span className="preview-booking-banner-text">
+            ⚠️ Denna bokningssida är i förhandsgranskning. Riktiga bokningar kan inte genomföras.
           </span>
         </div>
       )}
@@ -348,18 +338,18 @@ function App() {
         <div /> {/* spacer */}
         <button
           type="button"
-          onClick={isDemo || isExpired ? undefined : () => openBookingModal(null)}
-          disabled={isDemo || isExpired}
+          onClick={isExpired ? undefined : () => openBookingModal(null)}
+          disabled={isExpired}
           className="desktop-header-btn"
           style={
-            isDemo || isExpired
+            isExpired
               ? { opacity: 0.5, cursor: 'not-allowed', pointerEvents: 'none' }
               : scrollY > 50
               ? { backgroundColor: accentColor, color: '#fff' }
               : undefined
           }
         >
-          {isDemo ? 'Boka (inaktiverad)' : isExpired ? 'Bokning stängd' : 'Boka tid'}
+          {isExpired ? 'Bokning stängd' : 'Boka tid'}
         </button>
       </div>
 
@@ -439,17 +429,16 @@ function App() {
                       return (
                         <div
                           key={svc.id || i}
-                          className={`service-popular-row service-popular-row--interactive${isDemo ? ' service-popular-row--demo' : ''}`}
-                          role={isDemo ? 'presentation' : 'button'}
-                          tabIndex={isDemo ? -1 : 0}
-                          onClick={isDemo ? undefined : () => openBookingModal(svc)}
-                          onKeyDown={isDemo ? undefined : (e) => {
+                          className="service-popular-row service-popular-row--interactive"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => openBookingModal(svc)}
+                          onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
                               openBookingModal(svc);
                             }
                           }}
-                          style={isDemo ? { opacity: 0.6, cursor: 'default' } : undefined}
                         >
                           <div className="service-popular-text">
                             <p className="service-popular-name">{svc.name}</p>
@@ -461,10 +450,9 @@ function App() {
                             type="button"
                             className="service-popular-btn"
                             tabIndex={-1}
-                            disabled={isDemo}
-                            style={isDemo ? { opacity: 0.5, cursor: 'not-allowed' } : { backgroundColor: accentColor }}
+                            style={{ backgroundColor: accentColor }}
                           >
-                            {isDemo ? 'Låst' : 'Välj'}
+                            Välj
                           </button>
                         </div>
                       );
@@ -615,11 +603,11 @@ function App() {
         <button
           type="button"
           className="btn-floating"
-          disabled={isDemo || isExpired}
-          style={isDemo || isExpired ? { opacity: 0.5, cursor: 'not-allowed', backgroundColor: '#9CA3AF' } : { backgroundColor: accentColor }}
-          onClick={isDemo || isExpired ? undefined : () => openBookingModal(null)}
+          disabled={isExpired}
+          style={isExpired ? { opacity: 0.5, cursor: 'not-allowed', backgroundColor: '#9CA3AF' } : { backgroundColor: accentColor }}
+          onClick={isExpired ? undefined : () => openBookingModal(null)}
         >
-          {isDemo ? 'Boka (inaktiverad)' : isExpired ? 'Bokning stängd' : 'Boka Tid'}
+          {isExpired ? 'Bokning stängd' : 'Boka Tid'}
         </button>
       </div>
 
@@ -643,6 +631,7 @@ function App() {
             onPrefillApplied={clearBookingPrefill}
             prefillStylistFromHome={bookingPrefillStylist}
             onStylistPrefillApplied={clearBookingPrefillStylist}
+            previewBookingLocked={isSalonPreviewMode}
           />
         </div>
       </div>
@@ -666,6 +655,7 @@ function BookingSection({
   onPrefillApplied,
   prefillStylistFromHome,
   onStylistPrefillApplied,
+  previewBookingLocked = false,
 }) {
   const [step, setStep]                   = useState('category');
   const [selectedCategory, setCategory]   = useState(null);
@@ -1022,6 +1012,7 @@ function BookingSection({
    */
 
   const fetchPaymentIntent = useCallback(async () => {
+    if (previewBookingLocked) return;
     if (selectedServices.length === 0 || !selectedDate || !selectedTime) return;
     if (clientSecret || intentLoading || intentRequested) return;
 
@@ -1079,14 +1070,16 @@ function BookingSection({
     selectedStylist?.name,
     selectedTime,
     intentRequested,
+    previewBookingLocked,
   ]);
 
   useEffect(() => {
+    if (previewBookingLocked) return;
     if (step !== 'checkout') return;
     if (paymentChoice !== 'swish') return;
     if (intentRequested) return;
     fetchPaymentIntent();
-  }, [fetchPaymentIntent, intentRequested, paymentChoice, step]);
+  }, [fetchPaymentIntent, intentRequested, paymentChoice, previewBookingLocked, step]);
 
   const handleBookPayOnSite = async () => {
     setLoading(true);
@@ -1551,44 +1544,63 @@ function BookingSection({
 
               {paymentChoice === 'swish' ? (
                 <>
-                  {intentLoading && <p className="payment-element-loading">Initierar onlinebetalning...</p>}
-                  {!intentLoading && !clientSecret && apiError ? (
-                    <div className="step-cta">
+                  {previewBookingLocked ? (
+                    <div className="embedded-payment-shell">
                       <button
                         type="button"
-                        className="btn-continue"
-                        onClick={() => {
-                          setIntentRequested(false);
-                          fetchPaymentIntent();
-                        }}
+                        className="btn-pay btn-pay--preview-locked"
+                        disabled
+                        aria-disabled="true"
                       >
-                        Försök igen
+                        Bokning inaktiverad i preview-läge
                       </button>
                     </div>
-                  ) : null}
-                  {!intentLoading && clientSecret && stripePromise && elementsOptions ? (
-                    <Elements stripe={stripePromise} options={elementsOptions}>
-                      <SwishPaymentForm
-                        disabled={!termsAccepted || loading}
-                        payLabel={fmtPrice(priceAmount)}
-                        onError={(msg) => setApiError(msg)}
-                        onConfirm={handleSwishConfirmed}
-                      />
-                    </Elements>
-                  ) : null}
-                  <p className="stripe-note">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    Säker inbäddad betalning via Stripe
-                  </p>
+                  ) : (
+                    <>
+                      {intentLoading && <p className="payment-element-loading">Initierar onlinebetalning...</p>}
+                      {!intentLoading && !clientSecret && apiError ? (
+                        <div className="step-cta">
+                          <button
+                            type="button"
+                            className="btn-continue"
+                            onClick={() => {
+                              setIntentRequested(false);
+                              fetchPaymentIntent();
+                            }}
+                          >
+                            Försök igen
+                          </button>
+                        </div>
+                      ) : null}
+                      {!intentLoading && clientSecret && stripePromise && elementsOptions ? (
+                        <Elements stripe={stripePromise} options={elementsOptions}>
+                          <SwishPaymentForm
+                            disabled={!termsAccepted || loading}
+                            payLabel={fmtPrice(priceAmount)}
+                            onError={(msg) => setApiError(msg)}
+                            onConfirm={handleSwishConfirmed}
+                          />
+                        </Elements>
+                      ) : null}
+                      <p className="stripe-note">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Säker inbäddad betalning via Stripe
+                      </p>
+                    </>
+                  )}
                 </>
               ) : (
                 <div className="step-cta">
                   <button
                     className="btn-pay"
-                    disabled={!termsAccepted || loading}
-                    onClick={handleBookPayOnSite}
+                    disabled={previewBookingLocked || !termsAccepted || loading}
+                    onClick={previewBookingLocked ? undefined : handleBookPayOnSite}
                   >
-                    {loading ? 'Skapar bokning...' : 'Bekräfta bokning (betala på plats)'}
+                    {previewBookingLocked
+                      ? 'Bokning inaktiverad i preview-läge'
+                      : loading
+                        ? 'Skapar bokning...'
+                        : 'Bekräfta bokning (betala på plats)'}
                   </button>
                 </div>
               )}

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireAdmin } from '../lib/auth.js';
+import { salonAcceptsPublicBookings, SALON_PREVIEW_FORBIDDEN_MESSAGE } from '../lib/salonPublicBookingGate.js';
 
 const router = Router();
 
@@ -175,11 +176,18 @@ router.post('/create-payment-intent', async (req, res) => {
     const supabase = getSupabaseAdmin();
     const { data: salon, error: salonErr } = await supabase
       .from('salons')
-      .select('stripe_account_id')
+      .select('stripe_account_id, status')
       .eq('id', salonIdStr)
       .maybeSingle();
 
     if (salonErr) throw salonErr;
+
+    if (!salonAcceptsPublicBookings(salon?.status)) {
+      return res.status(403).json({
+        error: SALON_PREVIEW_FORBIDDEN_MESSAGE,
+        code: 'SALON_PREVIEW',
+      });
+    }
 
     const connectedAccountId = salon?.stripe_account_id || null;
     if (!connectedAccountId) {
