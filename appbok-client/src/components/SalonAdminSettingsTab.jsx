@@ -13,6 +13,14 @@ import { getSalonPublicBookingPreviewUrl, copyTextToClipboard } from '../lib/adm
 
 const DEFAULT_SALON_THEME = DEFAULT_PLATFORM_SALON_THEME;
 
+/** Färdiga hero-bakgrunder (Unsplash, komprimerade). */
+const PRESET_BACKGROUNDS = [
+  'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1585747860715-2e37eafe6643?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1540555700478-4be289bebe51?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80',
+];
+
 const SALON_ADMIN_TABS = [
   { id: 'theme', label: '🎨 Tema' },
   { id: 'contact', label: '📍 Kontakt' },
@@ -64,6 +72,12 @@ function SalonThemePanel({ salon, onSaved }) {
     setBgImage(bg);
     setBgImagePreview(bg);
   }, [salon]);
+
+  const selectPresetBackground = useCallback((url) => {
+    setBgImageUploadErr('');
+    setBgImage(url);
+    setBgImagePreview(url);
+  }, []);
 
   const handleLogoFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -398,6 +412,31 @@ function SalonThemePanel({ salon, onSaved }) {
                   Ta bort
                 </button>
               )}
+            </div>
+            <p className="theme-preset-bg-label">Eller välj en färdig bild:</p>
+            <div className="theme-preset-bg-grid">
+              {PRESET_BACKGROUNDS.map((presetUrl, i) => {
+                const selected = bgImage === presetUrl;
+                return (
+                  <button
+                    key={presetUrl}
+                    type="button"
+                    className={`theme-preset-bg-thumb-btn${selected ? ' theme-preset-bg-thumb-btn--selected' : ''}`}
+                    onClick={() => selectPresetBackground(presetUrl)}
+                    disabled={bgImageUploading}
+                    aria-pressed={selected}
+                    aria-label={`Välj färdig bakgrundsbild ${i + 1}`}
+                  >
+                    <img
+                      src={presetUrl}
+                      alt=""
+                      className="theme-preset-bg-thumb"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </button>
+                );
+              })}
             </div>
             {bgImageUploadErr && <p className="logo-upload-error">{bgImageUploadErr}</p>}
           </div>
