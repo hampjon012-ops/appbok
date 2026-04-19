@@ -5157,17 +5157,17 @@ textarea.admin-input {
   align-items: center;
   gap: 0.35rem;
   padding: 0.45rem 1rem;
-  background: var(--panel-accent, #6f4e37);
+  background: var(--admin-ui-primary);
   color: #fff;
   border: none;
   border-radius: 8px;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: background 0.15s ease, opacity 0.15s ease;
 }
 .logo-upload-btn:hover:not(:disabled) {
-  opacity: 0.85;
+  background: var(--admin-ui-primary-hover);
 }
 .logo-upload-btn:disabled {
   opacity: 0.5;
