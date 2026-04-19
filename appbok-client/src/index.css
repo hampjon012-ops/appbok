@@ -5351,6 +5351,52 @@ textarea.admin-input {
   display: block;
 }
 
+/* Inställningar: Kontakt & plats (kontakt + Google Maps i en flik) */
+.contact-place-card .contact-place-lead {
+  margin-bottom: 1.25rem;
+  max-width: 40rem;
+}
+
+.contact-place-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.contact-place-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.contact-place-section-title {
+  margin: 0 0 0.15rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-color, #292524);
+}
+
+.contact-place-hr {
+  margin: 2rem 0;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+}
+
+.contact-place-map-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.45;
+  max-width: 40rem;
+}
+
+.contact-place-save-hint {
+  margin: 1.25rem 0 0.75rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  max-width: 40rem;
+}
+
 .superadmin-preview-wrap {
   min-width: 0;
   max-width: 100%;

@@ -15,10 +15,9 @@ const DEFAULT_SALON_THEME = DEFAULT_PLATFORM_SALON_THEME;
 
 const SALON_ADMIN_TABS = [
   { id: 'theme', label: '🎨 Tema' },
-  { id: 'contact', label: '📍 Kontakt' },
+  { id: 'contact', label: '📍 Kontakt & Plats' },
   { id: 'hours', label: '⏰ Öppettider' },
   { id: 'instagram', label: '📸 Instagram' },
-  { id: 'maps', label: '🗺️ Google Maps' },
   { id: 'texts', label: '✍️ Texter' },
   { id: 'calendar', label: '📅 Google Kalender' },
   { id: 'payments', label: '💳 Betalningar' },
@@ -438,6 +437,7 @@ function SalonContactPanel({ salon, onSaved, onSalonNameLive }) {
   const [address, setAddress] = useState(c0.address || '');
   const [phone, setPhone] = useState(c0.phone || '');
   const [email, setEmail] = useState(c0.email || '');
+  const [mapUrl, setMapUrl] = useState(salon.map_url != null ? String(salon.map_url) : '');
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -447,6 +447,7 @@ function SalonContactPanel({ salon, onSaved, onSalonNameLive }) {
     setAddress(c.address || '');
     setPhone(c.phone || '');
     setEmail(c.email || '');
+    setMapUrl(salon.map_url != null ? String(salon.map_url) : '');
   }, [salon]);
 
   const save = async (e) => {
@@ -462,6 +463,7 @@ function SalonContactPanel({ salon, onSaved, onSalonNameLive }) {
           address: address.trim(),
           phone: phone.trim(),
           email: email.trim(),
+          map_url: mapUrl.trim(),
         }),
       });
       const data = await res.json();
@@ -485,36 +487,63 @@ function SalonContactPanel({ salon, onSaved, onSalonNameLive }) {
   };
 
   return (
-    <div className="admin-card">
-      <h3 className="admin-card-title">📍 Kontakt</h3>
-      <p className="admin-hint">Salongens namn och kontaktuppgifter som visas för kunder där det är aktiverat.</p>
-      <form className="superadmin-modal-form" onSubmit={save}>
-        <label>
-          Salongens namn
-          <input
-            className="admin-input"
-            value={salonName}
-            onChange={(e) => {
-              const v = e.target.value;
-              setSalonName(v);
-              onSalonNameLive?.(v);
-            }}
-            required
-          />
-        </label>
-        <label>
-          Adress
-          <input className="admin-input" value={address} onChange={(e) => setAddress(e.target.value)} />
-        </label>
-        <label>
-          Telefon
-          <input className="admin-input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </label>
-        <label>
-          E-post
-          <input className="admin-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>
-        <button type="submit" className="btn-superadmin-gold" disabled={saving}>
+    <div className="admin-card contact-place-card">
+      <h3 className="admin-card-title">📍 Kontakt & Plats</h3>
+      <p className="admin-hint contact-place-lead">
+        Namn, kontakt och karta som visas för kunder på er bokningssida där det är aktiverat.
+      </p>
+      <form className="contact-place-form" onSubmit={save}>
+        <div className="contact-place-section">
+          <h4 className="contact-place-section-title">Kontaktuppgifter</h4>
+          <label>
+            Salongens namn
+            <input
+              className="admin-input"
+              value={salonName}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSalonName(v);
+                onSalonNameLive?.(v);
+              }}
+              required
+            />
+          </label>
+          <label>
+            Telefonnummer
+            <input className="admin-input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </label>
+          <label>
+            E-postadress
+            <input className="admin-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </label>
+          <label>
+            Gatuadress
+            <input className="admin-input" value={address} onChange={(e) => setAddress(e.target.value)} />
+          </label>
+        </div>
+
+        <hr className="contact-place-hr" />
+
+        <div className="contact-place-section">
+          <h4 className="contact-place-section-title">Karta & hitta hit</h4>
+          <label>
+            Google Maps (inbäddningslänk)
+            <input
+              className="admin-input"
+              value={mapUrl}
+              onChange={(e) => setMapUrl(e.target.value)}
+              placeholder="https://www.google.com/maps/embed?..."
+            />
+          </label>
+          <p className="contact-place-map-hint">
+            Klistra in länken till er salong från Google Maps så att kunderna enkelt kan hitta till er. Använd embed-URL:en från Google Maps under Dela → Bädda in karta.
+          </p>
+        </div>
+
+        <p className="admin-hint contact-place-save-hint">
+          Spara skriver kontakt, adress och karta till er salong på en gång.
+        </p>
+        <button type="submit" className="superadmin-theme-controls-save" disabled={saving}>
           {saving ? 'Sparar…' : 'Spara'}
         </button>
         {msg && <p className={msg === 'Sparat!' ? 'superadmin-success' : 'superadmin-error'}>{msg}</p>}
@@ -640,60 +669,6 @@ function SalonInstagramPanel({ salon, onSaved }) {
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
             placeholder="min_salong"
-          />
-        </label>
-        <button type="submit" className="btn-superadmin-gold" disabled={saving}>
-          {saving ? 'Sparar…' : 'Spara'}
-        </button>
-        {msg && <p className={msg === 'Sparat!' ? 'superadmin-success' : 'superadmin-error'}>{msg}</p>}
-      </form>
-    </div>
-  );
-}
-
-function SalonMapsPanel({ salon, onSaved }) {
-  const [mapUrl, setMapUrl] = useState(salon.map_url != null ? String(salon.map_url) : '');
-  const [msg, setMsg] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    setMapUrl(salon.map_url != null ? String(salon.map_url) : '');
-  }, [salon]);
-
-  const save = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setMsg('');
-    try {
-      const res = await fetch('/api/salons', {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({ map_url: mapUrl.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Kunde inte spara.');
-      setMsg('Sparat!');
-      onSaved?.(data);
-      setTimeout(() => setMsg(''), 2500);
-    } catch (x) {
-      setMsg(x.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="admin-card">
-      <h3 className="admin-card-title">🗺️ Google Maps</h3>
-      <p className="admin-hint">Klistra in embed-URL från Google Maps (dela → Bädda in karta).</p>
-      <form className="superadmin-modal-form" onSubmit={save}>
-        <label>
-          Embed-URL
-          <input
-            className="admin-input"
-            value={mapUrl}
-            onChange={(e) => setMapUrl(e.target.value)}
-            placeholder="https://www.google.com/maps/embed?..."
           />
         </label>
         <button type="submit" className="btn-superadmin-gold" disabled={saving}>
@@ -1248,7 +1223,8 @@ export default function SalonAdminSettingsTab() {
   /** Öppna rätt underruta när användaren kommer från t.ex. Översikt → "Inställningar → Betalningar". */
   useEffect(() => {
     try {
-      const t = sessionStorage.getItem('salonAdminInitialTab');
+      let t = sessionStorage.getItem('salonAdminInitialTab');
+      if (t === 'maps') t = 'contact';
       if (t && SALON_ADMIN_TABS.some((x) => x.id === t)) {
         setTab(t);
       }
@@ -1313,7 +1289,6 @@ export default function SalonAdminSettingsTab() {
       {tab === 'contact' && <SalonContactPanel salon={salon} onSaved={onSaved} onSalonNameLive={onSalonNameLive} />}
       {tab === 'hours' && <SalonHoursPanel salon={salon} onSaved={onSaved} />}
       {tab === 'instagram' && <SalonInstagramPanel salon={salon} onSaved={onSaved} />}
-      {tab === 'maps' && <SalonMapsPanel salon={salon} onSaved={onSaved} />}
       {tab === 'texts' && <SalonTextsPanel salon={salon} onSaved={onSaved} onSalonNameLive={onSalonNameLive} />}
       {tab === 'calendar' && <SalonCalendarPanel />}
       {tab === 'payments' && (
