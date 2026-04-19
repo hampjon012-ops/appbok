@@ -356,4 +356,107 @@ router.post('/current/soft-delete', requireAuth, requireAdmin, async (req, res) 
   }
 });
 
+// POST /api/salons/current/logo-upload — Ladda upp logotypbild (multipart file)
+router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const contentType = req.headers['content-type'] || '';
+
+    if (!contentType.includes('multipart/form-data')) {
+      return res.status(400).json({ error: 'Content-Type must be multipart/form-data' });
+    }
+
+    const { data: salonRow, error: fetchErr } = await supabase
+      .from('salons')
+      .select('id')
+      .eq('id', req.user.salonId)
+      .single();
+
+    if (fetchErr) throw fetchErr;
+    if (!salonRow) return res.status(404).json({ error: 'Salong hittades inte.' });
+
+    // Parse multipart body manually (Node.js built-in)
+    const { Readable } = await import('stream');
+    const buf = await new Promise((resolve, reject) => {
+      const chunks = [];
+      req.on('data', (chunk) => chunks.push(chunk));
+      req.on('end', () => resolve(Buffer.concat(chunks)));
+      req.on('error', reject);
+    });
+
+    // Simple multipart parser (finds boundary, splits parts)
+    const boundaryMatch = contentType.match(/boundary=(.+)$/);
+    if (!boundaryMatch) return res.status(400).json({ error: 'Missing multipart boundary' });
+    const boundary = '--' + boundaryMatch[1];
+    const parts = buf.toString('binary').split(boundary);
+
+    let fileBuffer = null;
+    let fileName = 'logo.png';
+    let mimeType = 'image/png';
+
+    for (const part of parts) {
+      if (!part.includes('filename="logo"')) continue;
+      const headerEnd = part.indexOf('\r\n\r\n');
+      if (headerEnd === -1) continue;
+      const header = part.substring(0, headerEnd);
+      const bodyRaw = part.substring(headerEnd + 4);
+      // Remove trailing \r\n that split leaves
+      const trimmed = bodyRaw.endsWith('\r\n') ? bodyRaw.slice(0, -2) : bodyRaw;
+
+      const nameMatch = header.match(/name="logo" filename="([^"]+)"/);
+      const typeMatch = header.match(/Content-Type:\s*([^\s\r\n]+)/);
+
+      if (nameMatch) fileName = nameMatch[1];
+      if (typeMatch) mimeType = typeMatch[1];
+
+      // Strip last padding bytes (trailing \r\n from boundary close)
+      const safeBody = Buffer.from(trimmed, 'binary');
+      // Remove up to 2 trailing bytes (\r\n) that are part of the multipart footer
+      let end = safeBody.length;
+      if (end > 2 && safeBody[end - 1] === 0x0a) end--;
+      if (end > 2 && safeBody[end - 1] === 0x0d) end--;
+      fileBuffer = safeBody.slice(0, end);
+    }
+
+    if (!fileBuffer) {
+      return res.status(400).json({ error: 'Ingen fil hittades i förfrågan.' });
+    }
+
+    // Validate type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+    if (!allowedTypes.includes(mimeType)) {
+      return res.status(400).json({ error: `Filtypen ${mimeType} är inte tillåten. Använd PNG, JPG eller SVG.` });
+    }
+
+    // Validate size (2 MB)
+    if (fileBuffer.length > 2 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Filen är för stor. Max 2 MB.' });
+    }
+
+    const { uploadLogoToSupabase } = await import('../lib/uploadLogo.js');
+    const publicUrl = await uploadLogoToSupabase({
+      salonId: salonRow.id,
+      fileBuffer,
+      fileName,
+      mimeType,
+    });
+
+    // Update logo_url in salons table
+    const { data: updated, error: updateErr } = await supabase
+      .from('salons')
+      .update({ logo_url: publicUrl })
+      .eq('id', salonRow.id)
+      .select('logo_url')
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    res.json({ logo_url: updated.logo_url });
+  } catch (err) {
+    console.error('[logo-upload]', err);
+    const msg = err?.message || err?.details || 'Kunde inte ladda upp logotypen.';
+    res.status(500).json({ error: msg });
+  }
+});
+
 export default router;
+

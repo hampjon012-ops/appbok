@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import ThemeLivePreviewColumn from './ThemeLivePreviewColumn.jsx';
 import {
   displaySalonName,
@@ -31,6 +32,9 @@ function contactFromSalon(salon) {
 function SalonThemePanel({ salon, onSaved }) {
   const t = typeof salon.theme === 'object' && salon.theme ? salon.theme : {};
   const [logoUrl, setLogoUrl] = useState(salon.logo_url || '');
+  const [logoPreview, setLogoPreview] = useState(salon.logo_url || '');
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoUploadErr, setLogoUploadErr] = useState('');
   const [accent, setAccent] = useState(
     resolvePrimaryAccentHex({
       ...DEFAULT_SALON_THEME,
@@ -46,6 +50,7 @@ function SalonThemePanel({ salon, onSaved }) {
 
   useEffect(() => {
     setLogoUrl(salon.logo_url || '');
+    setLogoPreview(salon.logo_url || '');
     const th = typeof salon.theme === 'object' && salon.theme ? salon.theme : {};
     setAccent(resolvePrimaryAccentHex({ ...DEFAULT_SALON_THEME, ...th }));
     setBackground(th.backgroundColor || DEFAULT_SALON_THEME.backgroundColor);
@@ -53,6 +58,71 @@ function SalonThemePanel({ salon, onSaved }) {
     setSecondary(th.secondaryColor || DEFAULT_SALON_THEME.secondaryColor);
     setBgImage(th.backgroundImageUrl || '');
   }, [salon]);
+
+  const handleLogoFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploadErr('');
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type)) {
+      setLogoUploadErr('Filtypen är inte tillåten. Använd PNG, JPG eller SVG.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoUploadErr('Filen är för stor. Max 2 MB.');
+      return;
+    }
+    // Preview local file immediately
+    const objectUrl = URL.createObjectURL(file);
+    setLogoPreview(objectUrl);
+    setLogoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('logo', file, file.name);
+      const res = await fetch('/api/salons/current/logo-upload', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Kunde inte ladda upp logotypen.');
+      const uploadedUrl = data.logo_url;
+      setLogoUrl(uploadedUrl);
+      setLogoPreview(uploadedUrl);
+      toast.success('Logotypen har sparats!');
+      onSaved?.(data);
+    } catch (err) {
+      setLogoUploadErr(err.message);
+      // Revert preview to previous URL on failure
+      setLogoPreview(salon.logo_url || '');
+    } finally {
+      setLogoUploading(false);
+      // Clear the file input so same file can be re-selected
+      e.target.value = '';
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    setLogoUploadErr('');
+    setLogoUploading(true);
+    try {
+      const res = await fetch('/api/salons', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ logo_url: '' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Kunde inte ta bort logotypen.');
+      setLogoUrl('');
+      setLogoPreview('');
+      toast.success('Logotypen har tagits bort.');
+      onSaved?.(data);
+    } catch (err) {
+      setLogoUploadErr(err.message);
+    } finally {
+      setLogoUploading(false);
+    }
+  };
 
   const themeControlsStyle = useMemo(
     () => ({
@@ -74,7 +144,6 @@ function SalonThemePanel({ salon, onSaved }) {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({
-          logo_url: logoUrl,
           theme_primary: accent,
           theme_background: background,
           theme_text: text,
@@ -131,11 +200,40 @@ function SalonThemePanel({ salon, onSaved }) {
           <input type="color" className="admin-input color-input" value={text} onChange={(e) => setText(e.target.value)} />
         </label>
         <label>
-          Logo URL
+          Logotyp
           <span className="admin-hint admin-hint--field">
-            Adress till er logotypbild som visas i hero (ovanför tagline). Lämna tom för att bara visa salongsnamn som text.
+            PNG, JPG eller SVG. Max 2 MB. Visas i hero (ovanför tagline).
           </span>
-          <input className="admin-input" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
+          <div className="logo-upload-area">
+            {logoPreview && (
+              <div className="logo-upload-preview">
+                <img src={logoPreview} alt="Logotypförhandsvisning" />
+              </div>
+            )}
+            <div className="logo-upload-actions">
+              <label className="logo-upload-btn">
+                {logoUploading ? 'Laddar upp…' : 'Välj logotyp'}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                  className="logo-upload-input"
+                  onChange={handleLogoFileChange}
+                  disabled={logoUploading}
+                />
+              </label>
+              {logoPreview && (
+                <button
+                  type="button"
+                  className="logo-remove-btn"
+                  onClick={handleLogoRemove}
+                  disabled={logoUploading}
+                >
+                  Ta bort
+                </button>
+              )}
+            </div>
+            {logoUploadErr && <p className="logo-upload-error">{logoUploadErr}</p>}
+          </div>
         </label>
         <label>
           Bakgrundsbild URL
