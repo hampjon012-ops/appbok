@@ -3,6 +3,7 @@ import supabase from '../lib/supabase.js';
 import { requireAuth, requireAdmin } from '../lib/auth.js';
 import { ensureSalonThemeAccent } from '../lib/ensureSalonThemeAccent.js';
 import { maybeExpireTrialSalonIfNeeded } from '../lib/expireTrialSalon.js';
+import { normalizeLogoMimeType } from '../lib/normalizeLogoMimeType.js';
 
 const router = Router();
 const SYSTEM_SALON_ID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
@@ -436,6 +437,8 @@ router.post('/current/logo-upload', requireAuth, requireAdmin, async (req, res) 
     if (!fileBuffer) {
       return res.status(400).json({ error: 'Ingen fil hittades i förfrågan.' });
     }
+
+    mimeType = normalizeLogoMimeType(mimeType, fileName);
 
     // Validate type
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];

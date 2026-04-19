@@ -64,7 +64,16 @@ function SalonThemePanel({ salon, onSaved }) {
     if (!file) return;
     setLogoUploadErr('');
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
-    if (!allowedTypes.includes(file.type)) {
+    const lowerName = file.name.toLowerCase();
+    const extOk =
+      lowerName.endsWith('.png') ||
+      lowerName.endsWith('.jpg') ||
+      lowerName.endsWith('.jpeg') ||
+      lowerName.endsWith('.svg');
+    const typeOk =
+      allowedTypes.includes(file.type) ||
+      (extOk && (file.type === '' || file.type === 'application/octet-stream'));
+    if (!typeOk || !extOk) {
       setLogoUploadErr('Filtypen är inte tillåten. Använd PNG, JPG eller SVG.');
       return;
     }
@@ -72,9 +81,13 @@ function SalonThemePanel({ salon, onSaved }) {
       setLogoUploadErr('Filen är för stor. Max 2 MB.');
       return;
     }
-    // Preview local file immediately
-    const objectUrl = URL.createObjectURL(file);
-    setLogoPreview(objectUrl);
+    let blobPreviewUrl = null;
+    try {
+      blobPreviewUrl = URL.createObjectURL(file);
+      setLogoPreview(blobPreviewUrl);
+    } catch {
+      /* ignore blob preview failure */
+    }
     setLogoUploading(true);
     try {
       const fd = new FormData();
@@ -110,6 +123,13 @@ function SalonThemePanel({ salon, onSaved }) {
       setLogoPreview(salon.logo_url || '');
     } finally {
       setLogoUploading(false);
+      if (blobPreviewUrl) {
+        try {
+          URL.revokeObjectURL(blobPreviewUrl);
+        } catch {
+          /* ignore */
+        }
+      }
       // Clear the file input so same file can be re-selected
       e.target.value = '';
     }
@@ -220,7 +240,7 @@ function SalonThemePanel({ salon, onSaved }) {
           <div className="logo-upload-area">
             {logoPreview && (
               <div className="logo-upload-preview">
-                <img src={logoPreview} alt="Logotypförhandsvisning" />
+                <img src={logoPreview} alt="Logotypförhandsvisning" decoding="async" />
               </div>
             )}
             <div className="logo-upload-actions">
@@ -1112,7 +1132,10 @@ export default function SalonAdminSettingsTab() {
     setSalon((prev) => (prev ? { ...prev, name } : null));
   }, []);
 
-  const onSaved = useCallback(() => {
+  const onSaved = useCallback((patch) => {
+    if (patch && typeof patch === 'object' && patch.logo_url !== undefined) {
+      setSalon((prev) => (prev ? { ...prev, logo_url: patch.logo_url } : null));
+    }
     load({ silent: true }).then(() => notifySalonConfigUpdated());
   }, [load]);
 
