@@ -3,12 +3,24 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { applyThemeToDocument, fetchMergedSalonConfig } from './lib/salonPublicConfig';
 import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
 
+function loadCustomerFromStorage() {
+  try {
+    const raw = sessionStorage.getItem('appbok_customer');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function ThankYou() {
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get('session_id');
-  const [salonName, setSalonName] = useState('Colorisma');
+  const emailFromUrl = searchParams.get('email');
+  const phoneFromUrl = searchParams.get('phone');
+  const [salonName, setSalonName] = useState('Salongen');
   const [pageState, setPageState] = useState('loading');
   const [missingTenantSlug, setMissingTenantSlug] = useState(null);
+  const [customer, setCustomer] = useState({ name: '', email: '', phone: '' });
 
   useEffect(() => {
     fetchMergedSalonConfig()
@@ -27,15 +39,32 @@ export default function ThankYou() {
       .catch(() => {
         setPageState('ready');
       });
-  }, []);
 
-  if (pageState === 'loading') {
-    return <div className="loading-screen">Laddar...</div>;
-  }
+    // Hämta kunddata från sessionStorage (sätts av App.jsx före redirect)
+    const stored = loadCustomerFromStorage();
+    if (stored) {
+      setCustomer({
+        name: stored.name || '',
+        email: stored.email || '',
+        phone: stored.phone || '',
+      });
+    } else {
+      // Fallback till URL-parametrar (om användaren laddar om sidan och sessionStorage är tom)
+      setCustomer({
+        name: '',
+        email: emailFromUrl || '',
+        phone: phoneFromUrl || '',
+      });
+    }
+  }, [emailFromUrl, phoneFromUrl]);
 
-  if (pageState === 'not_found') {
-    return <SalonTenantNotFoundView attemptedSlug={missingTenantSlug} />;
-  }
+  const emailDisplay = customer.email
+    ? <strong className="font-semibold">{customer.email}</strong>
+    : <span className="text-gray-400">din e-postadress</span>;
+
+  const phoneDisplay = customer.phone
+    ? <strong className="font-semibold">{customer.phone}</strong>
+    : <span className="text-gray-400">ditt telefonnummer</span>;
 
   return (
     <div className="thankyou-page">
@@ -64,11 +93,11 @@ export default function ThankYou() {
           </div>
           <div className="ty-detail-row">
             <span>📧</span>
-            <span>Bekräftelse skickas till din e-postadress</span>
+            <span>Bekräftelse skickad till: {emailDisplay}</span>
           </div>
           <div className="ty-detail-row">
             <span>💬</span>
-            <span>SMS-bekräftelse skickas till ditt telefonnummer</span>
+            <span>SMS-bekräftelse skickad till: {phoneDisplay}</span>
           </div>
           <div className="ty-detail-row">
             <span>⏰</span>

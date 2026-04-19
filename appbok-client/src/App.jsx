@@ -1016,6 +1016,11 @@ function BookingSection({
     totalDurationMin,
   ]);
 
+  /**
+   * Skapar bokning och returnerar { id, customer_email, customer_phone, customer_name }.
+   * Används för att bygga redirect-URL med kunddata till ThankYou-sidan.
+   */
+
   const fetchPaymentIntent = useCallback(async () => {
     if (selectedServices.length === 0 || !selectedDate || !selectedTime) return;
     if (clientSecret || intentLoading || intentRequested) return;
@@ -1087,8 +1092,14 @@ function BookingSection({
     setLoading(true);
     setApiError('');
     try {
-      await createBooking({ amountPaid: 0, stripeSessionId: 'pay_on_site' });
-      window.location.href = '/tack';
+      const booking = await createBooking({ amountPaid: 0, stripeSessionId: 'pay_on_site' });
+      sessionStorage.setItem('appbok_customer', JSON.stringify({
+        email: form.email,
+        phone: form.phone,
+        name: form.name,
+        bookingId: booking?.id,
+      }));
+      window.location.href = booking?.id ? `/tack?session_id=${encodeURIComponent(booking.id)}` : '/tack';
     } catch (err) {
       setApiError(err.message || 'Kunde inte skapa bokningen.');
       setLoading(false);
@@ -1099,11 +1110,17 @@ function BookingSection({
     setLoading(true);
     setApiError('');
     try {
-      await createBooking({
+      const booking = await createBooking({
         amountPaid: priceAmount,
         stripeSessionId: confirmedPaymentIntentId || paymentIntentId || null,
         paymentIntentId: confirmedPaymentIntentId || paymentIntentId || null,
       });
+      sessionStorage.setItem('appbok_customer', JSON.stringify({
+        email: form.email,
+        phone: form.phone,
+        name: form.name,
+        bookingId: booking?.id,
+      }));
       const sid = encodeURIComponent(confirmedPaymentIntentId || paymentIntentId || '');
       window.location.href = sid ? `/tack?session_id=${sid}` : '/tack';
     } catch (err) {
