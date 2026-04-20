@@ -921,8 +921,8 @@ html.preview-embed-mode [role='button'] {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f3f4f6; /* bg-gray-100 */
-  color: #9ca3af; /* text-gray-400 */
+  background-color: #ffffff;
+  color: #171717;
   border: 1px solid #e5e7eb; /* border-gray-200 */
 }
 
@@ -990,8 +990,8 @@ html.preview-embed-mode [role='button'] {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f3f4f6;
-  color: #9ca3af; /* text-gray-400 */
+  background-color: #ffffff;
+  color: #171717;
   border: 1px solid #e5e7eb;
 }
 
