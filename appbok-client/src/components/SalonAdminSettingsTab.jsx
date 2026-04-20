@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { UploadCloud } from 'lucide-react';
+import { UploadCloud, Palette, MapPin, Clock, Camera, PenLine, CreditCard } from 'lucide-react';
 import ThemeLivePreviewColumn from './ThemeLivePreviewColumn.jsx';
 import {
   displaySalonName,
@@ -14,12 +14,12 @@ import { getSalonPublicBookingPreviewUrl, copyTextToClipboard } from '../lib/adm
 const DEFAULT_SALON_THEME = DEFAULT_PLATFORM_SALON_THEME;
 
 const SALON_ADMIN_TABS = [
-  { id: 'theme', label: '🎨 Tema' },
-  { id: 'contact', label: '📍 Kontakt & Plats' },
-  { id: 'hours', label: '⏰ Öppettider' },
-  { id: 'instagram', label: '📸 Instagram' },
-  { id: 'texts', label: '✍️ Texter' },
-  { id: 'payments', label: '💳 Betalningar' },
+  { id: 'theme',    label: 'Tema',            Icon: Palette },
+  { id: 'contact',  label: 'Kontakt & Plats', Icon: MapPin },
+  { id: 'hours',    label: 'Öppettider',      Icon: Clock },
+  { id: 'instagram', label: 'Instagram',      Icon: Camera },
+  { id: 'texts',    label: 'Texter',          Icon: PenLine },
+  { id: 'payments', label: 'Betalningar',     Icon: CreditCard },
 ];
 
 function contactFromSalon(salon) {
@@ -1201,7 +1201,8 @@ export default function SalonAdminSettingsTab() {
             className={`superadmin-subtab ${tab === t.id ? 'active' : ''}`}
             onClick={() => setTab(t.id)}
           >
-            {t.label}
+            <t.Icon size={15} strokeWidth={2} aria-hidden />
+            <span>{t.label}</span>
           </button>
         ))}
       </div>
