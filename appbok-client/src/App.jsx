@@ -464,8 +464,9 @@ function App() {
 
             {/* ── 2. STYLISTER ── */}
             {(() => {
-              // Använd de dynamiskt hämtade stylisterna, men filtrera bort "Valfri stylist" från landningssidan
-              const displayStylists = stylists.filter(s => s.id !== 'any');
+              // Renda alla stylister, inklusive "Valfri stylist"
+              const displayStylists = stylists;
+              // Om det BARA finns "Valfri stylist" (inga riktiga stylister tillagda ännu) kan vi välja om sekionen ska visas eller ej. Vi visar den.
               if (displayStylists.length === 0) return null;
               return (
                 <section className="home-section home-section-alt">
