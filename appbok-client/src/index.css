@@ -914,7 +914,7 @@ html.preview-embed-mode [role='button'] {
   color: var(--text-lighter);
 }
 
-.stylist-avatar-initials {
+.stylist-avatar-placeholder-icon {
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -922,10 +922,14 @@ html.preview-embed-mode [role='button'] {
   align-items: center;
   justify-content: center;
   background-color: #f3f4f6; /* bg-gray-100 */
-  color: #374151; /* text-gray-700 */
-  font-weight: 500;
-  font-size: 1.5rem;
+  color: #9ca3af; /* text-gray-400 */
   border: 1px solid #e5e7eb; /* border-gray-200 */
+}
+
+.stylist-fallback-icon {
+  width: 36px;
+  height: 36px;
+  stroke-width: 1.5;
 }
 
 .stylist-info {
@@ -979,7 +983,7 @@ html.preview-embed-mode [role='button'] {
   color: var(--text-lighter);
 }
 
-.stylist-avatar-initials-sm {
+.stylist-avatar-placeholder-icon-sm {
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -987,10 +991,14 @@ html.preview-embed-mode [role='button'] {
   align-items: center;
   justify-content: center;
   background-color: #f3f4f6;
-  color: #374151;
-  font-weight: 500;
-  font-size: 1rem;
+  color: #9ca3af; /* text-gray-400 */
   border: 1px solid #e5e7eb;
+}
+
+.stylist-fallback-icon-sm {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.5;
 }
 
 .stylist-avatar-any {
@@ -4214,9 +4222,13 @@ body:has(.admin-layout) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: #374151;
+  color: #9ca3af; /* text-gray-400 */
+}
+
+.staff-avatar-icon-admin {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.5;
 }
 
 /* Service list (admin) */

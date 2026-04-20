@@ -2,7 +2,7 @@ import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } fr
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, MessageSquare, X, CalendarCheck, BarChart3, Wallet, Users, Sparkles } from 'lucide-react';
+import { AlertTriangle, MessageSquare, X, CalendarCheck, BarChart3, Wallet, Users, Sparkles, User } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
 import SuperadminTab from './SuperadminTab.jsx';
@@ -2312,7 +2312,7 @@ function StaffTab({ salonId: salonIdProp }) {
               {s.photo_url
                 ? <img src={s.photo_url} alt={s.name} className="staff-avatar-admin" />
                 : <div className="staff-avatar-admin staff-avatar-placeholder-admin">
-                    <span>{(s.name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'}</span>
+                    <User className="staff-avatar-icon-admin" />
                   </div>
               }
               <div>

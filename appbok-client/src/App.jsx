@@ -16,7 +16,7 @@ import { usePreviewEmbedUi } from './hooks/usePreviewEmbedUi.js';
 import { useSalonCatalog } from './hooks/useSalonCatalog.js';
 import PreviewDeviceStatusBar from './components/PreviewDeviceStatusBar.jsx';
 import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
-import { Plus } from 'lucide-react';
+import { Plus, User, Users } from 'lucide-react';
 
 function isPreviewEmbedClient() {
   if (typeof window === 'undefined') return false;
@@ -492,9 +492,13 @@ function App() {
                           <div className="stylist-avatar">
                             {(st.photo || st.photo_url) ? (
                               <img src={st.photo || st.photo_url} alt={st.name} />
+                            ) : st.id === 'any' ? (
+                              <div className="stylist-avatar-any" aria-hidden>
+                                <Users className="stylist-fallback-icon" />
+                              </div>
                             ) : (
-                              <div className="stylist-avatar-initials" aria-hidden>
-                                {(st.name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'}
+                              <div className="stylist-avatar-placeholder-icon" aria-hidden>
+                                <User className="stylist-fallback-icon" />
                               </div>
                             )}
                           </div>
@@ -1288,10 +1292,7 @@ function BookingSection({
                   <div className="stylist-row-left">
                     <div className="stylist-avatar-sm">
                       <div className="stylist-avatar-any" aria-hidden>
-                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
+                        <Users className="stylist-fallback-icon-sm" />
                       </div>
                     </div>
                     <div className="cat-sel-info">
@@ -1314,8 +1315,8 @@ function BookingSection({
                       <div className="stylist-avatar-sm">
                         {st.photo
                           ? <img src={st.photo} alt={st.name} />
-                          : <div className="stylist-avatar-initials-sm" aria-hidden>
-                              {(st.name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'}
+                          : <div className="stylist-avatar-placeholder-icon-sm" aria-hidden>
+                              <User className="stylist-fallback-icon-sm" />
                             </div>
                         }
                       </div>
