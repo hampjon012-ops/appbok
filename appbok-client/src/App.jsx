@@ -578,9 +578,16 @@ function App() {
                   )}
                 </div>
                 <div className="contact-map-container">
-                  {config.mapUrl && config.mapUrl !== '#'
-                    ? <iframe src={config.mapUrl} width="100%" height="100%" style={{border:0}} allowFullScreen="" loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Karta"></iframe>
-                    : <div className="map-placeholder">Karta saknas — lägg in Google Maps embed-URL i admin.</div>}
+                  {(() => {
+                    let url = config.mapUrl;
+                    if (!url || url === '#') return <div className="map-placeholder">Karta saknas — lägg in Google Maps embed-URL i admin.</div>;
+                    // Auto-extract src from <iframe> tag if stored as HTML
+                    const iframeMatch = url.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+                    if (iframeMatch) url = iframeMatch[1];
+                    // Validate that it looks like a Google Maps URL
+                    if (!url.includes('google.com/maps')) return <div className="map-placeholder">Ogiltig kart-URL — ange en Google Maps embed-URL.</div>;
+                    return <iframe src={url} width="100%" height="100%" style={{border:0}} allowFullScreen="" loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Karta"></iframe>;
+                  })()}
                 </div>
               </div>
             </div>

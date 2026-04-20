@@ -125,7 +125,13 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
 
     if (name !== undefined) updates.name = name.trim();
     if (tagline !== undefined) updates.tagline = (tagline || '').trim();
-    if (map_url !== undefined) updates.map_url = (map_url || '').trim();
+    if (map_url !== undefined) {
+      let cleanUrl = (map_url || '').trim();
+      // Auto-extract src from pasted <iframe> tags
+      const iframeMatch = cleanUrl.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+      if (iframeMatch) cleanUrl = iframeMatch[1];
+      updates.map_url = cleanUrl;
+    }
     if (instagram !== undefined) updates.instagram = (instagram || '').trim();
 
     const contactPatch =
