@@ -20,6 +20,76 @@ import {
   copyTextToClipboard,
 } from '../lib/adminUrls.js';
 
+// ── Sidebar SVG Icons (same style as SuperadminSidebar) ─────────────────────
+function SidebarDashboardIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/>
+      <rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  );
+}
+
+function SidebarBookingsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  );
+}
+
+function SidebarStaffIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  );
+}
+
+function SidebarServicesIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+    </svg>
+  );
+}
+
+function SidebarScheduleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <polyline points="12 6 12 12 16 14"/>
+    </svg>
+  );
+}
+
+function SidebarSettingsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  );
+}
+
+function SidebarLogoutIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+  );
+}
+
 // ── Auth helper ──────────────────────────────────────────────────────────────
 function getAuth() {
   const token = localStorage.getItem('sb_token');
@@ -428,27 +498,27 @@ export default function Admin() {
   const tabs = useMemo(() => {
     if (isSuperAdmin) {
       return [
-        { id: 'dashboard',  label: 'Dashboard',    icon: '📊', roles: ['superadmin'] },
-        { id: 'superadmin',  label: 'Salonger',     icon: '👑', roles: ['superadmin'] },
-        { id: 'billing',     label: 'Fakturering',  icon: '💳', roles: ['superadmin'] },
-        { id: 'settings',    label: 'Inställningar', icon: '⚙️', roles: ['superadmin'] },
+        { id: 'dashboard',  label: 'Dashboard',     Icon: SidebarDashboardIcon, roles: ['superadmin'] },
+        { id: 'superadmin',  label: 'Salonger',      Icon: SidebarStaffIcon,     roles: ['superadmin'] },
+        { id: 'billing',     label: 'Fakturering',   Icon: SidebarBookingsIcon,  roles: ['superadmin'] },
+        { id: 'settings',    label: 'Inställningar', Icon: SidebarSettingsIcon,  roles: ['superadmin'] },
       ];
     }
     if (isStaffImpersonation) {
       // Samma flikar som inloggad personal (ej begränsad vy)
       return [
-        { id: 'bookings', label: '📅 Bokningar', icon: '📅', roles: ['staff'] },
-        { id: 'schedule', label: '📅 Schema', icon: '📅', roles: ['staff'] },
-        { id: 'settings', label: '⚙️ Inställningar', icon: '⚙️', roles: ['staff'] },
+        { id: 'bookings', label: 'Bokningar',     Icon: SidebarBookingsIcon,  roles: ['staff'] },
+        { id: 'schedule', label: 'Schema',         Icon: SidebarScheduleIcon,  roles: ['staff'] },
+        { id: 'settings', label: 'Inställningar',  Icon: SidebarSettingsIcon,  roles: ['staff'] },
       ];
     }
     return [
-      { id: 'dashboard', label: '📊 Dashboard', icon: '📊', roles: ['admin'] },
-      { id: 'bookings',  label: '📅 Bokningar', icon: '📅', roles: ['admin', 'staff'] },
-      { id: 'staff',     label: '👥 Personal',  icon: '👥', roles: ['admin'] },
-      { id: 'services',  label: '💇 Tjänster',  icon: '💇', roles: ['admin'] },
-      { id: 'schedule',  label: '📅 Schema',    icon: '📅', roles: ['admin', 'staff'] },
-      { id: 'settings',  label: '⚙️ Inställningar', icon: '⚙️', roles: ['admin', 'staff'] },
+      { id: 'dashboard', label: 'Dashboard',     Icon: SidebarDashboardIcon, roles: ['admin'] },
+      { id: 'bookings',  label: 'Bokningar',     Icon: SidebarBookingsIcon,  roles: ['admin', 'staff'] },
+      { id: 'staff',     label: 'Personal',      Icon: SidebarStaffIcon,     roles: ['admin'] },
+      { id: 'services',  label: 'Tjänster',      Icon: SidebarServicesIcon,  roles: ['admin'] },
+      { id: 'schedule',  label: 'Schema',         Icon: SidebarScheduleIcon,  roles: ['admin', 'staff'] },
+      { id: 'settings',  label: 'Inställningar', Icon: SidebarSettingsIcon,  roles: ['admin', 'staff'] },
     ].filter((t) => t.roles.includes(user?.role || 'admin'));
   }, [isSuperAdmin, isStaffImpersonation, user?.role]);
 
@@ -513,9 +583,11 @@ export default function Admin() {
                 className={`admin-nav-btn ${activeTab === tab.id ? 'active' : ''}`}
                 onClick={() => setActiveTab(tab.id)}
               >
-                <span className="admin-nav-icon">{tab.icon}</span>
+                <span className="admin-nav-icon">
+                  <tab.Icon />
+                </span>
                 <span className="admin-nav-btn-label">
-                  {tab.label.split(' ').slice(1).join(' ')}
+                  {tab.label}
                   {tab.id === 'schedule' && showScheduleReminder ? (
                     <span
                       className="admin-nav-schedule-warning"
@@ -549,7 +621,8 @@ export default function Admin() {
               </span>
             </div>
             <button type="button" className="admin-logout-btn" onClick={handleLogout}>
-              Logga ut
+              <SidebarLogoutIcon />
+              <span>Logga ut</span>
             </button>
           </div>
         </aside>

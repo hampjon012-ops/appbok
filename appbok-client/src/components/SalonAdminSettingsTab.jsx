@@ -259,10 +259,8 @@ function SalonThemePanel({ salon, onSaved }) {
       '--panel-text': text,
       '--panel-secondary': secondary,
       '--panel-accent': accent,
-      backgroundColor: background,
-      color: text,
     }),
-    [accent, background, secondary, text],
+    [accent, secondary, text],
   );
 
   const save = async (e) => {

@@ -2170,6 +2170,13 @@ html.preview-embed-mode [role='button'] {
 /* =========================================
    ADMIN LAYOUT
    ========================================= */
+
+/* Förhindra att salongens tema-färg blöder igenom till admin-vyn */
+body:has(.admin-layout) {
+  background-color: #F5F4F2 !important;
+  color: #1A1A1A !important;
+}
+
 .admin-layout {
   display: flex;
   min-height: 100vh;
@@ -2261,9 +2268,12 @@ html.preview-embed-mode [role='button'] {
   font-weight: 500;
 }
 .admin-nav-icon {
-  font-size: 1.1rem;
-  width: 24px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .admin-nav-btn-label {
@@ -2339,6 +2349,9 @@ html.preview-embed-mode [role='button'] {
   color: rgba(255,255,255,0.4);
 }
 .admin-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
   background: none;
   border: 1px solid rgba(255,255,255,0.15);
   color: rgba(255,255,255,0.6);
