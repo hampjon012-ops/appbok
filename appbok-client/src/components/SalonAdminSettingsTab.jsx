@@ -528,7 +528,15 @@ function SalonContactPanel({ salon, onSaved, onSalonNameLive }) {
             <input
               className="admin-input"
               value={mapUrl}
-              onChange={(e) => setMapUrl(e.target.value)}
+              onChange={(e) => {
+                let val = e.target.value;
+                // Auto-extract src from pasted <iframe> tags
+                const iframeMatch = val.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+                if (iframeMatch) {
+                  val = iframeMatch[1];
+                }
+                setMapUrl(val);
+              }}
               placeholder="https://www.google.com/maps/embed?..."
             />
           </label>
