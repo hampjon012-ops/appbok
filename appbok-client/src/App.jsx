@@ -464,8 +464,9 @@ function App() {
 
             {/* ── 2. STYLISTER ── */}
             {(() => {
-              const stylists = config.stylists || [];
-              if (stylists.length === 0) return null;
+              // Använd de dynamiskt hämtade stylisterna, men filtrera bort "Valfri stylist" från landningssidan
+              const displayStylists = stylists.filter(s => s.id !== 'any');
+              if (displayStylists.length === 0) return null;
               return (
                 <section className="home-section home-section-alt">
                   <div className="container">
@@ -473,7 +474,7 @@ function App() {
                       <h2 className="home-section-title">Träffa vårt team</h2>
                     </div>
                     <div className="stylists-scroll-row">
-                      {stylists.map((st, i) => (
+                      {displayStylists.map((st, i) => (
                         <div
                           key={st.id || i}
                           role="button"
@@ -1302,7 +1303,7 @@ function BookingSection({
                     : <div className="cat-sel-count">›</div>
                   }
                 </button>
-                {stylists.map(st => (
+                {stylists.filter(s => s.id !== 'any').map(st => (
                   <button
                     key={st.id}
                     className={`category-selection-btn stylist-row-btn ${selectedStylist?.id === st.id ? 'selected' : ''}`}

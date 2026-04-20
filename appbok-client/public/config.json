@@ -54,12 +54,7 @@
       ]
     }
   ],
-  "stylists": [
-    { "id": "s1", "name": "Emma Lindqvist", "title": "Senior Kolorist", "photo": "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=400&q=80" },
-    { "id": "s2", "name": "Ulf Jonsson", "title": "Frisör & Stylist", "photo": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&q=80" },
-    { "id": "s3", "name": "Sofia Berg", "title": "Balayage Specialist", "photo": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80" },
-    { "id": "s4", "name": "Valfri stylist", "title": "Bästa tillgängliga tid", "photo": "" }
-  ],
+  "stylists": [],
   "contact": {
     "address": "Sveavägen 42, 111 34 Stockholm",
     "phone": "08-123 456 78",
