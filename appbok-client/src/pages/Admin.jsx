@@ -2,7 +2,7 @@ import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } fr
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, MessageSquare, X } from 'lucide-react';
+import { AlertTriangle, MessageSquare, X, CalendarCheck, BarChart3, Wallet, Users, Sparkles } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
 import SuperadminTab from './SuperadminTab.jsx';
@@ -1302,28 +1302,36 @@ function DashboardTab({
 
       <div className="stats-cards dashboard-kpi-grid">
         <div className="stat-card dashboard-kpi-card">
-          <span className="stat-icon">📅</span>
+          <span className="stat-icon stat-icon--blue">
+            <CalendarCheck size={22} strokeWidth={1.8} />
+          </span>
           <div className="stat-info">
             <span className="stat-value">{stats.todayBookings}</span>
             <span className="stat-label">Bokningar idag</span>
           </div>
         </div>
         <div className="stat-card dashboard-kpi-card">
-          <span className="stat-icon">📊</span>
+          <span className="stat-icon stat-icon--purple">
+            <BarChart3 size={22} strokeWidth={1.8} />
+          </span>
           <div className="stat-info">
             <span className="stat-value">{stats.monthBookings}</span>
             <span className="stat-label">Denna månad</span>
           </div>
         </div>
         <div className="stat-card dashboard-kpi-card">
-          <span className="stat-icon">💰</span>
+          <span className="stat-icon stat-icon--green">
+            <Wallet size={22} strokeWidth={1.8} />
+          </span>
           <div className="stat-info">
             <span className="stat-value">{fmtKr(stats.monthRevenue)}</span>
             <span className="stat-label">Omsättning (månad)</span>
           </div>
         </div>
         <div className="stat-card dashboard-kpi-card">
-          <span className="stat-icon">👥</span>
+          <span className="stat-icon stat-icon--amber">
+            <Users size={22} strokeWidth={1.8} />
+          </span>
           <div className="stat-info">
             <span className="stat-value">{stats.staffCount}</span>
             <span className="stat-label">Aktiv personal</span>
@@ -1390,8 +1398,9 @@ function DashboardTab({
               </>
             ) : (
               <>
-                <h3 className="dashboard-upcoming-title" style={{ margin: '0 0 0.5rem' }}>
-                  ✨ Dina tjänster är redo!
+                <h3 className="dashboard-upcoming-title" style={{ margin: '0 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Sparkles size={18} strokeWidth={2} style={{ color: '#d97706', flexShrink: 0 }} aria-hidden />
+                  Dina tjänster är redo!
                 </h3>
                 <p style={{ margin: '0 0 1.125rem', fontSize: '0.92rem', color: '#57534e', lineHeight: 1.55 }}>
                   Vi har importerat {dashboardServiceCount} tjänster åt dig. Ta gärna en titt och dubbelkolla priserna, eller

@@ -3369,6 +3369,25 @@ body:has(.admin-layout) {
   justify-content: center;
   background: #F5F4F2;
   border-radius: 12px;
+  color: #525252;
+  flex-shrink: 0;
+}
+/* Subtle color variants for dashboard KPI icons */
+.stat-icon--blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.stat-icon--purple {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+.stat-icon--green {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+.stat-icon--amber {
+  background: #fffbeb;
+  color: #d97706;
 }
 .stat-info {
   display: flex;
