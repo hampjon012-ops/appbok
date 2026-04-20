@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
       .from('users')
       .select('id, name, title, photo_url')
       .eq('salon_id', salonId)
-      .eq('role', 'staff')
+      .in('role', ['staff', 'admin'])
       .eq('active', true)
       .order('created_at');
 
@@ -63,7 +63,7 @@ router.get('/list', requireAuth, async (req, res) => {
         .select('id, name, email, role, title, photo_url, active, work_schedule')
         .eq('id', req.user.id)
         .eq('salon_id', req.user.salonId)
-        .eq('role', 'staff')
+        .in('role', ['staff', 'admin'])
         .maybeSingle();
       if (error) throw error;
       return res.json(data ? [data] : []);
@@ -75,7 +75,7 @@ router.get('/list', requireAuth, async (req, res) => {
       .from('users')
       .select('id, name, email, role, title, photo_url, active, work_schedule')
       .eq('salon_id', req.user.salonId)
-      .eq('role', 'staff')
+      .in('role', ['staff', 'admin'])
       .order('name');
 
     if (error) throw error;
@@ -243,7 +243,7 @@ router.get('/:id/schedule', requireAuth, requireScheduleEditor, async (req, res)
       .select('id, salon_id, role, work_schedule')
       .eq('id', req.params.id)
       .eq('salon_id', req.user.salonId)
-      .eq('role', 'staff')
+      .in('role', ['staff', 'admin'])
       .maybeSingle();
 
     if (error) throw error;
@@ -271,7 +271,7 @@ router.put('/:id/schedule', requireAuth, requireScheduleEditor, async (req, res)
       .select('id, salon_id, role')
       .eq('id', req.params.id)
       .eq('salon_id', req.user.salonId)
-      .eq('role', 'staff')
+      .in('role', ['staff', 'admin'])
       .maybeSingle();
 
     if (findErr) throw findErr;
@@ -305,7 +305,7 @@ router.post('/:id/blocked-days', requireAuth, requireScheduleEditor, async (req,
       .select('id, salon_id, role')
       .eq('id', req.params.id)
       .eq('salon_id', req.user.salonId)
-      .eq('role', 'staff')
+      .in('role', ['staff', 'admin'])
       .maybeSingle();
 
     if (findErr) throw findErr;
@@ -368,7 +368,7 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
       .select('id, name, salon_id')
       .eq('id', req.params.id)
       .eq('salon_id', req.user.salonId)
-      .eq('role', 'staff')
+      .in('role', ['staff', 'admin'])
       .maybeSingle();
     if (styErr) throw styErr;
     if (!stylist) return res.status(404).json({ error: 'Personal hittades inte.' });
@@ -505,7 +505,7 @@ router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
       .update({ active: false })
       .eq('id', req.params.id)
       .eq('salon_id', req.user.salonId)
-      .eq('role', 'staff');
+      .in('role', ['staff', 'admin']);
 
     if (error) throw error;
     res.json({ success: true });

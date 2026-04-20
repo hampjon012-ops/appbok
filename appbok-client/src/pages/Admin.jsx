@@ -2312,7 +2312,7 @@ function StaffTab({ salonId: salonIdProp }) {
               {s.photo_url
                 ? <img src={s.photo_url} alt={s.name} className="staff-avatar-admin" />
                 : <div className="staff-avatar-admin staff-avatar-placeholder-admin">
-                    <span>{s.name?.charAt(0)}</span>
+                    <span>{(s.name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'}</span>
                   </div>
               }
               <div>

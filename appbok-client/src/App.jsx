@@ -465,12 +465,7 @@ function App() {
             {/* ── 2. STYLISTER ── */}
             {(() => {
               const stylists = config.stylists || [];
-              const display = stylists.length > 0 ? stylists : [
-                { id: 1, name: 'Anna', title: 'Senior Stylist', photo: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=400&auto=format&fit=crop' },
-                { id: 2, name: 'Sofia', title: 'Top Stylist', photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400&auto=format&fit=crop' },
-                { id: 3, name: 'Emma', title: 'Color Specialist', photo: 'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=400&auto=format&fit=crop' },
-                { id: 4, name: 'Lina', title: 'Junior Stylist', photo: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=400&auto=format&fit=crop' },
-              ];
+              if (stylists.length === 0) return null;
               return (
                 <section className="home-section home-section-alt">
                   <div className="container">
@@ -478,7 +473,7 @@ function App() {
                       <h2 className="home-section-title">Träffa vårt team</h2>
                     </div>
                     <div className="stylists-scroll-row">
-                      {display.map((st, i) => (
+                      {stylists.map((st, i) => (
                         <div
                           key={st.id || i}
                           role="button"
@@ -496,7 +491,9 @@ function App() {
                             {(st.photo || st.photo_url) ? (
                               <img src={st.photo || st.photo_url} alt={st.name} />
                             ) : (
-                              <div className="stylist-avatar-fallback" aria-hidden />
+                              <div className="stylist-avatar-initials" aria-hidden>
+                                {(st.name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'}
+                              </div>
                             )}
                           </div>
                           <p className="stylist-name">{st.name}</p>
@@ -1281,6 +1278,30 @@ function BookingSection({
               </div>
               <SelectedServicesSummary />
               <div className="category-selection-list">
+                {/* Valfri stylist — högst upp */}
+                <button
+                  className={`category-selection-btn stylist-row-btn ${selectedStylist === null ? 'selected' : ''}`}
+                  onClick={() => handleSelectStylist(null)}
+                >
+                  <div className="stylist-row-left">
+                    <div className="stylist-avatar-sm">
+                      <div className="stylist-avatar-any" aria-hidden>
+                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="cat-sel-info">
+                      <h4>Valfri stylist</h4>
+                      <p>Hitta första lediga tid</p>
+                    </div>
+                  </div>
+                  {selectedStylist === null
+                    ? <div className="stylist-check-inline">✓</div>
+                    : <div className="cat-sel-count">›</div>
+                  }
+                </button>
                 {stylists.map(st => (
                   <button
                     key={st.id}
@@ -1291,10 +1312,8 @@ function BookingSection({
                       <div className="stylist-avatar-sm">
                         {st.photo
                           ? <img src={st.photo} alt={st.name} />
-                          : <div className="stylist-avatar-placeholder">
-                              <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="1.5" fill="none">
-                                <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-                              </svg>
+                          : <div className="stylist-avatar-initials-sm" aria-hidden>
+                              {(st.name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'}
                             </div>
                         }
                       </div>
