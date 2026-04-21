@@ -16,6 +16,7 @@ import {
   Trash2,
   GripVertical,
   Plus,
+  CalendarOff,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
@@ -2187,6 +2188,7 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
 
 // ─── Staff Tab ───────────────────────────────────────────────────────────────
 function StaffTab({ salonId: salonIdProp }) {
+  const navigate = useNavigate();
   const [staff, setStaff] = useState([]);
   const [calendarStatus, setCalendarStatus] = useState({});
   const [inviteUrl, setInviteUrl] = useState('');
@@ -2261,6 +2263,15 @@ function StaffTab({ salonId: salonIdProp }) {
     loadStaff();
   };
 
+  const handleEditStaffSchedule = (id) => {
+    try {
+      sessionStorage.setItem('appbok_schedule_focus_staff', id);
+    } catch {
+      /* ignore */
+    }
+    navigate('/admin/schema');
+  };
+
   if (loading) return <div className="admin-loading">Laddar personal...</div>;
 
   return (
@@ -2321,7 +2332,7 @@ function StaffTab({ salonId: salonIdProp }) {
           </p>
         ) : null}
         {staff.map(s => (
-          <div key={s.id} className="staff-card-admin">
+          <div key={s.id} className="staff-card-admin staff-card-admin--interactive">
             <div className="staff-card-left">
               {s.photo_url
                 ? <img src={s.photo_url} alt={s.name} className="staff-avatar-admin" />
@@ -2333,11 +2344,39 @@ function StaffTab({ salonId: salonIdProp }) {
                 <h4>{s.name}</h4>
                 <p>{s.title || 'Stylist'}</p>
                 <span className={`calendar-badge ${calendarStatus[s.id] ? 'connected' : 'disconnected'}`}>
-                  {calendarStatus[s.id] ? '📅 Kalender kopplad' : '⚠️ Kalender ej kopplad'}
+                  {calendarStatus[s.id] ? (
+                    <>
+                      <CalendarCheck className="calendar-badge-icon" size={14} strokeWidth={2} aria-hidden />
+                      <span>Kalender kopplad</span>
+                    </>
+                  ) : (
+                    <>
+                      <CalendarOff className="calendar-badge-icon" size={14} strokeWidth={2} aria-hidden />
+                      <span>Kalender ej kopplad</span>
+                    </>
+                  )}
                 </span>
               </div>
             </div>
-            <button className="btn-sm btn-danger" onClick={() => handleRemove(s.id)}>Ta bort</button>
+            <div className="staff-card-actions">
+              <button
+                type="button"
+                className="staff-card-btn-edit"
+                onClick={() => handleEditStaffSchedule(s.id)}
+              >
+                <Pencil size={14} strokeWidth={2} aria-hidden />
+                Redigera
+              </button>
+              <button
+                type="button"
+                className="staff-card-btn-delete"
+                title="Ta bort personal"
+                aria-label="Ta bort personal"
+                onClick={() => handleRemove(s.id)}
+              >
+                <Trash2 size={18} strokeWidth={2} aria-hidden />
+              </button>
+            </div>
           </div>
         ))}
       </div>

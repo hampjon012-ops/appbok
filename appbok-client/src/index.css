@@ -4335,10 +4335,63 @@ body:has(.admin-layout) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   background: white;
   border-radius: 12px;
   padding: 1rem 1.2rem;
   border: 1px solid var(--border-color);
+}
+.staff-card-admin--interactive {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.staff-card-admin--interactive:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.staff-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.staff-card-btn-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: #6b7280;
+  background: #f9fafb;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.staff-card-btn-edit:hover {
+  color: #111827;
+  background: #f3f4f6;
+}
+
+.staff-card-btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  color: #9ca3af;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.staff-card-btn-delete:hover {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
 }
 .staff-card-left {
   display: flex;
@@ -4622,20 +4675,33 @@ body:has(.admin-layout) {
 
 /* ── Google Calendar Status ──────────────────────────────────────────────── */
 .calendar-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.7rem;
   padding: 2px 8px;
   border-radius: 12px;
   margin-top: 4px;
   font-weight: 500;
+  line-height: 1.2;
+}
+.calendar-badge-icon {
+  flex-shrink: 0;
+  display: block;
 }
 .calendar-badge.connected {
   background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
+  color: #16a34a;
+}
+.calendar-badge.connected .calendar-badge-icon {
+  color: #16a34a;
 }
 .calendar-badge.disconnected {
-  background: rgba(234, 179, 8, 0.15);
-  color: #ca8a04;
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+.calendar-badge.disconnected .calendar-badge-icon {
+  color: #d97706;
 }
 
 .calendar-status-box {

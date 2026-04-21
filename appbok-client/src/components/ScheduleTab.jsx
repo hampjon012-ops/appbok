@@ -185,6 +185,20 @@ export default function ScheduleTab({ user }) {
     loadStaff();
   }, [user?.role, user?.id, user?.impersonatedStaffId, user?.impersonatedName, user?.name, loadStaff]);
 
+  /** Välj medarbetare när admin kommer från Personal → Redigera. */
+  useEffect(() => {
+    if (!staffList.length || isStaffView) return;
+    try {
+      const id = sessionStorage.getItem('appbok_schedule_focus_staff');
+      if (id && staffList.some((s) => s.id === id)) {
+        setSelectedId(id);
+        sessionStorage.removeItem('appbok_schedule_focus_staff');
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [staffList, isStaffView]);
+
   const loadSchedule = useCallback((staffId) => {
     if (!staffId || staffId === 'all') {
       setLoading(false);
