@@ -514,39 +514,65 @@ function App() {
           </>
         )}
 
-        {/* ── 3. INSTAGRAM / PORTFOLIO ── */}
-        {!isExpired && (Array.isArray(config.portfolioImages) && config.portfolioImages.length > 0) && (
-          <section className="home-section">
-            <div className="container">
-              <div className="home-section-header" style={{ textAlign: 'center' }}>
-                <p className="insta-label">Hitta Inspiration på Instagram</p>
-                {config.contact?.instagramHandle ? (
-                  <a
-                    href={`https://instagram.com/${String(config.contact.instagramHandle).replace(/^@/, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="insta-handle insta-handle-link"
-                  >
-                    @{String(config.contact.instagramHandle).replace(/^@/, '')}
-                  </a>
-                ) : (
-                  <h2 className="insta-handle">
-                    @{displaySalonName(config.salonName).replace(/\s+/g, '').toLowerCase()}
-                  </h2>
-                )}
-                <p className="insta-sub">Följ oss för daglig inspiration</p>
-              </div>
-              <div className="insta-grid">
-                {config.portfolioImages.map((img, idx) => (
-                  <div key={idx} className="insta-item">
-                    <img src={img} alt="Portfolio" />
-                    <div className="insta-overlay"><span>❤️</span></div>
+        {/* ── 3. INSTAGRAM / PORTFOLIO ── (visas om handtag och/eller portföljbilder finns) */}
+        {(() => {
+          const igHandleRaw = config.contact?.instagramHandle;
+          const igHandle = igHandleRaw != null && String(igHandleRaw).trim()
+            ? String(igHandleRaw).replace(/^@/, '').trim()
+            : '';
+          const hasPortfolioImages = Array.isArray(config.portfolioImages) && config.portfolioImages.length > 0;
+          const showInstagramSection = !isExpired && (Boolean(igHandle) || hasPortfolioImages);
+          if (!showInstagramSection) return null;
+          return (
+            <section className="home-section">
+              <div className="container">
+                <div className="home-section-header" style={{ textAlign: 'center' }}>
+                  <p className="insta-label">Hitta Inspiration på Instagram</p>
+                  {igHandle ? (
+                    <a
+                      href={`https://instagram.com/${igHandle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="insta-handle insta-handle-link"
+                    >
+                      @{igHandle}
+                    </a>
+                  ) : (
+                    <h2 className="insta-handle">
+                      @{displaySalonName(config.salonName).replace(/\s+/g, '').toLowerCase()}
+                    </h2>
+                  )}
+                  <p className="insta-sub">Följ oss för daglig inspiration</p>
+                </div>
+                {hasPortfolioImages && (
+                  <div className="insta-grid">
+                    {config.portfolioImages.map((img, idx) => (
+                      <div key={idx} className="insta-item">
+                        {igHandle ? (
+                          <a
+                            href={`https://instagram.com/${igHandle}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="insta-item-link"
+                            aria-label={`Öppna Instagram @${igHandle} i ny flik`}
+                          >
+                            <img src={img} alt="Portfolio" className="insta-item-img" />
+                            <div className="insta-overlay"><span>❤️</span></div>
+                          </a>
+                        ) : (
+                          <>
+                            <img src={img} alt="Portfolio" className="insta-item-img" />
+                            <div className="insta-overlay"><span>❤️</span></div>
+                          </>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          </section>
-        )}
+            </section>
+          );
+        })()}
 
         {/* ── 4. KONTAKT & KARTA ── */}
         {(config.contact?.address || config.contact?.phone || (config.contact?.hours && config.contact.hours.length > 0)) && (

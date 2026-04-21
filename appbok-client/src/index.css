@@ -423,19 +423,50 @@ html.preview-embed-mode [role='button'] {
   aspect-ratio: 1 / 1;
   overflow: hidden;
   border-radius: 12px;
-  cursor: pointer;
+  cursor: default;
   background: #eee;
 }
 
-.insta-item img {
+/* Klickbar cell: länk fyller rutan (samma utseende som tidigare) */
+a.insta-item-link {
+  display: block;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+a.insta-item-link:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+a.insta-item-link .insta-item-img {
+  position: absolute;
+  inset: 0;
+}
+
+.insta-item-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  display: block;
+  transition: transform 0.35s ease, opacity 0.3s ease;
 }
 
-.insta-item:hover img {
+.insta-item > .insta-item-img {
+  position: absolute;
+  inset: 0;
+}
+
+.insta-item:hover .insta-item-img,
+a.insta-item-link:hover .insta-item-img {
   transform: scale(1.05);
+  opacity: 0.9;
 }
 
 .insta-overlay {
@@ -451,8 +482,14 @@ html.preview-embed-mode [role='button'] {
   font-size: 1.5rem;
 }
 
-.insta-item:hover .insta-overlay {
+.insta-item:hover .insta-overlay,
+a.insta-item-link:hover .insta-overlay {
   opacity: 1;
+}
+
+a.insta-item-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-color) 40%, transparent);
+  outline-offset: 2px;
 }
 
 /* =========================================
