@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { UploadCloud, Palette, MapPin, Clock, Camera, PenLine, CreditCard, X, Loader2 } from 'lucide-react';
+import { UploadCloud, Palette, MapPin, Clock, Camera, PenLine, CreditCard, X, Loader2, Info } from 'lucide-react';
 import ThemeLivePreviewColumn from './ThemeLivePreviewColumn.jsx';
 import {
   displaySalonName,
@@ -929,6 +929,8 @@ function SalonPaymentsPanel({ salon, onTrialStarted }) {
   const [goLiveBusy, setGoLiveBusy] = useState(false);
   const [goLiveMsg, setGoLiveMsg] = useState('');
   const [previewLinkCopied, setPreviewLinkCopied] = useState(false);
+  const [stripeDashBusy, setStripeDashBusy] = useState(false);
+  const [stripeDisconnectBusy, setStripeDisconnectBusy] = useState(false);
 
   useEffect(() => {
     if (!stripeConnected) {
@@ -981,6 +983,35 @@ function SalonPaymentsPanel({ salon, onTrialStarted }) {
       window.location.href = data.url;
     } catch (err) {
       alert('Stripe-anslutning misslyckades: ' + err.message);
+    }
+  };
+
+  const handleStripeDashboard = async () => {
+    setStripeDashBusy(true);
+    try {
+      const res = await fetch('/api/stripe/connect-dashboard', { headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Kunde inte öppna Stripe.');
+      window.location.href = data.url;
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setStripeDashBusy(false);
+    }
+  };
+
+  const handleStripeDisconnect = async () => {
+    if (!confirm('Koppla från Stripe? Kortbetalningar via Appbok pausas tills du ansluter igen.')) return;
+    setStripeDisconnectBusy(true);
+    try {
+      const res = await fetch('/api/stripe/disconnect', { method: 'POST', headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Kunde inte koppla från.');
+      if (typeof onTrialStarted === 'function') onTrialStarted(data);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setStripeDisconnectBusy(false);
     }
   };
 
@@ -1074,132 +1105,147 @@ function SalonPaymentsPanel({ salon, onTrialStarted }) {
 
   return (
     <div className="admin-card salon-payments-card">
-      {/* Trial / Status Banner */}
-      <div style={{
-        padding: '1rem',
-        borderRadius: '10px',
-        marginBottom: '1.25rem',
-        background: isLive ? '#DCFCE7' : isTrial ? '#FEF9C3' : isPreTrial ? '#F3F4F6' : '#FAFAFA',
-        border: `1px solid ${isLive ? '#86EFAC' : isTrial ? '#FDE047' : isPreTrial ? '#D1D5DB' : '#E5E5E5'}`,
-      }}>
-        <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.25rem', color: '#1F2937' }}>
-          {isLive ? (
-            <>
-              💳 <span style={{ fontWeight: 700 }}>Du är live</span>
-            </>
-          ) : isTrial ? (
-            <>Trial</>
-          ) : isPreTrial ? (
-            <>Demo — starta testperiod nedan när du är redo</>
-          ) : (
-            <>Status: {salonStatus || '—'}</>
-          )}
-        </div>
-        {!knownLifecycle && (
-          <p className="admin-hint" style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem' }}>
-            Kontakta support om livscykelstatus behöver justeras manuellt.
-          </p>
-        )}
-        {isTrial && salon?.trial_ends_at && (
-          <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: '#92400E' }}>
-            {(() => {
-              const left = Math.ceil(
-                (new Date(salon.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24),
-              );
-              return left > 0
-                ? `${left} dagar kvar av din testperiod.`
-                : 'Testperioden har gått ut.';
-            })()}
-          </p>
-        )}
-        {isPreTrial && previewBookingUrl ? (
-          <div
-            style={{
-              marginBottom: '0.75rem',
-              padding: '0.55rem 0.65rem',
-              borderRadius: '8px',
-              background: '#fff',
-              border: '1px solid #E5E5E5',
-              fontSize: '0.78rem',
-              wordBreak: 'break-all',
-              fontFamily: 'ui-monospace, monospace',
-              color: '#374151',
-            }}
-          >
-            {previewBookingUrl}
+      {/* Trial / status — alert-stil */}
+      <div className="payments-lifecycle-banner">
+        {isLive && (
+          <div className="payments-alert payments-alert--live" role="status">
+            <div className="payments-alert-body">
+              <div className="payments-alert-title">Du är live</div>
+              <p className="payments-alert-text">Din bokningssida är synlig och du kan ta emot bokningar enligt dina inställningar.</p>
+            </div>
           </div>
-        ) : null}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-          {isPreTrial && (
-            <button
-              type="button"
-              className="btn-admin-primary"
-              style={{ fontSize: '0.9rem', padding: '0.55rem 1.1rem' }}
-              disabled={startingTrial}
-              onClick={handleStartTrial}
-            >
-              {startingTrial ? 'Startar...' : 'Starta 14 dagars testperiod'}
-            </button>
-          )}
-          {isPreTrial && previewBookingUrl ? (
-            <button
-              type="button"
-              className="btn-admin-secondary"
-              style={{ fontSize: '0.9rem', padding: '0.55rem 1.1rem' }}
-              onClick={handleCopyPreviewLink}
-            >
-              {previewLinkCopied ? 'Länk kopierad' : 'Dela länk för förhandsvisning'}
-            </button>
-          ) : null}
-        </div>
-        {trialMsg && (
-          <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: trialMsg.startsWith('✓') ? '#166534' : '#991B1B' }}>
+        )}
+
+        {isTrial && (
+          <div className="payments-alert payments-alert--trial" role="status">
+            <Clock className="payments-alert-icon" size={18} strokeWidth={2} aria-hidden />
+            <div className="payments-alert-body">
+              <div className="payments-alert-title">Trial</div>
+              {salon?.trial_ends_at && (
+                <p className="payments-alert-text payments-alert-text--trial">
+                  {(() => {
+                    const left = Math.ceil(
+                      (new Date(salon.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24),
+                    );
+                    return left > 0
+                      ? `${left} dagar kvar av din testperiod.`
+                      : 'Testperioden har gått ut.';
+                  })()}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {isPreTrial && (
+          <div className="payments-alert payments-alert--muted">
+            <div className="payments-alert-body">
+              <div className="payments-alert-title">Demo — starta testperiod nedan när du är redo</div>
+              {previewBookingUrl ? (
+                <div className="payments-preview-url">{previewBookingUrl}</div>
+              ) : null}
+              <div className="payments-alert-actions">
+                <button
+                  type="button"
+                  className="btn-admin-primary"
+                  style={{ fontSize: '0.9rem', padding: '0.55rem 1.1rem' }}
+                  disabled={startingTrial}
+                  onClick={handleStartTrial}
+                >
+                  {startingTrial ? 'Startar...' : 'Starta 14 dagars testperiod'}
+                </button>
+                {previewBookingUrl ? (
+                  <button
+                    type="button"
+                    className="btn-admin-secondary"
+                    style={{ fontSize: '0.9rem', padding: '0.55rem 1.1rem' }}
+                    onClick={handleCopyPreviewLink}
+                  >
+                    {previewLinkCopied ? 'Länk kopierad' : 'Dela länk för förhandsvisning'}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!knownLifecycle && (
+          <p className="admin-hint payments-lifecycle-unknown">
+            Status: {salonStatus || '—'}. Kontakta support om livscykelstatus behöver justeras manuellt.
+          </p>
+        )}
+
+        {trialMsg ? (
+          <p
+            className={`payments-trial-feedback ${trialMsg.startsWith('✓') ? 'payments-trial-feedback--ok' : 'payments-trial-feedback--err'}`}
+          >
             {trialMsg}
           </p>
-        )}
+        ) : null}
       </div>
 
       <div className="salon-payments-title-row">
         <h3 className="admin-card-title salon-payments-heading">Stripe-anslutning</h3>
-        <span
-          className={`salon-payments-status-badge ${stripeConnected ? 'salon-payments-status-badge--ok' : 'salon-payments-status-badge--inactive'}`}
-        >
-          {stripeConnected ? 'Aktiv' : 'Ej aktiv'}
-        </span>
+        {stripeConnected ? (
+          <span className="salon-payments-status-badge salon-payments-status-badge--ok">Aktiv</span>
+        ) : null}
       </div>
       <p className="admin-card-desc salon-payments-desc">
         Aktivera kortbetalningar direkt vid bokning. Genom att ansluta ditt Stripe-konto betalas pengarna ut
         automatiskt till ditt bankkonto. Inga extra serviceavgifter tillkommer från Appbok.
       </p>
 
-      <button type="button" className="btn-stripe-connect" onClick={handleStripeConnect}>
-        <StripeMark />
-        <span>Anslut din salong med Stripe</span>
-      </button>
+      <div className="salon-stripe-actions">
+        {!stripeConnected ? (
+          <button type="button" className="btn-stripe-connect btn-stripe-connect--inline" onClick={handleStripeConnect}>
+            <StripeMark />
+            <span>Anslut med Stripe</span>
+          </button>
+        ) : (
+          <div className="salon-stripe-connected-actions">
+            <button
+              type="button"
+              className="btn-stripe-manage"
+              onClick={handleStripeDashboard}
+              disabled={stripeDashBusy}
+            >
+              {stripeDashBusy ? 'Öppnar…' : 'Hantera Stripe-konto'}
+            </button>
+            <button
+              type="button"
+              className="btn-stripe-disconnect"
+              onClick={handleStripeDisconnect}
+              disabled={stripeDisconnectBusy}
+            >
+              {stripeDisconnectBusy ? '…' : 'Koppla från'}
+            </button>
+          </div>
+        )}
+      </div>
 
-      <label className={`salon-payment-toggle-row ${!stripeConnected ? 'salon-payment-toggle-row--disabled' : ''}`}>
-        <span className="salon-payment-toggle-label">Kräv betalning vid bokning</span>
-        <span className="salon-payment-switch-wrap">
-          <input
-            type="checkbox"
-            className="salon-payment-switch-input"
-            checked={requirePayment}
-            disabled={!stripeConnected}
-            onChange={(e) => setRequirePayment(e.target.checked)}
-          />
-          <span className="salon-payment-switch-track" aria-hidden />
-        </span>
-      </label>
-      {!stripeConnected && (
-        <p className="admin-hint salon-payment-toggle-hint">Anslut Stripe först för att aktivera detta val.</p>
-      )}
-
-      {/* ── BETALNING PÅ PLATS ── */}
-      <div style={{ marginTop: '1.75rem', paddingTop: '1.5rem', borderTop: '1px solid #E5E5E5' }}>
-        <label className="salon-payment-toggle-row">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+      <div className="salon-payment-settings-card">
+        <label className={`salon-payment-setting-row ${!stripeConnected ? 'salon-payment-setting-row--disabled' : ''}`}>
+          <div className="salon-payment-setting-text">
+            <span className="salon-payment-toggle-label">Kräv betalning vid bokning</span>
+            <span className="salon-payment-setting-desc">
+              Kunden måste betala hela beloppet via kort för att slutföra bokningen.
+            </span>
+          </div>
+          <span className="salon-payment-switch-wrap">
+            <input
+              type="checkbox"
+              className="salon-payment-switch-input"
+              checked={requirePayment}
+              disabled={!stripeConnected}
+              onChange={(e) => setRequirePayment(e.target.checked)}
+            />
+            <span className="salon-payment-switch-track" aria-hidden />
+          </span>
+        </label>
+        <label className="salon-payment-setting-row">
+          <div className="salon-payment-setting-text">
             <span className="salon-payment-toggle-label">Tillåt kunder att betala på plats</span>
-            <span className="admin-hint" style={{ margin: 0, maxWidth: '28rem', fontSize: '0.8rem', color: '#6B7280' }}>
+            <span className="salon-payment-setting-desc">
               Om denna är avstängd måste kunden betala hela beloppet via Stripe vid bokningstillfället.
             </span>
           </div>
@@ -1214,28 +1260,36 @@ function SalonPaymentsPanel({ salon, onTrialStarted }) {
           </span>
         </label>
       </div>
+      {!stripeConnected && (
+        <p className="admin-hint salon-payment-toggle-hint">Anslut Stripe först för att aktivera krav på kortbetalning.</p>
+      )}
 
       {/* ── GÅ LIVE ── */}
       {isTrial && (
-        <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #E5E5E5' }}>
-          <button
-            type="button"
-            className="btn-admin-primary"
-            style={{ width: '100%', justifyContent: 'center', fontSize: '0.95rem', padding: '0.75rem', background: '#16a34a' }}
-            disabled={goLiveBusy}
-            onClick={handleGoLive}
-          >
-            {goLiveBusy ? 'Startar...' : 'Gå Live'}
-          </button>
+        <div className="salon-go-live-block">
+          <p className="salon-go-live-hint">
+            <Info className="salon-go-live-hint-icon" size={16} strokeWidth={2} aria-hidden />
+            <span>
+              Vid live: Stripe måste vara ansluten. Dina kunder kan boka och betala direkt.
+            </span>
+          </p>
+          <div className="salon-go-live-actions">
+            <button
+              type="button"
+              className="btn-admin-primary btn-go-live"
+              disabled={goLiveBusy}
+              onClick={handleGoLive}
+            >
+              {goLiveBusy ? 'Startar...' : 'Gå Live'}
+            </button>
+          </div>
           {goLiveMsg ? (
-            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: goLiveMsg.startsWith('✓') ? '#166534' : '#991B1B', textAlign: 'center' }}>
+            <p
+              className={`salon-go-live-feedback ${goLiveMsg.startsWith('✓') ? 'salon-go-live-feedback--ok' : 'salon-go-live-feedback--err'}`}
+            >
               {goLiveMsg}
             </p>
-          ) : (
-            <p className="admin-hint" style={{ margin: '0.5rem 0 0 0', textAlign: 'center' }}>
-              Vid live: Stripe måste vara ansluten. Dina kunder kan boka och betala direkt.
-            </p>
-          )}
+          ) : null}
         </div>
       )}
     </div>

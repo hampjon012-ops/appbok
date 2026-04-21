@@ -4656,6 +4656,71 @@ body:has(.admin-layout) {
   outline: 2px solid #635bff;
   outline-offset: 3px;
 }
+
+/* Normalstor Stripe-knapp (inte fullbredd) */
+.btn-stripe-connect--inline {
+  width: auto;
+  max-width: none;
+}
+
+.btn-stripe-manage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  background: #fff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-stripe-manage:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+.btn-stripe-manage:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-stripe-disconnect {
+  display: inline;
+  padding: 0.55rem 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: #b91c1c;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.btn-stripe-disconnect:hover:not(:disabled) {
+  color: #991b1b;
+}
+.btn-stripe-disconnect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.salon-stripe-actions {
+  margin-bottom: 1.5rem;
+}
+
+.salon-stripe-connected-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+
 .salon-stripe-mark {
   flex-shrink: 0;
   opacity: 0.95;
@@ -4736,6 +4801,198 @@ body:has(.admin-layout) {
   margin-top: 0.65rem;
   margin-bottom: 0;
   max-width: 28rem;
+}
+
+/* Betalningar — status / trial (alert) */
+.payments-lifecycle-banner {
+  margin-bottom: 1.35rem;
+}
+
+.payments-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+
+.payments-alert--live {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  border-left: 4px solid #22c55e;
+}
+
+.payments-alert--trial {
+  background: #fffbeb;
+  border-color: #fde68a;
+  border-left: 4px solid #facc15;
+}
+
+.payments-alert--muted {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.payments-alert-icon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: #b45309;
+}
+
+.payments-alert-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.payments-alert-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #111827;
+  margin-bottom: 0.25rem;
+}
+
+.payments-alert-text {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.payments-alert-text--trial {
+  color: #92400e;
+}
+
+.payments-preview-url {
+  margin: 0.65rem 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  font-size: 0.78rem;
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #374151;
+}
+
+.payments-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.payments-lifecycle-unknown {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.85rem;
+}
+
+.payments-trial-feedback {
+  margin: 0.65rem 0 0 0;
+  font-size: 0.85rem;
+}
+.payments-trial-feedback--ok {
+  color: #166534;
+}
+.payments-trial-feedback--err {
+  color: #991b1b;
+}
+
+/* Betalningar — inställningskort (två rader) */
+.salon-payment-settings-card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  max-width: 40rem;
+  margin-bottom: 0.25rem;
+}
+
+.salon-payment-setting-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  margin: 0;
+  border-bottom: 1px solid #e5e7eb;
+  cursor: pointer;
+}
+
+.salon-payment-setting-row:last-child {
+  border-bottom: none;
+}
+
+.salon-payment-setting-row--disabled {
+  cursor: not-allowed;
+}
+
+.salon-payment-setting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
+  padding-right: 0.5rem;
+}
+
+.salon-payment-setting-desc {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #6b7280;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.salon-go-live-block {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.salon-go-live-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 1rem 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #6b7280;
+  max-width: 36rem;
+}
+
+.salon-go-live-hint-icon {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: #9ca3af;
+}
+
+.salon-go-live-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-go-live {
+  background: #16a34a !important;
+  color: #fff !important;
+  border: none !important;
+  padding: 0.65rem 1.35rem !important;
+  font-size: 0.95rem !important;
+  border-radius: 10px !important;
+}
+
+.salon-go-live-feedback {
+  margin: 0.65rem 0 0 0;
+  font-size: 0.85rem;
+  text-align: right;
+}
+.salon-go-live-feedback--ok {
+  color: #166534;
+}
+.salon-go-live-feedback--err {
+  color: #991b1b;
 }
 
 /* ── Charts Grid ─────────────────────────────────────────────────────────── */

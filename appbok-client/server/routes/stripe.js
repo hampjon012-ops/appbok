@@ -117,6 +117,58 @@ router.get('/callback', async (req, res) => {
   }
 });
 
+// GET /api/stripe/connect-dashboard — Stripe Express / connected account login link
+router.get('/connect-dashboard', requireAuth, requireAdmin, async (req, res) => {
+  const stripe = getStripe();
+  if (!stripe) return res.status(503).json({ error: 'Stripe ej konfigurerat.' });
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: row, error } = await supabase
+      .from('salons')
+      .select('stripe_account_id')
+      .eq('id', req.user.salonId)
+      .single();
+    if (error) throw error;
+    if (!row?.stripe_account_id) {
+      return res.status(400).json({ error: 'Inget Stripe-konto är anslutet.' });
+    }
+    const loginLink = await stripe.accounts.createLoginLink(row.stripe_account_id);
+    return res.json({ url: loginLink.url });
+  } catch (err) {
+    console.error('[stripe/connect-dashboard]', err);
+    return res.status(500).json({ error: err.message || 'Kunde inte öppna Stripe Dashboard.' });
+  }
+});
+
+// POST /api/stripe/disconnect — ta bort anslutet Stripe-konto från salongen
+router.post('/disconnect', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: row, error: fetchErr } = await supabase
+      .from('salons')
+      .select('contact')
+      .eq('id', req.user.salonId)
+      .single();
+    if (fetchErr) throw fetchErr;
+    const contact =
+      row?.contact && typeof row.contact === 'object' ? { ...row.contact } : {};
+    contact.stripe_connected = false;
+
+    const { data, error } = await supabase
+      .from('salons')
+      .update({ stripe_account_id: null, contact })
+      .eq('id', req.user.salonId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return res.json(data);
+  } catch (err) {
+    console.error('[stripe/disconnect]', err);
+    return res.status(500).json({ error: err.message || 'Kunde inte koppla från Stripe.' });
+  }
+});
+
 // GET /api/stripe/status — is Stripe connected for this salon?
 router.get('/status', requireAuth, requireAdmin, async (req, res) => {
   try {
