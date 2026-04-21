@@ -17,7 +17,10 @@ router.get('/public', async (req, res) => {
     return res.status(400).json({ error: 'Ange salon_id eller slug.' });
   }
 
-  const selectCols = 'id, name, slug, tagline, logo_url, theme, contact, map_url, instagram, status, plan, trial_ends_at, allow_pay_on_site, stripe_account_id, portfolio_images';
+  // NOTE: keep this list backwards compatible with older DB schemas.
+  // If we include a non-existing column here, Supabase will error and the public booking page breaks.
+  const selectCols =
+    'id, name, slug, tagline, logo_url, theme, contact, map_url, instagram, status, plan, trial_ends_at, allow_pay_on_site, stripe_account_id';
 
   try {
     let data;
@@ -208,12 +211,32 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
       return res.json(full);
     }
 
-    const { data, error } = await supabase
-      .from('salons')
-      .update(updates)
-      .eq('id', req.user.salonId)
-      .select()
-      .single();
+    let data;
+    let error;
+
+    {
+      const r = await supabase.from('salons').update(updates).eq('id', req.user.salonId).select().single();
+      data = r.data;
+      error = r.error;
+    }
+
+    // Backwards compatible fallback: if the DB doesn't have `portfolio_images` yet,
+    // store the array in the legacy `instagram` column so the UI still works.
+    if (
+      error &&
+      typeof error?.message === 'string' &&
+      error.message.toLowerCase().includes('column') &&
+      error.message.toLowerCase().includes('portfolio_images') &&
+      Object.prototype.hasOwnProperty.call(updates, 'portfolio_images')
+    ) {
+      const retryUpdates = { ...updates };
+      retryUpdates.instagram = retryUpdates.portfolio_images;
+      delete retryUpdates.portfolio_images;
+
+      const r2 = await supabase.from('salons').update(retryUpdates).eq('id', req.user.salonId).select().single();
+      data = r2.data;
+      error = r2.error;
+    }
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Salong hittades inte.' });
