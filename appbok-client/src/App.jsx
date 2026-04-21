@@ -525,8 +525,7 @@ function App() {
                     href={`https://instagram.com/${String(config.contact.instagramHandle).replace(/^@/, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="insta-handle"
-                    style={{ textDecoration: 'none' }}
+                    className="insta-handle insta-handle-link"
                   >
                     @{String(config.contact.instagramHandle).replace(/^@/, '')}
                   </a>

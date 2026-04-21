@@ -6021,6 +6021,28 @@ textarea.admin-input {
   text-align: center;
 }
 
+/* Klickbart @-handtag: ny flik, tydlig men diskret hover */
+a.insta-handle-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+a.insta-handle-link:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.12em;
+  text-decoration-color: color-mix(in srgb, var(--text-color) 45%, transparent);
+}
+
+a.insta-handle-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-color) 35%, transparent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
 .insta-sub {
   font-size: 0.88rem;
   color: var(--text-muted);
