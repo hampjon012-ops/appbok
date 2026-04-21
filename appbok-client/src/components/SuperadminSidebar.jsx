@@ -58,33 +58,32 @@ const MENU_ITEMS = [
 export default function SuperadminSidebar({ activeTab, onTabChange, user, onLogout }) {
   return (
     <aside className="sa-sidebar">
-      {/* Header */}
-      <div className="sa-sidebar-header sa-sidebar-header--logo">
-        <img
-          src="/sidebar-logo.png"
-          alt="Appbok"
-          className="sidebar-brand-img"
-          decoding="async"
-        />
+      <div className="sa-sidebar-scroll">
+        <div className="sa-sidebar-header sa-sidebar-header--logo">
+          <img
+            src="/sidebar-logo.png"
+            alt="Appbok"
+            className="sidebar-brand-img"
+            decoding="async"
+          />
+        </div>
+
+        <nav className="sa-nav">
+          {MENU_ITEMS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              className={`sa-nav-btn${activeTab === id ? ' sa-nav-btn--active' : ''}`}
+              onClick={() => onTabChange(id)}
+            >
+              <span className="sa-nav-icon">
+                <Icon />
+              </span>
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
       </div>
 
-      {/* Navigation */}
-      <nav className="sa-nav">
-        {MENU_ITEMS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            className={`sa-nav-btn${activeTab === id ? ' sa-nav-btn--active' : ''}`}
-            onClick={() => onTabChange(id)}
-          >
-            <span className="sa-nav-icon">
-              <Icon />
-            </span>
-            <span>{label}</span>
-          </button>
-        ))}
-      </nav>
-
-      {/* Footer */}
       <div className="sa-sidebar-footer">
         <div className="sa-user-info">
           <div className="sa-user-name-row">

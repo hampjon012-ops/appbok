@@ -289,6 +289,7 @@ function ImpersonationBanner({ salonName, staffName }) {
   const staffMode = staffName != null && String(staffName).length > 0;
   return (
     <div
+      className="admin-impersonation-banner"
       style={{
         background: '#f97316',
         color: 'white',
@@ -300,8 +301,6 @@ function ImpersonationBanner({ salonName, staffName }) {
         gap: '8px',
         fontWeight: 'bold',
         zIndex: 9999,
-        position: 'sticky',
-        top: 0,
       }}
     >
       <span>
@@ -564,7 +563,7 @@ export default function Admin() {
   if (!token) return null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f4f2' }}>
+    <div className="admin-page-root">
       <Toaster position="top-center" toastOptions={{ duration: 5500 }} />
       {user?.originalRole === 'superadmin' && (
         <ImpersonationBanner
@@ -572,7 +571,7 @@ export default function Admin() {
           staffName={isStaffImpersonation ? user?.impersonatedName : null}
         />
       )}
-      <div className="admin-layout" style={{ flex: 1, minHeight: 0 }}>
+      <div className="admin-layout">
         {/* Sidebar — always superadmin variant */}
       {isSuperAdmin ? (
         <SuperadminSidebar
@@ -583,45 +582,47 @@ export default function Admin() {
         />
       ) : (
         <aside className="admin-sidebar">
-          <div className="admin-sidebar-header admin-sidebar-header--logo">
-            <img
-              src="/sidebar-logo.png"
-              alt="Appbok"
-              className="sidebar-brand-img"
-              decoding="async"
-            />
+          <div className="admin-sidebar-scroll">
+            <div className="admin-sidebar-header admin-sidebar-header--logo">
+              <img
+                src="/sidebar-logo.png"
+                alt="Appbok"
+                className="sidebar-brand-img"
+                decoding="async"
+              />
+            </div>
+            <nav className="admin-nav">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`admin-nav-btn ${activeTab === tab.id ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <span className="admin-nav-icon">
+                    <tab.Icon />
+                  </span>
+                  <span className="admin-nav-btn-label">
+                    {tab.label}
+                    {tab.id === 'schedule' && showScheduleReminder ? (
+                      <span
+                        className="admin-nav-schedule-warning"
+                        title="Ställ in arbetsschema så kunder kan boka."
+                        aria-label="Påminnelse: ställ in schema"
+                      >
+                        <AlertTriangle
+                          size={15}
+                          strokeWidth={2.25}
+                          className="admin-nav-schedule-warning-icon"
+                          aria-hidden
+                        />
+                      </span>
+                    ) : null}
+                  </span>
+                </button>
+              ))}
+            </nav>
           </div>
-          <nav className="admin-nav">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                className={`admin-nav-btn ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <span className="admin-nav-icon">
-                  <tab.Icon />
-                </span>
-                <span className="admin-nav-btn-label">
-                  {tab.label}
-                  {tab.id === 'schedule' && showScheduleReminder ? (
-                    <span
-                      className="admin-nav-schedule-warning"
-                      title="Ställ in arbetsschema så kunder kan boka."
-                      aria-label="Påminnelse: ställ in schema"
-                    >
-                      <AlertTriangle
-                        size={15}
-                        strokeWidth={2.25}
-                        className="admin-nav-schedule-warning-icon"
-                        aria-hidden
-                      />
-                    </span>
-                  ) : null}
-                </span>
-              </button>
-            ))}
-          </nav>
           <div className="admin-sidebar-footer">
             <div className="admin-user-info">
               <div className="admin-user-name-row">
