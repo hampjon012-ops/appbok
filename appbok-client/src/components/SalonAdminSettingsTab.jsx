@@ -17,7 +17,7 @@ const SALON_ADMIN_TABS = [
   { id: 'theme',    label: 'Tema',            Icon: Palette },
   { id: 'contact',  label: 'Kontakt & Plats', Icon: MapPin },
   { id: 'hours',    label: 'Öppettider',      Icon: Clock },
-  { id: 'instagram', label: 'Instagram',      Icon: Camera },
+  { id: 'instagram', label: 'Instagram & Galleri', Icon: Camera },
   { id: 'texts',    label: 'Texter',          Icon: PenLine },
   { id: 'payments', label: 'Betalningar',     Icon: CreditCard },
 ];
@@ -643,7 +643,7 @@ function SalonInstagramPanel({ salon, onSaved }) {
     }
   }, [salon]);
 
-  const save = async (e) => {
+  const saveAll = async (e) => {
     e?.preventDefault();
     setSaving(true);
     setMsg('');
@@ -654,6 +654,7 @@ function SalonInstagramPanel({ salon, onSaved }) {
         headers: authHeaders(),
         body: JSON.stringify({
           contact: { instagram_handle: h },
+          portfolio_images: images,
         }),
       });
       const data = await res.json();
@@ -737,56 +738,78 @@ function SalonInstagramPanel({ salon, onSaved }) {
   };
 
   return (
-    <div className="admin-card">
-      <h3 className="admin-card-title">📸 Instagram &amp; Galleri</h3>
-      <p className="admin-hint">Användarnamn som länkas från bokningssidan, samt portfolio-bilder.</p>
-
-      <form className="superadmin-modal-form" style={{ marginBottom: '2rem' }} onSubmit={save}>
-        <label>
-          Instagram Användarnamn (utan @)
-          <input
-            className="admin-input"
-            value={handle}
-            onChange={(e) => setHandle(e.target.value)}
-            placeholder="min_salong"
-          />
-        </label>
-        <button type="submit" className="btn-superadmin-gold" disabled={saving}>
-          {saving ? 'Sparar…' : 'Spara användarnamn'}
-        </button>
-      </form>
-
-      <div className="admin-divider" />
-
-      <h4 className="admin-card-subtitle" style={{ marginTop: '2rem', marginBottom: '0.5rem' }}>Portfolio-bilder</h4>
-      <p className="admin-hint" style={{ marginBottom: '1.5rem' }}>
-        Dessa bilder (max 6) visas i gridet på din bokningssida.
+    <div className="admin-card ig-panel">
+      <h3 className="admin-card-title">Instagram &amp; Galleri</h3>
+      <p className="admin-hint ig-panel-lead">
+        Länka din Instagram och ladda upp dina bästa bilder för att inspirera kunderna på din bokningssida.
       </p>
 
-      <div className="admin-gallery-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        {images.map((img, idx) => (
-          <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-            <img src={img} alt={`Portfolio ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <button
-              type="button"
-              onClick={() => removeImage(idx)}
-              style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              title="Ta bort bild"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        ))}
-        {images.length < 6 && (
-          <label style={{ aspectRatio: '1', border: '2px dashed #d1d5db', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: '#f9fafb', color: '#6b7280' }}>
-            {uploadingImage ? <Loader2 className="spinner" size={24} /> : <UploadCloud size={24} />}
-            <span style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Ladda upp</span>
-            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileUpload} disabled={uploadingImage} />
+      <form className="ig-panel-form" onSubmit={saveAll}>
+        <div className="ig-panel-field">
+          <label className="ig-panel-label" htmlFor="salon-instagram-handle-input">
+            Instagram Användarnamn
           </label>
-        )}
-      </div>
+          <div className="ig-panel-input-addon-wrap">
+            <span className="ig-panel-input-addon-prefix" aria-hidden="true">
+              @
+            </span>
+            <input
+              id="salon-instagram-handle-input"
+              type="text"
+              className="ig-panel-input-addon-input"
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              placeholder="dittsalongnamn"
+              autoComplete="off"
+            />
+          </div>
+        </div>
 
-      {msg && <p className={msg.includes('Kunde inte') || msg.includes('Max') ? 'superadmin-error' : 'superadmin-success'}>{msg}</p>}
+        <hr className="ig-panel-section-hr" />
+
+        <h4 className="admin-card-subtitle ig-panel-portfolio-title">Portfolio-bilder</h4>
+        <p className="admin-hint ig-panel-portfolio-hint">
+          Ladda upp upp till 6 av dina bästa arbeten.
+        </p>
+
+        <div
+          className="admin-gallery-grid ig-panel-gallery"
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}
+        >
+          {images.map((img, idx) => (
+            <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+              <img src={img} alt={`Portfolio ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <button
+                type="button"
+                onClick={() => removeImage(idx)}
+                style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                title="Ta bort bild"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+          {images.length < 6 && (
+            <label style={{ aspectRatio: '1', border: '2px dashed #d1d5db', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: '#f9fafb', color: '#6b7280' }}>
+              {uploadingImage ? <Loader2 className="spinner" size={24} /> : <UploadCloud size={24} />}
+              <span style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Ladda upp</span>
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileUpload} disabled={uploadingImage} />
+            </label>
+          )}
+        </div>
+
+        {msg && (
+          <p className={msg.includes('Kunde inte') || msg.includes('Max') ? 'superadmin-error' : 'superadmin-success'}>
+            {msg}
+          </p>
+        )}
+
+        <div className="ig-panel-footer">
+          <button type="submit" className="superadmin-theme-controls-save" disabled={saving}>
+            {saving ? 'Sparar…' : 'Spara ändringar'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
