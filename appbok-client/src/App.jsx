@@ -528,7 +528,7 @@ function App() {
                 <p className="insta-sub">Följ oss för daglig inspiration</p>
               </div>
               <div className="insta-grid">
-                {(config.instagram || []).map((img, idx) => (
+                {(Array.isArray(config.instagram) ? config.instagram : []).map((img, idx) => (
                   <div key={idx} className="insta-item">
                     <img src={img} alt="Instagram feed" />
                     <div className="insta-overlay"><span>❤️</span></div>

@@ -621,19 +621,14 @@ function SalonHoursPanel({ salon, onSaved }) {
 function SalonInstagramPanel({ salon, onSaved }) {
   const c0 = contactFromSalon(salon);
   const [handle, setHandle] = useState(
-    salon.instagram != null && String(salon.instagram).trim()
-      ? String(salon.instagram).replace(/^@/, '')
-      : (c0.instagram_handle != null ? String(c0.instagram_handle) : '')
+    c0.instagram_handle != null ? String(c0.instagram_handle).replace(/^@/, '') : ''
   );
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const c = contactFromSalon(salon);
-    const fromCol = salon.instagram != null && String(salon.instagram).trim()
-      ? String(salon.instagram).replace(/^@/, '')
-      : '';
-    setHandle(fromCol || (c.instagram_handle != null ? String(c.instagram_handle) : ''));
+    setHandle(c.instagram_handle != null ? String(c.instagram_handle).replace(/^@/, '') : '');
   }, [salon]);
 
   const save = async (e) => {
@@ -646,7 +641,6 @@ function SalonInstagramPanel({ salon, onSaved }) {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({
-          instagram: h,
           contact: { instagram_handle: h },
         }),
       });
