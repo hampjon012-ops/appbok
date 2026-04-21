@@ -132,7 +132,10 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
       if (iframeMatch) cleanUrl = iframeMatch[1];
       updates.map_url = cleanUrl;
     }
-    if (instagram !== undefined) updates.instagram = (instagram || '').trim();
+    if (instagram !== undefined) {
+      if (Array.isArray(instagram)) updates.instagram = instagram;
+      else updates.instagram = (instagram || '').trim();
+    }
 
     const contactPatch =
       address !== undefined ||
@@ -509,6 +512,35 @@ router.post('/current/background-upload', requireAuth, requireAdmin, async (req,
   } catch (err) {
     console.error('[background-upload]', err);
     const msg = err?.message || err?.details || 'Kunde inte ladda upp bakgrundsbilden.';
+    res.status(500).json({ error: msg });
+  }
+});// POST /api/salons/current/gallery-upload — Ladda upp galleribild (multipart file)
+router.post('/current/gallery-upload', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { data: salonRow, error: fetchErr } = await supabase
+      .from('salons')
+      .select('id, status')
+      .eq('id', req.user.salonId)
+      .single();
+
+    if (fetchErr) throw fetchErr;
+    if (!salonRow) return res.status(404).json({ error: 'Salong hittades inte.' });
+
+    const file = req.files?.file;
+    if (!file) return res.status(400).json({ error: 'Ingen fil skickades med.' });
+
+    const { uploadGalleryToSupabase } = await import('../lib/uploadGallery.js');
+    const publicUrl = await uploadGalleryToSupabase({
+      salonId: salonRow.id,
+      fileBuffer: file.data,
+      fileName: file.name,
+      mimeType: file.mimetype,
+    });
+
+    res.json({ gallery_url: publicUrl });
+  } catch (err) {
+    console.error('[gallery-upload]', err);
+    const msg = err?.message || err?.details || 'Kunde inte ladda upp galleribilden.';
     res.status(500).json({ error: msg });
   }
 });

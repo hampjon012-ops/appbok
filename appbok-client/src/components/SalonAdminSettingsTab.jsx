@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { UploadCloud, Palette, MapPin, Clock, Camera, PenLine, CreditCard } from 'lucide-react';
+import { UploadCloud, Palette, MapPin, Clock, Camera, PenLine, CreditCard, X, Loader2 } from 'lucide-react';
 import ThemeLivePreviewColumn from './ThemeLivePreviewColumn.jsx';
 import {
   displaySalonName,
@@ -623,16 +623,26 @@ function SalonInstagramPanel({ salon, onSaved }) {
   const [handle, setHandle] = useState(
     c0.instagram_handle != null ? String(c0.instagram_handle).replace(/^@/, '') : ''
   );
+  
+  // Gallery states
+  const [images, setImages] = useState(() => {
+    if (Array.isArray(salon.instagram)) return salon.instagram;
+    return [];
+  });
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     const c = contactFromSalon(salon);
     setHandle(c.instagram_handle != null ? String(c.instagram_handle).replace(/^@/, '') : '');
+    if (Array.isArray(salon.instagram)) {
+      setImages(salon.instagram);
+    }
   }, [salon]);
 
   const save = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     setSaving(true);
     setMsg('');
     const h = handle.trim().replace(/^@/, '');
@@ -641,6 +651,7 @@ function SalonInstagramPanel({ salon, onSaved }) {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({
+          instagram: images,
           contact: { instagram_handle: h },
         }),
       });
@@ -655,14 +666,88 @@ function SalonInstagramPanel({ salon, onSaved }) {
       setSaving(false);
     }
   };
+  
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (images.length >= 6) {
+      return setMsg('Max 6 bilder tillåtna.');
+    }
+    
+    setUploadingImage(true);
+    setMsg('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const res = await fetch('/api/salons/current/gallery-upload', {
+        method: 'POST',
+        headers: adminApiHeadersForUpload(),
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Kunde inte ladda upp bild.');
+      
+      const newImages = [...images, data.gallery_url];
+      setImages(newImages);
+      
+      // Auto-save the new array safely
+      const h = handle.trim().replace(/^@/, '');
+      const putRes = await fetch('/api/salons', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          instagram: newImages,
+          contact: { instagram_handle: h },
+        }),
+      });
+      if (putRes.ok) {
+        const ptq = await putRes.json();
+        onSaved?.(ptq);
+        setMsg('Bild uppladdad!');
+        setTimeout(() => setMsg(''), 2500);
+      }
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setUploadingImage(false);
+      e.target.value = ''; // reset input
+    }
+  };
+  
+  const removeImage = async (idx) => {
+    const newImages = images.filter((_, i) => i !== idx);
+    setImages(newImages);
+    setSaving(true);
+    try {
+      const h = handle.trim().replace(/^@/, '');
+      const res = await fetch('/api/salons', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          instagram: newImages,
+          contact: { instagram_handle: h },
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onSaved?.(data);
+      }
+    } catch (err) {
+      setMsg('Kunde inte ta bort: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="admin-card">
-      <h3 className="admin-card-title">📸 Instagram</h3>
-      <p className="admin-hint">Användarnamn (utan @) som visas på er bokningssida.</p>
-      <form className="superadmin-modal-form" onSubmit={save}>
+      <h3 className="admin-card-title">📸 Instagram & Galleri</h3>
+      <p className="admin-hint">Användarnamn som länkas från bokningssidan, samt portfolio-bilder.</p>
+      
+      <form className="superadmin-modal-form" style={{ marginBottom: '2rem' }} onSubmit={save}>
         <label>
-          Användarnamn
+          Instagram Användarnamn (utan @)
           <input
             className="admin-input"
             value={handle}
@@ -671,10 +756,39 @@ function SalonInstagramPanel({ salon, onSaved }) {
           />
         </label>
         <button type="submit" className="btn-superadmin-gold" disabled={saving}>
-          {saving ? 'Sparar…' : 'Spara'}
+          {saving ? 'Sparar…' : 'Spara användarnamn'}
         </button>
-        {msg && <p className={msg === 'Sparat!' ? 'superadmin-success' : 'superadmin-error'}>{msg}</p>}
       </form>
+
+      <div className="admin-divider" />
+
+      <h4 className="admin-card-subtitle" style={{ marginTop: '2rem', marginBottom: '0.5rem' }}>Galleribilder</h4>
+      <p className="admin-hint" style={{ marginBottom: '1.5rem' }}>Dessa bilder (max 6) visas i gridet på din bokningssida. Istället för att lita på externa skrotade kopplingar laddas de direkt hit.</p>
+      
+      <div className="admin-gallery-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        {images.map((img, idx) => (
+          <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+            <img src={img} alt={`Gallery ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <button 
+              type="button"
+              onClick={() => removeImage(idx)}
+              style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              title="Ta bort bild"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+        {images.length < 6 && (
+          <label style={{ aspectRatio: '1', border: '2px dashed #d1d5db', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: '#f9fafb', color: '#6b7280' }}>
+            {uploadingImage ? <Loader2 className="spinner" size={24} /> : <UploadCloud size={24} />}
+            <span style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Ladda upp</span>
+            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileUpload} disabled={uploadingImage} />
+          </label>
+        )}
+      </div>
+
+      {msg && <p className={msg.includes('Kunde inte') || msg.includes('Max') ? 'superadmin-error' : 'superadmin-success'}>{msg}</p>}
     </div>
   );
 }
