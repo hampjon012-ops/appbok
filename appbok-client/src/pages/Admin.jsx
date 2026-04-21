@@ -2,7 +2,21 @@ import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } fr
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, MessageSquare, X, CalendarCheck, BarChart3, Wallet, Users, Sparkles, User } from 'lucide-react';
+import {
+  AlertTriangle,
+  MessageSquare,
+  X,
+  CalendarCheck,
+  BarChart3,
+  Wallet,
+  Users,
+  Sparkles,
+  User,
+  Pencil,
+  Trash2,
+  GripVertical,
+  Plus,
+} from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
 import SuperadminTab from './SuperadminTab.jsx';
@@ -2612,12 +2626,26 @@ function ServicesTab() {
                   </div>
                 ) : (
                   <>
-                    <div className="service-row-left">
+                    <span className="service-row-grip" aria-hidden title="Dra för att sortera (kommer snart)">
+                      <GripVertical size={18} strokeWidth={2} />
+                    </span>
+                    <div className="service-row-main">
                       <span className="service-row-name">{svc.name}</span>
-                      <span className="service-row-duration">{svc.duration}</span>
                     </div>
-                    <div className="service-row-right">
-                      <span className="service-row-price">{svc.price_label}</span>
+                    <div className="service-row-meta">
+                      {svc.duration ? (
+                        <span className="service-row-duration">{svc.duration}</span>
+                      ) : null}
+                      {svc.duration && svc.price_label ? (
+                        <span className="service-row-meta-sep" aria-hidden>
+                          ·
+                        </span>
+                      ) : null}
+                      {svc.price_label ? (
+                        <span className="service-row-price">{svc.price_label}</span>
+                      ) : null}
+                    </div>
+                    <div className="service-row-actions">
                       <button
                         type="button"
                         className={`service-row-popular-btn ${serviceIsPopular(svc) ? 'service-row-popular-btn--on' : 'service-row-popular-btn--off'}`}
@@ -2636,8 +2664,24 @@ function ServicesTab() {
                       >
                         <ServicePopularStarIcon filled={serviceIsPopular(svc)} />
                       </button>
-                      <button className="btn-sm" onClick={() => handleEdit(svc)}>Ändra</button>
-                      <button className="btn-sm btn-danger" onClick={() => handleDelete(svc.id)}>×</button>
+                      <button
+                        type="button"
+                        className="service-row-icon-btn service-row-icon-btn--edit"
+                        title="Redigera tjänst"
+                        aria-label="Redigera tjänst"
+                        onClick={() => handleEdit(svc)}
+                      >
+                        <Pencil size={18} strokeWidth={2} />
+                      </button>
+                      <button
+                        type="button"
+                        className="service-row-icon-btn service-row-icon-btn--delete"
+                        title="Ta bort tjänst"
+                        aria-label="Ta bort tjänst"
+                        onClick={() => handleDelete(svc.id)}
+                      >
+                        <Trash2 size={18} strokeWidth={2} />
+                      </button>
                     </div>
                   </>
                 )}
@@ -2675,15 +2719,16 @@ function ServicesTab() {
                 </div>
               </div>
             ) : (
-              <button 
-                className="btn-admin-secondary" 
-                style={{ width: '100%', marginTop: '12px', padding: '12px', borderStyle: 'dashed' }}
+              <button
+                type="button"
+                className="service-add-service-btn"
                 onClick={() => {
                   setAddingToCategory(cat.id);
                   setAddForm({ name: '', price_label: '', price_amount: 0, duration: '', duration_minutes: 60 });
                 }}
               >
-                + Lägg till ny tjänst under {cat.name}
+                <Plus size={16} strokeWidth={2} aria-hidden />
+                <span>Lägg till tjänst i {cat.name}</span>
               </button>
             )}
 
