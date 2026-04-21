@@ -149,25 +149,71 @@
   color: #9ca3af;
 }
 
-.schedule-cal-cell--weekend {
-  background: #f9fafb;
-}
-
+/* Blockerad dag: ingen helrutans färg — bara cursor; siffran får röd cirkel via .schedule-cal-num--blocked */
 .schedule-cal-cell--blocked {
+  cursor: not-allowed;
+}
+
+.schedule-cal-cell--blocked:hover {
+  background: #fff;
+}
+
+.schedule-cal-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  margin: 0 auto;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: #111827;
+}
+
+.schedule-cal-num--muted {
+  color: #9ca3af;
+}
+
+.schedule-cal-num--blocked {
   background: #fee2e2;
-  border-color: #fecaca;
-  color: #991b1b;
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+.schedule-cal-num--picked {
+  background: #000;
+  color: #fff;
+  font-weight: 500;
+}
+
+.schedule-cal-num--weekend {
+  color: #6b7280;
+}
+
+.schedule-cal-pick-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.9rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.schedule-cal-cell--work {
-  background: #ecfdf5;
-  border-color: #a7f3d0;
+.schedule-cal-pick-btn--disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
 }
 
-.schedule-cal-cell--picked {
-  box-shadow: inset 0 0 0 2px #2563eb;
-  font-weight: 700;
+.schedule-cal-pick-btn--active {
+  background: #000;
+  color: #fff;
+}
+
+.schedule-cal-pick-btn--active:hover:not(:disabled) {
+  background: #1f2937;
 }
 
 .schedule-block-list {
@@ -176,14 +222,52 @@
   margin: 0;
 }
 
-.schedule-block-list li {
+.schedule-block-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.5rem 0;
+  padding: 0.75rem 0;
   border-bottom: 1px solid #f3f4f6;
-  font-size: 0.9rem;
+}
+
+.schedule-block-row:last-child {
+  border-bottom: none;
+}
+
+.schedule-block-row__text {
+  min-width: 0;
+  flex: 1;
+}
+
+.schedule-block-row__date {
+  font-weight: 500;
+  color: #111827;
+}
+
+.schedule-block-row__reason {
+  margin-left: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.schedule-block-remove-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.schedule-block-remove-btn:hover {
+  color: #dc2626;
+  background: #fef2f2;
 }
 
 .schedule-modal-backdrop {

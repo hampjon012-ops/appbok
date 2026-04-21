@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Trash2 } from 'lucide-react';
 import { adminApiHeaders as authHeaders } from '../lib/adminApiHeaders.js';
 import './ScheduleTab.css';
 
@@ -437,13 +438,20 @@ export default function ScheduleTab({ user }) {
     [blockedDays, days, selectedId],
   );
 
-  const dayCellClass = (meta, picked) => {
+  const dayCellClass = (meta) => {
     const c = ['schedule-cal-cell'];
-    if (meta.muted) return [...c, 'schedule-cal-cell--muted'].join(' ');
-    if (picked) c.push('schedule-cal-cell--picked');
-    if (meta.weekend) c.push('schedule-cal-cell--weekend');
-    if (meta.blocked) c.push('schedule-cal-cell--blocked');
-    else if (meta.workHint) c.push('schedule-cal-cell--work');
+    if (meta.muted) c.push('schedule-cal-cell--muted');
+    else if (meta.blocked) c.push('schedule-cal-cell--blocked');
+    return c.join(' ');
+  };
+
+  /** Rund siffra: vald (svart) > blockerad (röd) > helg (diskret) > ledig (svart text) */
+  const dayNumClass = (meta, picked) => {
+    const c = ['schedule-cal-num'];
+    if (meta.muted) return [...c, 'schedule-cal-num--muted'].join(' ');
+    if (picked) return [...c, 'schedule-cal-num--picked'].join(' ');
+    if (meta.blocked) return [...c, 'schedule-cal-num--blocked'].join(' ');
+    if (meta.weekend) return [...c, 'schedule-cal-num--weekend'].join(' ');
     return c.join(' ');
   };
 
@@ -530,11 +538,15 @@ export default function ScheduleTab({ user }) {
           ) : (
             <ul className="schedule-block-list">
               {blockedDays.map((b) => (
-                <li key={b.id}>
-                  <span>
-                    {fmtRange(b)} — {blockTypeLabel(b.block_type)}
-                    {b._staffName ? ` · ${b._staffName}` : ''}
-                  </span>
+                <li key={b.id} className="schedule-block-row">
+                  <div className="schedule-block-row__text">
+                    <span className="schedule-block-row__date">{fmtRange(b)}</span>
+                    <span className="schedule-block-row__reason">
+                      {' '}
+                      — {blockTypeLabel(b.block_type)}
+                      {b._staffName ? ` · ${b._staffName}` : ''}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -704,7 +716,11 @@ export default function ScheduleTab({ user }) {
           <div className="schedule-cal-pick-actions">
             <button
               type="button"
-              className="btn-admin-primary"
+              className={
+                pickedBlockDates.length === 0
+                  ? 'schedule-cal-pick-btn schedule-cal-pick-btn--disabled'
+                  : 'schedule-cal-pick-btn schedule-cal-pick-btn--active'
+              }
               disabled={pickedBlockDates.length === 0}
               onClick={openBlockModalFromPick}
             >
@@ -766,14 +782,18 @@ export default function ScheduleTab({ user }) {
                   <button
                     key={ci}
                     type="button"
-                    className={dayCellClass(meta, picked)}
+                    className={dayCellClass(meta)}
                     disabled={meta.muted}
                     onClick={() => {
                       if (!cell) return;
                       togglePickBlockDate(cell, meta);
                     }}
                   >
-                    {cell ? <span>{cell.getDate()}</span> : ''}
+                    {cell ? (
+                      <span className={dayNumClass(meta, picked)}>{cell.getDate()}</span>
+                    ) : (
+                      ''
+                    )}
                   </button>
                 );
               })}
@@ -788,12 +808,22 @@ export default function ScheduleTab({ user }) {
           ) : (
             <ul className="schedule-block-list">
               {blockedDays.map((b) => (
-                <li key={b.id}>
-                  <span>
-                    {fmtRange(b)} — {blockTypeLabel(b.block_type)}
-                  </span>
-                  <button type="button" className="btn-sm btn-ghost" onClick={() => removeBlock(b.id)}>
-                    Ta bort
+                <li key={b.id} className="schedule-block-row">
+                  <div className="schedule-block-row__text">
+                    <span className="schedule-block-row__date">{fmtRange(b)}</span>
+                    <span className="schedule-block-row__reason">
+                      {' '}
+                      — {blockTypeLabel(b.block_type)}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="schedule-block-remove-btn"
+                    title="Ta bort"
+                    aria-label="Ta bort"
+                    onClick={() => removeBlock(b.id)}
+                  >
+                    <Trash2 size={16} strokeWidth={2} aria-hidden />
                   </button>
                 </li>
               ))}
