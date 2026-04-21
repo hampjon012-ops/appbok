@@ -67,12 +67,69 @@ function blockTypeLabel(t) {
   return 'Annat';
 }
 
-function fmtRange(d) {
-  const a = d.start_date === d.end_date ? d.start_date : `${d.start_date} – ${d.end_date}`;
-  if (d.time_mode === 'range' && d.time_from && d.time_to) {
-    return `${a} (${String(d.time_from).slice(0, 5)}–${String(d.time_to).slice(0, 5)})`;
+/** Parsa YYYY-MM-DD som lokalt datum (undvik UTC-förskjutning). */
+function parseISODateLocal(iso) {
+  if (!iso || typeof iso !== 'string') return null;
+  const [ys, ms, ds] = iso.split('-');
+  const y = Number(ys);
+  const m = Number(ms);
+  const d = Number(ds);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+  return new Date(y, m - 1, d, 12, 0, 0);
+}
+
+function formatLongSv(iso) {
+  const dt = parseISODateLocal(iso);
+  if (!dt) return String(iso || '');
+  return dt.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function formatBlockListDates(b) {
+  const startF = formatLongSv(b.start_date);
+  const endF =
+    b.end_date && b.end_date !== b.start_date ? formatLongSv(b.end_date) : null;
+  const dateText = endF ? `${startF} – ${endF}` : startF;
+  let timeText = null;
+  if (b.time_mode === 'range' && b.time_from && b.time_to) {
+    timeText = `${String(b.time_from).slice(0, 5)}–${String(b.time_to).slice(0, 5)}`;
   }
-  return `${a} (hela dagen)`;
+  return { dateText, timeText };
+}
+
+function blockBadgeModifier(blockType) {
+  return ['sick', 'vacation', 'other'].includes(blockType) ? blockType : 'other';
+}
+
+function ScheduleBlockListRow({ block, onRemove, showStaff }) {
+  const { dateText, timeText } = formatBlockListDates(block);
+  const bt = blockBadgeModifier(block.block_type);
+  return (
+    <li className="schedule-block-row">
+      <div className="schedule-block-row__cluster">
+        <span className="schedule-block-row__date">
+          {dateText}
+          {timeText ? <span className="schedule-block-row__time"> · {timeText}</span> : null}
+        </span>
+        <span className={`schedule-block-badge schedule-block-badge--${bt}`}>
+          {blockTypeLabel(block.block_type)}
+        </span>
+        {showStaff && block._staffName ? (
+          <span className="schedule-block-row__staff">{block._staffName}</span>
+        ) : null}
+      </div>
+      {onRemove ? (
+        <button
+          type="button"
+          className="schedule-block-remove-btn"
+          title="Ta bort"
+          aria-label="Ta bort"
+          onClick={() => onRemove(block.id)}
+        >
+          <Trash2 size={16} strokeWidth={2} aria-hidden />
+        </button>
+      ) : null}
+    </li>
+  );
 }
 
 /** Lokalt YYYY-MM-DD (undvik UTC-fel vid toISOString). */
@@ -538,16 +595,7 @@ export default function ScheduleTab({ user }) {
           ) : (
             <ul className="schedule-block-list">
               {blockedDays.map((b) => (
-                <li key={b.id} className="schedule-block-row">
-                  <div className="schedule-block-row__text">
-                    <span className="schedule-block-row__date">{fmtRange(b)}</span>
-                    <span className="schedule-block-row__reason">
-                      {' '}
-                      — {blockTypeLabel(b.block_type)}
-                      {b._staffName ? ` · ${b._staffName}` : ''}
-                    </span>
-                  </div>
-                </li>
+                <ScheduleBlockListRow key={b.id} block={b} showStaff />
               ))}
             </ul>
           )}
@@ -808,24 +856,7 @@ export default function ScheduleTab({ user }) {
           ) : (
             <ul className="schedule-block-list">
               {blockedDays.map((b) => (
-                <li key={b.id} className="schedule-block-row">
-                  <div className="schedule-block-row__text">
-                    <span className="schedule-block-row__date">{fmtRange(b)}</span>
-                    <span className="schedule-block-row__reason">
-                      {' '}
-                      — {blockTypeLabel(b.block_type)}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="schedule-block-remove-btn"
-                    title="Ta bort"
-                    aria-label="Ta bort"
-                    onClick={() => removeBlock(b.id)}
-                  >
-                    <Trash2 size={16} strokeWidth={2} aria-hidden />
-                  </button>
-                </li>
+                <ScheduleBlockListRow key={b.id} block={b} onRemove={removeBlock} />
               ))}
             </ul>
           )}
