@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import supabase from '../lib/supabase.js';
 import { requireAuth, requireAdmin, requireScheduleEditor, signToken } from '../lib/auth.js';
+import { formidable } from 'formidable';
+import { normalizeLogoMimeType } from '../lib/normalizeLogoMimeType.js';
 import bcrypt from 'bcryptjs';
 import { sendInviteEmail } from '../lib/email.js';
 import { sendBlockedDaySMS, isSmsConfigured } from '../lib/sms.js';
@@ -14,6 +16,18 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '../.env') });
 
 const router = Router();
+
+async function assertStaffInSalon(req, staffId) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id')
+    .eq('id', staffId)
+    .eq('salon_id', req.user.salonId)
+    .in('role', ['staff', 'admin'])
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
 
 // ── GET /api/staff?salon_id=... — Publik: lista stylister ───────────────────
 router.get('/', async (req, res) => {
@@ -232,6 +246,49 @@ router.post('/invite/:token/register', async (req, res) => {
   } catch (err) {
     console.error('Staff registration error:', err);
     res.status(500).json({ error: 'Kunde inte registrera kontot.' });
+  }
+});
+
+// ── GET /api/staff/:id/calendar-status — Admin: Google Kalender kopplad? ─────
+router.get('/:id/calendar-status', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const row = await assertStaffInSalon(req, req.params.id);
+    if (!row) return res.status(404).json({ error: 'Personal hittades inte.' });
+    const { data } = await supabase.from('calendar_tokens').select('id').eq('user_id', req.params.id).maybeSingle();
+    res.json({ connected: !!data });
+  } catch (err) {
+    console.error('[staff calendar-status]', err);
+    res.status(500).json({ error: 'Kunde inte läsa kalenderstatus.' });
+  }
+});
+
+// ── DELETE /api/staff/:id/calendar-tokens — Admin: koppla från Google Kalender
+router.delete('/:id/calendar-tokens', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const row = await assertStaffInSalon(req, req.params.id);
+    if (!row) return res.status(404).json({ error: 'Personal hittades inte.' });
+    await supabase.from('calendar_tokens').delete().eq('user_id', req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[staff calendar-tokens]', err);
+    res.status(500).json({ error: 'Kunde inte koppla från kalender.' });
+  }
+});
+
+// ── GET /api/staff/:id/calendar-connect-url — Admin: OAuth-URL (state = medarbetarens user-id)
+router.get('/:id/calendar-connect-url', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { isConfigured, getConsentUrl } = await import('../lib/google.js');
+    if (!isConfigured()) {
+      return res.status(503).json({ error: 'Google Kalender ej konfigurerat på servern.' });
+    }
+    const row = await assertStaffInSalon(req, req.params.id);
+    if (!row) return res.status(404).json({ error: 'Personal hittades inte.' });
+    const url = getConsentUrl(req.params.id);
+    res.json({ url });
+  } catch (err) {
+    console.error('[staff calendar-connect-url]', err);
+    res.status(500).json({ error: 'Kunde inte skapa anslutningslänk.' });
   }
 });
 
@@ -494,6 +551,94 @@ router.post('/:id/notify-blocked-day', requireAuth, requireScheduleEditor, async
       detail,
       hint,
     });
+  }
+});
+
+// ── PUT /api/staff/:id — Admin: namn, titel, photo_url ─────────────────────
+router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
+  const { name, title, photo_url } = req.body || {};
+  try {
+    const row = await assertStaffInSalon(req, req.params.id);
+    if (!row) return res.status(404).json({ error: 'Personal hittades inte.' });
+    const updates = {};
+    if (name !== undefined) updates.name = String(name).trim();
+    if (title !== undefined) updates.title = String(title).trim();
+    if (photo_url !== undefined) {
+      const u = photo_url == null || photo_url === '' ? null : String(photo_url).trim();
+      updates.photo_url = u;
+    }
+    if (Object.keys(updates).length === 0) {
+      const { data: full, error: fe } = await supabase
+        .from('users')
+        .select('id, name, email, role, title, photo_url')
+        .eq('id', req.params.id)
+        .eq('salon_id', req.user.salonId)
+        .single();
+      if (fe) throw fe;
+      return res.json(full);
+    }
+    const { data, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', req.params.id)
+      .eq('salon_id', req.user.salonId)
+      .select('id, name, email, role, title, photo_url')
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error('[staff PUT]', err);
+    res.status(500).json({ error: err.message || 'Kunde inte spara.' });
+  }
+});
+
+// ── POST /api/staff/:id/photo-upload — Admin: ladda upp profilbild ───────────
+router.post('/:id/photo-upload', requireAuth, requireAdmin, async (req, res) => {
+  const contentType = req.headers['content-type'] || '';
+  if (!contentType.includes('multipart/form-data')) {
+    return res.status(400).json({ error: 'Content-Type must be multipart/form-data' });
+  }
+  try {
+    const row = await assertStaffInSalon(req, req.params.id);
+    if (!row) return res.status(404).json({ error: 'Personal hittades inte.' });
+
+    const form = formidable({ maxFileSize: 3 * 1024 * 1024 });
+    const [, files] = await form.parse(req);
+    const fileEntry = Array.isArray(files.photo) ? files.photo[0] : files.photo;
+    if (!fileEntry) {
+      return res.status(400).json({ error: 'Ingen fil hittades i förfrågan.' });
+    }
+    const fileName = fileEntry.originalFilename || 'avatar.jpg';
+    let mimeType = normalizeLogoMimeType(fileEntry.mimetype || '', fileName);
+    const lower = String(fileName).toLowerCase();
+    if (lower.endsWith('.webp')) mimeType = 'image/webp';
+
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!allowedTypes.includes(mimeType)) {
+      return res.status(400).json({ error: 'Filtypen är inte tillåten. Använd PNG, JPG eller WebP.' });
+    }
+    const fs = await import('fs');
+    const fileBuffer = fs.readFileSync(fileEntry.filepath);
+    const { uploadStaffAvatarToSupabase } = await import('../lib/uploadStaffAvatar.js');
+    const publicUrl = await uploadStaffAvatarToSupabase({
+      salonId: req.user.salonId,
+      staffId: req.params.id,
+      fileBuffer,
+      fileName,
+      mimeType,
+    });
+    const { data, error } = await supabase
+      .from('users')
+      .update({ photo_url: publicUrl })
+      .eq('id', req.params.id)
+      .eq('salon_id', req.user.salonId)
+      .select('id, name, email, role, title, photo_url')
+      .single();
+    if (error) throw error;
+    res.json({ photo_url: publicUrl, user: data });
+  } catch (err) {
+    console.error('[staff photo-upload]', err);
+    res.status(500).json({ error: err.message || 'Kunde inte ladda upp bild.' });
   }
 });
 

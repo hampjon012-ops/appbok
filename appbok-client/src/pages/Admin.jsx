@@ -23,6 +23,7 @@ import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
 import SuperadminTab from './SuperadminTab.jsx';
 import SuperadminSettingsTab from '../components/SuperadminSettingsTab.jsx';
 import SalonAdminSettingsTab from '../components/SalonAdminSettingsTab.jsx';
+import StaffEditSlideOver from '../components/StaffEditSlideOver.jsx';
 import ScheduleTab from '../components/ScheduleTab.jsx';
 import ServiceImportModal from '../components/ServiceImportModal.jsx';
 import SidebarRoleBadge from '../components/SidebarRoleBadge.jsx';
@@ -2188,8 +2189,8 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
 
 // ─── Staff Tab ───────────────────────────────────────────────────────────────
 function StaffTab({ salonId: salonIdProp }) {
-  const navigate = useNavigate();
   const [staff, setStaff] = useState([]);
+  const [editingStaff, setEditingStaff] = useState(null);
   const [calendarStatus, setCalendarStatus] = useState({});
   const [inviteUrl, setInviteUrl] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
@@ -2209,7 +2210,7 @@ function StaffTab({ salonId: salonIdProp }) {
       return;
     }
     setLoading(true);
-    fetch(`/api/staff?salon_id=${encodeURIComponent(salonId)}`, { headers: authHeaders() })
+    fetch('/api/staff/list', { headers: authHeaders() })
       .then(async (r) => {
         const d = await r.json().catch(() => ({}));
         if (!r.ok) {
@@ -2263,13 +2264,11 @@ function StaffTab({ salonId: salonIdProp }) {
     loadStaff();
   };
 
-  const handleEditStaffSchedule = (id) => {
-    try {
-      sessionStorage.setItem('appbok_schedule_focus_staff', id);
-    } catch {
-      /* ignore */
+  const handleStaffSaved = (updated) => {
+    if (updated && typeof updated === 'object' && updated.id) {
+      setStaff((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
+      setEditingStaff((cur) => (cur && cur.id === updated.id ? { ...cur, ...updated } : cur));
     }
-    navigate('/admin/schema');
   };
 
   if (loading) return <div className="admin-loading">Laddar personal...</div>;
@@ -2362,7 +2361,7 @@ function StaffTab({ salonId: salonIdProp }) {
               <button
                 type="button"
                 className="staff-card-btn-edit"
-                onClick={() => handleEditStaffSchedule(s.id)}
+                onClick={() => setEditingStaff(s)}
               >
                 <Pencil size={14} strokeWidth={2} aria-hidden />
                 Redigera
@@ -2380,6 +2379,12 @@ function StaffTab({ salonId: salonIdProp }) {
           </div>
         ))}
       </div>
+
+      <StaffEditSlideOver
+        staff={editingStaff}
+        onClose={() => setEditingStaff(null)}
+        onSaved={handleStaffSaved}
+      />
     </div>
   );
 }
