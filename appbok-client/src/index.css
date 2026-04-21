@@ -4356,31 +4356,12 @@ body:has(.admin-layout) {
   flex-shrink: 0;
 }
 
-.staff-card-btn-edit {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  font-family: inherit;
-  color: #6b7280;
-  background: #f9fafb;
-  border: none;
-  border-radius: 6px;
-  padding: 0.4rem 0.75rem;
-  cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
-}
-.staff-card-btn-edit:hover {
-  color: #111827;
-  background: #f3f4f6;
-}
-
-.staff-card-btn-delete {
+/* Personal-kort: ikonpar (samma padding som ~Tailwind p-1.5) */
+.staff-card-btn-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.35rem;
+  padding: 0.375rem;
   border: none;
   border-radius: 6px;
   background: transparent;
@@ -4389,9 +4370,13 @@ body:has(.admin-layout) {
   color: #9ca3af;
   transition: color 0.15s ease, background 0.15s ease;
 }
-.staff-card-btn-delete:hover {
+.staff-card-btn-icon--edit:hover {
+  color: #111827;
+  background: #f3f4f6;
+}
+.staff-card-btn-icon--delete:hover {
   color: #dc2626;
-  background: rgba(220, 38, 38, 0.08);
+  background: #fef2f2;
 }
 
 /* Personal — redigera (slide-over) */

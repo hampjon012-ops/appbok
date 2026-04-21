@@ -2360,17 +2360,18 @@ function StaffTab({ salonId: salonIdProp }) {
             <div className="staff-card-actions">
               <button
                 type="button"
-                className="staff-card-btn-edit"
+                className="staff-card-btn-icon staff-card-btn-icon--edit"
+                title="Redigera"
+                aria-label="Redigera"
                 onClick={() => setEditingStaff(s)}
               >
-                <Pencil size={14} strokeWidth={2} aria-hidden />
-                Redigera
+                <Pencil size={18} strokeWidth={2} aria-hidden />
               </button>
               <button
                 type="button"
-                className="staff-card-btn-delete"
-                title="Ta bort personal"
-                aria-label="Ta bort personal"
+                className="staff-card-btn-icon staff-card-btn-icon--delete"
+                title="Ta bort"
+                aria-label="Ta bort"
                 onClick={() => handleRemove(s.id)}
               >
                 <Trash2 size={18} strokeWidth={2} aria-hidden />
