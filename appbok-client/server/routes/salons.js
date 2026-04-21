@@ -17,7 +17,7 @@ router.get('/public', async (req, res) => {
     return res.status(400).json({ error: 'Ange salon_id eller slug.' });
   }
 
-  const selectCols = 'id, name, slug, tagline, logo_url, theme, contact, map_url, instagram, status, plan, trial_ends_at, allow_pay_on_site, stripe_account_id';
+  const selectCols = 'id, name, slug, tagline, logo_url, theme, contact, map_url, instagram, status, plan, trial_ends_at, allow_pay_on_site, stripe_account_id, portfolio_images';
 
   try {
     let data;
@@ -103,6 +103,7 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
     tagline,
     map_url,
     instagram,
+    portfolio_images,
     allow_pay_on_site,
     hide_onboarding_widget,
     contact: contactMerge,
@@ -135,6 +136,10 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
     if (instagram !== undefined) {
       if (Array.isArray(instagram)) updates.instagram = instagram;
       else updates.instagram = (instagram || '').trim();
+    }
+    if (portfolio_images !== undefined) {
+      if (Array.isArray(portfolio_images)) updates.portfolio_images = portfolio_images;
+      else updates.portfolio_images = [];
     }
 
     const contactPatch =

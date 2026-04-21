@@ -514,23 +514,33 @@ function App() {
           </>
         )}
 
-        {/* ── 3. INSTAGRAM ── */}
-        {!isExpired && (config.instagram && config.instagram.length > 0) && (
+        {/* ── 3. INSTAGRAM / PORTFOLIO ── */}
+        {!isExpired && (Array.isArray(config.portfolioImages) && config.portfolioImages.length > 0) && (
           <section className="home-section">
             <div className="container">
               <div className="home-section-header" style={{ textAlign: 'center' }}>
                 <p className="insta-label">Hitta Inspiration på Instagram</p>
-                <h2 className="insta-handle">
-                  @{config.contact?.instagramHandle && config.contact.instagramHandle !== '#'
-                    ? String(config.contact.instagramHandle).replace(/^@/, '')
-                    : displaySalonName(config.salonName).replace(/\s+/g, '').toLowerCase()}
-                </h2>
+                {config.contact?.instagramHandle ? (
+                  <a
+                    href={`https://instagram.com/${String(config.contact.instagramHandle).replace(/^@/, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="insta-handle"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    @{String(config.contact.instagramHandle).replace(/^@/, '')}
+                  </a>
+                ) : (
+                  <h2 className="insta-handle">
+                    @{displaySalonName(config.salonName).replace(/\s+/g, '').toLowerCase()}
+                  </h2>
+                )}
                 <p className="insta-sub">Följ oss för daglig inspiration</p>
               </div>
               <div className="insta-grid">
-                {(Array.isArray(config.instagram) ? config.instagram : []).map((img, idx) => (
+                {config.portfolioImages.map((img, idx) => (
                   <div key={idx} className="insta-item">
-                    <img src={img} alt="Instagram feed" />
+                    <img src={img} alt="Portfolio" />
                     <div className="insta-overlay"><span>❤️</span></div>
                   </div>
                 ))}
