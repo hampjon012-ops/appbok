@@ -7,6 +7,9 @@ const FORTNOX_STRIPE_URL =
 const INTEGRATI_STRIPE_URL =
   'https://www.fortnox.se/integrationer/integration/integrati/stripe-bokforing';
 
+const integrationCtaClassName =
+  'mt-6 w-fit gap-2 inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors';
+
 function isoDate(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -55,7 +58,7 @@ export default function AccountingIntegrationsTab() {
             href={FORTNOX_STRIPE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-6 inline-flex w-fit items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
+            className={integrationCtaClassName}
           >
             <span>Läs mer &amp; Installera</span>
             <ExternalLink className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} aria-hidden />
@@ -75,10 +78,10 @@ export default function AccountingIntegrationsTab() {
             href={INTEGRATI_STRIPE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-6 inline-flex w-fit items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
+            className={integrationCtaClassName}
           >
             <span>Läs mer &amp; Installera</span>
-            <ExternalLink className="h-4 w-4 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
+            <ExternalLink className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} aria-hidden />
           </a>
         </article>
       </div>
