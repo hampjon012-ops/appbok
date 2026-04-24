@@ -1863,6 +1863,34 @@ function bookingServiceCellLabel(b) {
   return b?.services?.name || '—';
 }
 
+const BOOKING_LIST_MONTHS_SV = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+
+/** Visar t.ex. "28 apr" från ISO-datum (YYYY-MM-DD). */
+function bookingListDateLabel(isoDate) {
+  if (!isoDate || typeof isoDate !== 'string') return '—';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate.trim());
+  if (!m) return isoDate;
+  const day = parseInt(m[3], 10);
+  const monthIdx = parseInt(m[2], 10) - 1;
+  if (!day || monthIdx < 0 || monthIdx > 11) return isoDate;
+  return `${day} ${BOOKING_LIST_MONTHS_SV[monthIdx]}`;
+}
+
+function bookingListTimeLabel(time) {
+  if (!time || typeof time !== 'string') return '';
+  return time.slice(0, 5);
+}
+
+function customerInitials(displayName) {
+  const s = String(displayName || '').trim();
+  if (!s) return '?';
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase() || '?';
+  }
+  return (parts[0][0] || '?').toUpperCase();
+}
+
 /** Hover-tooltip med meddelandetext (portal så tabell-scroll inte klipper) */
 function BookingNoteTooltip({ text, children }) {
   const [show, setShow] = useState(false);
@@ -2009,45 +2037,56 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
         <div className="admin-empty">Inga bokningar hittades.</div>
       ) : (
         <div className="admin-table-wrap">
-          <table className="admin-table">
+          <table className="admin-table bookings-table-modern">
             <thead>
               <tr>
-                <th>Datum</th>
-                <th>Tid</th>
-                <th>Kund</th>
-                <th>Tjänst</th>
-                <th>Stylist</th>
-                <th>Status</th>
-                <th></th>
+                <th scope="col">Datum &amp; tid</th>
+                <th scope="col">Kund</th>
+                <th scope="col">Tjänst</th>
+                <th scope="col">Stylist</th>
+                <th scope="col">Status</th>
+                <th scope="col" className="bookings-table-th-actions" aria-label="Åtgärder" />
               </tr>
             </thead>
             <tbody>
               {bookings.map((b) => {
                 const rowNotes = bookingNotesTrimmed(b);
+                const timeLine = bookingListTimeLabel(b.booking_time);
                 return (
                 <tr
                   key={b.id}
                   className={`bookings-table-row-clickable ${b.status === 'cancelled' ? 'row-cancelled' : ''}`}
                   onClick={() => setDetailBooking(b)}
                 >
-                  <td>{b.booking_date}</td>
-                  <td>{b.booking_time?.slice(0,5)}</td>
-                  <td className="booking-customer-td">
-                    <div className="booking-customer-name-line">
-                      <span>{b.customer_name}</span>
-                      {rowNotes ? (
-                        <BookingNoteTooltip text={rowNotes}>
-                          <MessageSquare
-                            className="booking-note-icon"
-                            size={16}
-                            strokeWidth={1.75}
-                            aria-hidden
-                          />
-                        </BookingNoteTooltip>
-                      ) : null}
+                  <td>
+                    <div className="bookings-table-datetime-cell">
+                      <div className="bookings-table-datetime-day">{bookingListDateLabel(b.booking_date)}</div>
+                      <div className="bookings-table-datetime-time">{timeLine || '—'}</div>
                     </div>
-                    <div className="booking-customer-contact-line">
-                      {b.customer_email || b.customer_phone || ''}
+                  </td>
+                  <td className="booking-customer-td">
+                    <div className="bookings-table-customer-row">
+                      <div className="bookings-table-customer-avatar" aria-hidden>
+                        {customerInitials(b.customer_name)}
+                      </div>
+                      <div className="bookings-table-customer-text">
+                        <div className="bookings-table-customer-name-row">
+                          <span className="bookings-table-customer-name">{b.customer_name}</span>
+                          {rowNotes ? (
+                            <BookingNoteTooltip text={rowNotes}>
+                              <MessageSquare
+                                className="booking-note-icon"
+                                size={16}
+                                strokeWidth={1.75}
+                                aria-hidden
+                              />
+                            </BookingNoteTooltip>
+                          ) : null}
+                        </div>
+                        <div className="bookings-table-customer-contact">
+                          {b.customer_email || b.customer_phone || ''}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td>{bookingServiceCellLabel(b)}</td>
@@ -2057,11 +2096,11 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
                       {b.status === 'confirmed' ? 'Bekräftad' : b.status === 'rebooked' ? 'Ombokad' : b.status === 'cancelled' ? 'Avbokad' : b.status === 'completed' ? 'Genomförd' : b.status}
                     </span>
                   </td>
-                  <td>
+                  <td className="bookings-table-actions-cell">
                     {(b.status === 'confirmed' || b.status === 'rebooked') && (
                       <button
                         type="button"
-                        className="btn-sm btn-danger"
+                        className="bookings-table-cancel-btn"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleCancel(b.id);

@@ -4067,6 +4067,100 @@ body:has(.admin-layout) {
   background: #f7f7f5;
 }
 
+/* Bokningar — listvy (modern tabell) */
+table.admin-table.bookings-table-modern thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+table.admin-table.bookings-table-modern .bookings-table-th-actions {
+  width: 5.5rem;
+  text-align: right;
+}
+.admin-table.bookings-table-modern tr.bookings-table-row-clickable td {
+  transition: background-color 0.15s ease;
+}
+.admin-table.bookings-table-modern tr.bookings-table-row-clickable:hover td {
+  background: #f9fafb;
+}
+.bookings-table-datetime-cell .bookings-table-datetime-day {
+  font-weight: 500;
+  color: #111827;
+  line-height: 1.25;
+}
+.bookings-table-datetime-cell .bookings-table-datetime-time {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.125rem;
+  line-height: 1.25;
+}
+.bookings-table-customer-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.bookings-table-customer-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #4b5563;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+.bookings-table-customer-text {
+  min-width: 0;
+  flex: 1;
+}
+.bookings-table-customer-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.bookings-table-customer-name {
+  font-weight: 500;
+  color: #111827;
+}
+.bookings-table-customer-contact {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.125rem;
+  line-height: 1.35;
+  word-break: break-word;
+}
+.bookings-table-actions-cell {
+  text-align: right;
+  vertical-align: middle;
+}
+.bookings-table-cancel-btn {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #dc2626;
+  background: transparent;
+  border: 0;
+  padding: 0.3rem 0.4rem;
+  margin: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  font-family: var(--font-sans);
+}
+.bookings-table-cancel-btn:hover {
+  color: #991b1b;
+}
+.bookings-table-cancel-btn:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+
 /* Bokningar: kundkolumn med meddelande-ikon */
 .booking-customer-td {
   overflow: visible;
