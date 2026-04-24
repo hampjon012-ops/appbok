@@ -1380,10 +1380,7 @@ export default function SalonAdminSettingsTab() {
   return (
     <div className="admin-section superadmin-section salon-admin-settings">
       <div className="superadmin-editor-top salon-admin-editor-top">
-        <h2 className="admin-section-title">Redigerar: {displaySalonName(salon.name)}</h2>
-        <p className="admin-hint salon-admin-lead">
-          Uppdatera er bokningssida och kontakt. Personal, tjänster och Google Kalender per medlem hanterar du via menyn till vänster.
-        </p>
+        <h1 className="salon-admin-page-title">Inställningar</h1>
       </div>
 
       <div className="superadmin-subtabs">

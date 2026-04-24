@@ -5993,13 +5993,16 @@ textarea.admin-input {
   margin-bottom: 0.5rem;
 }
 .salon-admin-settings .salon-admin-editor-top {
-  margin-bottom: 0.25rem;
+  margin-bottom: 1rem;
 }
 
-.salon-admin-settings .salon-admin-lead {
-  margin: 0 0 1.25rem;
-  max-width: 52rem;
-  line-height: 1.5;
+.salon-admin-settings .salon-admin-page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #111827;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .superadmin-subtabs {
