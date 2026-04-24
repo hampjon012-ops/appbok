@@ -21,6 +21,7 @@ const SALON_ADMIN_TABS = [
   { id: 'instagram', label: 'Instagram & Galleri', Icon: Camera },
   { id: 'texts',    label: 'Texter',          Icon: PenLine },
   { id: 'payments', label: 'Betalningar',     Icon: CreditCard },
+  { id: 'accounting', label: 'Bokföring',       Icon: BookOpen },
 ];
 
 function contactFromSalon(salon) {
