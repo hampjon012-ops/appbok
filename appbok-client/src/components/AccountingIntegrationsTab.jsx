@@ -37,9 +37,9 @@ export default function AccountingIntegrationsTab() {
     <div className="max-w-5xl">
       <header className="mb-10">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">Bokföring &amp; Integrationer</h1>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-gray-600">
-          Automatisera din bokföring genom att koppla Appbok till Fortnox, eller ladda ner dina underlag manuellt för
-          din redovisningskonsult.
+        <p className="mt-3 max-w-3xl text-base leading-relaxed text-gray-600">
+          Appbok tar inte ut några extra avgifter för bokföring. Välj en automatisk koppling nedan (avgifter från tredje
+          part kan tillkomma) eller ladda ner dina underlag manuellt helt kostnadsfritt.
         </p>
       </header>
 
@@ -86,10 +86,14 @@ export default function AccountingIntegrationsTab() {
         </article>
       </div>
 
+      <p className="text-xs text-gray-500 text-center mt-6">
+        * Eventuella kostnader för integrationerna ovan debiteras direkt av Fortnox eller Integrati.
+      </p>
+
       <hr className="my-10 border-gray-200" />
 
       <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm md:p-8">
-        <h2 className="text-lg font-semibold tracking-tight text-gray-900">Exportera transaktioner</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-gray-900">Kostnadsfri manuell export</h2>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600">
           Välj datumintervall för att ladda ner dina transaktioner. CSV-filen innehåller all nödvändig information om
           datum, tjänst, belopp och moms som din redovisningskonsult behöver.
