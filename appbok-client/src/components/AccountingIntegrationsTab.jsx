@@ -23,7 +23,7 @@ function defaultDateRange() {
   return { from: isoDate(from), to: isoDate(to) };
 }
 
-export default function AccountingIntegrationsTab() {
+export default function AccountingIntegrationsTab({ embedded = false }) {
   const defaults = useMemo(() => defaultDateRange(), []);
   const [dateFrom, setDateFrom] = useState(defaults.from);
   const [dateTo, setDateTo] = useState(defaults.to);
@@ -35,15 +35,24 @@ export default function AccountingIntegrationsTab() {
 
   return (
     <div className="max-w-5xl">
-      <header className="mb-10">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Bokföring &amp; Integrationer</h1>
-        <p className="mt-3 max-w-3xl text-base leading-relaxed text-gray-600">
+      {!embedded ? (
+        <header className="mb-10">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Bokföring &amp; Integrationer</h1>
+          <p className="mt-3 max-w-3xl text-base leading-relaxed text-gray-600">
+            Appbok tar inte ut några extra avgifter för bokföring. Välj en automatisk koppling nedan (avgifter från
+            tredje part kan tillkomma) eller ladda ner dina underlag manuellt helt kostnadsfritt.
+          </p>
+        </header>
+      ) : (
+        <p className="mb-6 max-w-3xl text-sm leading-relaxed text-gray-600">
           Appbok tar inte ut några extra avgifter för bokföring. Välj en automatisk koppling nedan (avgifter från tredje
           part kan tillkomma) eller ladda ner dina underlag manuellt helt kostnadsfritt.
         </p>
-      </header>
+      )}
 
-      <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Automatiska kopplingar</p>
+      {!embedded ? (
+        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Automatiska kopplingar</p>
+      ) : null}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <article className="flex flex-col rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md md:p-7">
           <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">

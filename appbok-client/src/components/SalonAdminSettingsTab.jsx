@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { UploadCloud, Palette, MapPin, Clock, Camera, PenLine, CreditCard, X, Loader2, Info } from 'lucide-react';
+import { UploadCloud, Palette, MapPin, Clock, Camera, PenLine, CreditCard, BookOpen, X, Loader2, Info } from 'lucide-react';
 import ThemeLivePreviewColumn from './ThemeLivePreviewColumn.jsx';
 import {
   displaySalonName,
@@ -10,6 +10,7 @@ import {
 import { DEFAULT_PLATFORM_SALON_THEME } from '../lib/themePresets.js';
 import { adminApiHeaders as authHeaders, adminApiHeadersForUpload } from '../lib/adminApiHeaders.js';
 import { getSalonPublicBookingPreviewUrl, copyTextToClipboard } from '../lib/adminUrls.js';
+import AccountingIntegrationsTab from './AccountingIntegrationsTab.jsx';
 
 const DEFAULT_SALON_THEME = DEFAULT_PLATFORM_SALON_THEME;
 
@@ -1417,6 +1418,7 @@ export default function SalonAdminSettingsTab() {
           }}
         />
       )}
+      {tab === 'accounting' && <AccountingIntegrationsTab embedded />}
     </div>
   );
 }
