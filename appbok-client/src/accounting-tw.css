@@ -1,0 +1,2 @@
+/* Tailwind utilities only — ingen preflight (befintlig global CSS i index.css behålls). */
+@tailwind utilities;

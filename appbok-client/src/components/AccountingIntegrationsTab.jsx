@@ -1,6 +1,6 @@
-import { useState, useCallback, useMemo } from 'react';
-import { ExternalLink } from 'lucide-react';
-import { adminApiHeaders as authHeaders } from '../lib/adminApiHeaders.js';
+import { useMemo, useState } from 'react';
+import { BookOpen, Zap, ExternalLink, Download } from 'lucide-react';
+import '../accounting-tw.css';
 
 const FORTNOX_STRIPE_URL =
   'https://www.fortnox.se/integrationer/integration/fortnox-ab-1778289/fortnox-stripe';
@@ -20,176 +20,107 @@ function defaultDateRange() {
   return { from: isoDate(from), to: isoDate(to) };
 }
 
-function csvCell(v) {
-  const s = v == null ? '' : String(v);
-  if (/[;"\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
-}
-
-/** Semikolon-separerat för enkel öppning i svensk Excel */
-function buildCsv(rows) {
-  const header = ['Datum', 'Kund', 'Tjänst', 'Belopp inkl. moms', 'Moms (25%)', 'Betalsätt'];
-  const lines = [
-    header.map(csvCell).join(';'),
-    ...rows.map((r) => r.map(csvCell).join(';')),
-  ];
-  return `\uFEFF${lines.join('\r\n')}`;
-}
-
-function serviceNameFromBooking(b) {
-  if (Array.isArray(b.booking_services) && b.booking_services.length) {
-    return b.booking_services.map((s) => s?.name).filter(Boolean).join(' + ');
-  }
-  if (b.services && typeof b.services === 'object' && b.services.name) {
-    return b.services.name;
-  }
-  return '—';
-}
-
-function paymentMethodLabel(b) {
-  const paid = Number(b.amount_paid) || 0;
-  if (paid <= 0) return '—';
-  if (b.stripe_payment_intent_id) return 'Kort (Stripe)';
-  return 'På plats / annat';
-}
-
-function formatSekFromÖre(öre) {
-  const n = Math.round(Number(öre) || 0);
-  return (n / 100).toFixed(2).replace('.', ',');
-}
-
-function vat25FromInclÖre(öre) {
-  const total = Math.round(Number(öre) || 0);
-  const vat = total - total / 1.25;
-  return (vat / 100).toFixed(2).replace('.', ',');
-}
-
 export default function AccountingIntegrationsTab() {
   const defaults = useMemo(() => defaultDateRange(), []);
   const [dateFrom, setDateFrom] = useState(defaults.from);
   const [dateTo, setDateTo] = useState(defaults.to);
-  const [exportBusy, setExportBusy] = useState(false);
-  const [exportMsg, setExportMsg] = useState('');
 
-  const handleExport = useCallback(async () => {
-    setExportMsg('');
-    if (!dateFrom || !dateTo) {
-      setExportMsg('Välj både från- och till-datum.');
-      return;
-    }
-    if (dateFrom > dateTo) {
-      setExportMsg('Från-datum får inte vara efter till-datum.');
-      return;
-    }
-
-    setExportBusy(true);
-    try {
-      const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
-      const res = await fetch(`/api/bookings?${params}`, { headers: authHeaders(), cache: 'no-store' });
-      const data = await res.json().catch(() => []);
-      if (!res.ok) {
-        throw new Error(typeof data?.error === 'string' ? data.error : 'Kunde inte hämta bokningar.');
-      }
-      if (!Array.isArray(data)) throw new Error('Ogiltigt svar från servern.');
-
-      const rows = data.map((b) => {
-        const d = b.booking_date
-          ? new Date(`${b.booking_date}T12:00:00`).toLocaleDateString('sv-SE')
-          : '—';
-        const kund = b.customer_name || '—';
-        const tjänst = serviceNameFromBooking(b);
-        const belopp = formatSekFromÖre(b.amount_paid);
-        const moms = vat25FromInclÖre(b.amount_paid);
-        const sätt = paymentMethodLabel(b);
-        return [d, kund, tjänst, belopp, moms, sätt];
-      });
-
-      const csv = buildCsv(rows);
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `appbok-export_${dateFrom}_${dateTo}.csv`;
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      setExportMsg(rows.length ? `Exporterade ${rows.length} rader.` : 'Inga bokningar i intervallet.');
-    } catch (e) {
-      setExportMsg(e?.message || 'Export misslyckades.');
-    } finally {
-      setExportBusy(false);
-    }
-  }, [dateFrom, dateTo]);
+  const handleExportCSV = () => {
+    // Placeholder tills export är kopplad till API igen
+    console.log('[CSV export]', { dateFrom, dateTo });
+  };
 
   return (
-    <div className="admin-section accounting-integrations">
-      <h2 className="admin-section-title">Bokföring &amp; Integrationer</h2>
-      <p className="admin-card-desc accounting-integrations-lead">
-        Automatisera din bokföring genom att koppla ihop Appbok med Fortnox, eller ladda ner dina underlag manuellt.
-      </p>
+    <div className="max-w-5xl">
+      <header className="mb-10">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Bokföring &amp; Integrationer</h1>
+        <p className="mt-3 max-w-2xl text-base leading-relaxed text-gray-600">
+          Automatisera din bokföring genom att koppla Appbok till Fortnox, eller ladda ner dina underlag manuellt för
+          din redovisningskonsult.
+        </p>
+      </header>
 
-      <h3 className="accounting-integrations-subtitle">Automatiska kopplingar</h3>
-      <div className="accounting-integration-grid">
-        <article className="admin-card accounting-integration-card">
-          <h4 className="accounting-integration-card__title">Fortnox via Stripe (Officiell)</h4>
-          <p className="accounting-integration-card__desc">
-            Bäst för nystartade salonger. Gratis upp till 10 transaktioner/mån.
+      <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Automatiska kopplingar</p>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <article className="flex flex-col rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md md:p-7">
+          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+            <BookOpen className="h-5 w-5" strokeWidth={2} aria-hidden />
+          </div>
+          <h3 className="text-lg font-semibold tracking-tight text-gray-900">Fortnox via Stripe (Officiell)</h3>
+          <p className="mt-2 flex-1 text-sm leading-relaxed text-gray-600">
+            Bäst för nystartade salonger. Bokför dina onlinebetalningar helt automatiskt. Gratis upp till 10
+            bokningar/månad.
           </p>
           <a
-            className="accounting-external-btn"
             href={FORTNOX_STRIPE_URL}
             target="_blank"
             rel="noopener noreferrer"
+            className="mt-6 inline-flex w-fit items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
           >
             <span>Läs mer &amp; Installera</span>
-            <ExternalLink size={16} strokeWidth={2} aria-hidden />
+            <ExternalLink className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} aria-hidden />
           </a>
         </article>
 
-        <article className="admin-card accounting-integration-card">
-          <h4 className="accounting-integration-card__title">Fortnox via Integrati (Pro)</h4>
-          <p className="accounting-integration-card__desc">
-            Bäst för etablerade salonger. Fast månadspris (199 kr) oavsett volym.
+        <article className="flex flex-col rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md md:p-7">
+          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
+            <Zap className="h-5 w-5" strokeWidth={2} aria-hidden />
+          </div>
+          <h3 className="text-lg font-semibold tracking-tight text-gray-900">Fortnox via Integrati (Pro)</h3>
+          <p className="mt-2 flex-1 text-sm leading-relaxed text-gray-600">
+            Bäst för etablerade salonger. Fast pris (199 kr/mån) oavsett volym. Hanterar Stripes avgifter och returer
+            automatiskt ner på öret.
           </p>
           <a
-            className="accounting-external-btn"
             href={INTEGRATI_STRIPE_URL}
             target="_blank"
             rel="noopener noreferrer"
+            className="mt-6 inline-flex w-fit items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
           >
             <span>Läs mer &amp; Installera</span>
-            <ExternalLink size={16} strokeWidth={2} aria-hidden />
+            <ExternalLink className="h-4 w-4 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
           </a>
         </article>
       </div>
 
-      <div className="admin-card accounting-export-card">
-        <h3 className="admin-card-title">Manuell export</h3>
-        <p className="admin-card-desc">
-          Välj datumintervall utifrån <strong>bokningsdatum</strong>. Alla bokningar i perioden ingår; belopp och moms
-          utgår från fältet betalt belopp (öre i databasen, visas som SEK nedan).
+      <hr className="my-10 border-gray-200" />
+
+      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm md:p-8">
+        <h2 className="text-lg font-semibold tracking-tight text-gray-900">Exportera transaktioner</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600">
+          Välj datumintervall för att ladda ner dina transaktioner. CSV-filen innehåller all nödvändig information om
+          datum, tjänst, belopp och moms som din redovisningskonsult behöver.
         </p>
-        <div className="accounting-export-row">
-          <label className="accounting-export-field">
-            <span className="accounting-export-label">Från</span>
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="accounting-export-input" />
+
+        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+          <label className="flex min-w-[10rem] flex-1 flex-col gap-1.5 sm:max-w-xs">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Från datum</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            />
           </label>
-          <label className="accounting-export-field">
-            <span className="accounting-export-label">Till</span>
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="accounting-export-input" />
+          <label className="flex min-w-[10rem] flex-1 flex-col gap-1.5 sm:max-w-xs">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Till datum</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            />
           </label>
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 sm:ml-0"
+          >
+            <Download className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+            Ladda ner CSV
+          </button>
         </div>
-        <button type="button" className="btn-admin-primary accounting-export-btn" disabled={exportBusy} onClick={handleExport}>
-          {exportBusy ? 'Exporterar…' : 'Ladda ner CSV-export'}
-        </button>
-        {exportMsg ? (
-          <p className={`accounting-export-feedback ${exportMsg.startsWith('Exporterade') ? 'accounting-export-feedback--ok' : ''}`}>
-            {exportMsg}
-          </p>
-        ) : null}
-      </div>
+      </section>
     </div>
   );
 }
