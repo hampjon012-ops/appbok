@@ -1881,14 +1881,11 @@ function bookingListTimeLabel(time) {
   return time.slice(0, 5);
 }
 
-function customerInitials(displayName) {
+/** Första bokstaven i kundnamnet (avatar). */
+function customerAvatarLetter(displayName) {
   const s = String(displayName || '').trim();
   if (!s) return '?';
-  const parts = s.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase() || '?';
-  }
-  return (parts[0][0] || '?').toUpperCase();
+  return s[0].toLocaleUpperCase('sv-SE');
 }
 
 /** Hover-tooltip med meddelandetext (portal så tabell-scroll inte klipper) */
@@ -2067,9 +2064,9 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
                   <td className="booking-customer-td">
                     <div className="bookings-table-customer-row">
                       <div className="bookings-table-customer-avatar" aria-hidden>
-                        {customerInitials(b.customer_name)}
+                        {customerAvatarLetter(b.customer_name)}
                       </div>
-                      <div className="bookings-table-customer-text">
+                      <div className="bookings-table-customer-info">
                         <div className="bookings-table-customer-name-row">
                           <span className="bookings-table-customer-name">{b.customer_name}</span>
                           {rowNotes ? (
