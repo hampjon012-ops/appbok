@@ -1057,6 +1057,11 @@ function DashboardTab({
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#111827', flex: 1 }}>
                   Kom igång med din salong
                 </h3>
+                {!isChecklistOpen ? (
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#6B7280' }}>
+                    {completedSteps} av 3 steg slutförda
+                  </span>
+                ) : null}
                 <span style={{
                   fontSize: '0.72rem',
                   fontWeight: 700,
@@ -1769,13 +1774,18 @@ function DashboardTab({
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <p className="admin-empty dashboard-chart-empty">Laddar eller saknar data.</p>
+              <div className="admin-empty dashboard-chart-empty" style={{ flexDirection: 'column', gap: '0.65rem' }}>
+                <Users size={48} strokeWidth={1.5} color="#e5e7eb" aria-hidden />
+                <p style={{ margin: 0, fontSize: '0.86rem', color: '#6b7280', textAlign: 'center' }}>
+                  Här kommer dina toppstylister att visas när bokningarna börjar rulla in.
+                </p>
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      {stats.upcomingBookings?.length > 0 && (
+      {stats.upcomingBookings?.length > 0 ? (
         <div className="admin-card dashboard-upcoming-card">
           <h3 className="dashboard-upcoming-title">Kommande bokningar</h3>
           <div className="booking-list dashboard-upcoming-list">
@@ -1810,6 +1820,25 @@ function DashboardTab({
                 </div>
               );
             })}
+          </div>
+        </div>
+      ) : (
+        <div className="admin-card dashboard-upcoming-card">
+          <h3 className="dashboard-upcoming-title">Kommande bokningar</h3>
+          <div
+            style={{
+              minHeight: '150px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.65rem',
+            }}
+          >
+            <CalendarOff size={48} strokeWidth={1.5} color="#e5e7eb" aria-hidden />
+            <p style={{ margin: 0, fontSize: '0.86rem', color: '#6b7280', textAlign: 'center' }}>
+              Här kommer dina kommande bokningar att visas när bokningarna börjar rulla in.
+            </p>
           </div>
         </div>
       )}
