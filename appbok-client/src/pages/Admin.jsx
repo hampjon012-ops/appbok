@@ -946,20 +946,12 @@ function DashboardTab({
         Array.isArray(ls.contact.opening_hours_week) &&
         ls.contact.opening_hours_week.length > 0),
   );
-  const openingHoursSavedFlag = (() => {
-    try {
-      return sessionStorage.getItem('appbok_opening_hours_saved') === '1';
-    } catch {
-      return false;
-    }
-  })();
 
   const step1Done = dashboardServiceCount > 0;
   const step2Done =
     scheduleConfigured ||
     (typeof openingHoursConfigured === 'boolean' ? openingHoursConfigured : false) ||
-    openingHoursFromLifecycle ||
-    openingHoursSavedFlag;
+    openingHoursFromLifecycle;
   const step3Done = stripeConnected;
   const completedSteps = [step1Done, step2Done, step3Done].filter(Boolean).length;
   const progressPct = Math.round((completedSteps / 3) * 100);

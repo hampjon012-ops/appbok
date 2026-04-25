@@ -639,11 +639,6 @@ function SalonHoursPanel({ salon, onSaved }) {
         };
         localStorage.setItem('sb_salon', JSON.stringify(updated));
       } catch (_) { /* ignore */ }
-      try {
-        sessionStorage.setItem('appbok_opening_hours_saved', '1');
-      } catch (_) {
-        /* ignore */
-      }
       notifySalonConfigUpdated();
       toast.success('Öppettider sparade!');
       onSaved?.({ ...data, openingHoursSaved: true });
