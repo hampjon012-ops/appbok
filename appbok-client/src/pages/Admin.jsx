@@ -1160,13 +1160,13 @@ function DashboardTab({
                   {/* Steg 1: Tjänster */}
                   {[
                     {
-                      done: dashboardServiceCount > 0,
+                      done: step1Done,
                       label: 'Skapa din första tjänst',
                       actionLabel: 'Gå till Tjänster',
                       action: typeof onNavigateToServices === 'function' ? onNavigateToServices : null,
                     },
                     {
-                      done: scheduleConfigured,
+                      done: step2Done,
                       label: 'Ställ in dina öppettider',
                       actionLabel: 'Gå till Öppettider',
                       action: typeof onNavigateToHours === 'function' ? onNavigateToHours : null,
