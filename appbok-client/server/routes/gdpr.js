@@ -34,6 +34,8 @@ router.get('/export', requireAuth, async (req, res) => {
     .from('bookings')
     .select(`
       id,
+      customer_name,
+      customer_phone,
       booking_date,
       booking_time,
       status,
@@ -51,6 +53,7 @@ router.get('/export', requireAuth, async (req, res) => {
   res.json({
     customer: { name: customerName, email: customerEmail, phone },
     bookings: (bookings || []).map((b) => ({
+      id: b.id,
       date: b.booking_date,
       time: b.booking_time,
       service: b.services?.name || '—',
