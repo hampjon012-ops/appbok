@@ -1014,6 +1014,8 @@ function BookingSection({
   };
   const handleContinueTime   = ()  => setStep('details');
   const handleContinueDetails= ()  => setStep('checkout');
+  const isDetailsValid =
+    Boolean(form.name.trim()) && Boolean(form.phone.trim()) && Boolean(form.email.trim());
 
   const priceAmount = totalPriceÖre;
   const selectedServiceIdsKey = selectedServices.map((s) => s.id).join(',');
@@ -1525,6 +1527,7 @@ function BookingSection({
                   <input
                     id="cust-name"
                     type="text"
+                    className="text-base sm:text-sm"
                     placeholder="För- och efternamn"
                     value={form.name}
                     onChange={e => setForm(f => ({...f, name: e.target.value}))}
@@ -1535,6 +1538,7 @@ function BookingSection({
                   <input
                     id="cust-phone"
                     type="tel"
+                    className="text-base sm:text-sm"
                     placeholder="070-000 00 00"
                     value={form.phone}
                     onChange={e => setForm(f => ({...f, phone: e.target.value}))}
@@ -1545,6 +1549,7 @@ function BookingSection({
                   <input
                     id="cust-email"
                     type="email"
+                    className="text-base sm:text-sm"
                     placeholder="din@email.se"
                     value={form.email}
                     onChange={e => setForm(f => ({...f, email: e.target.value}))}
@@ -1554,8 +1559,12 @@ function BookingSection({
                 <div className="step-cta">
                   <button
                     type="button"
-                    className={`btn-continue ${BTN_TOUCH_PRIMARY}`}
-                    disabled={!form.name.trim() || !form.phone.trim() || !form.email.trim()}
+                    className={`btn-continue w-full sm:w-auto mt-4 py-4 sm:py-2 text-center flex justify-center items-center transition-all duration-75 ${
+                      isDetailsValid
+                        ? 'bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98] cursor-pointer'
+                        : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    }`}
+                    disabled={!isDetailsValid}
                     onClick={handleContinueDetails}
                   >
                     Fortsätt →
