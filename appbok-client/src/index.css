@@ -3946,6 +3946,24 @@ body:has(.admin-layout) {
   opacity: 0.6;
 }
 
+/* Dashboard — collapsible onboarding header */
+.dashboard-onboarding-toggle-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.875rem 1.25rem;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 16px;
+  transition: background 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.dashboard-onboarding-toggle-btn:hover {
+  background: #f9fafb;
+}
+
 /* Dashboard — KPI (text-3xl / text-sm neutral) */
 .dashboard-kpi-card .stat-value {
   font-size: 2rem;

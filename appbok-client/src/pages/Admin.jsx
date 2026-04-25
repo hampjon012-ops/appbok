@@ -20,6 +20,7 @@ import {
   Shield,
   Download,
   ChevronDown,
+  ListChecks,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
@@ -1015,29 +1016,17 @@ function DashboardTab({
           {/* ── Clickable header ── */}
           <button
             type="button"
+            className="dashboard-onboarding-toggle-btn"
             onClick={() => setIsOpen((o) => !o)}
             aria-expanded={isOpen}
-            style={{
-              width: '100%',
-              background: 'none',
-              border: 'none',
-              padding: '1rem 1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem',
-              cursor: 'pointer',
-              textAlign: 'left',
-              borderRadius: '16px',
-              transition: 'background 0.15s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#FAFAFA'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
           >
-            {/* Top row: title + progress summary + chevron */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#111827', flex: 1 }}>
-                  Kom igång med din salong ({completedSteps}/3 klara)
+            {/* Top row: icon + title + status badge (left) + progress + chevron (right) */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+              {/* Left: icon + title + lifecycle badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1, minWidth: 0 }}>
+                <ListChecks size={18} color="#2563eb" aria-hidden style={{ flexShrink: 0 }} />
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>
+                  Kom igång med din salong
                 </h3>
                 <span style={{
                   fontSize: '0.72rem',
@@ -1047,43 +1036,42 @@ function DashboardTab({
                   border: '1px solid #93c5fd',
                   borderRadius: '999px',
                   padding: '0.15rem 0.5rem',
+                  flexShrink: 0,
                 }}>
                   {lifecycleLabel}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-                {/* Progress pill */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {completedSteps === 3 ? (
-                    <span style={{
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      color: '#16a34a',
-                      background: '#DCFCE7',
-                      border: '1px solid #86EFAC',
-                      borderRadius: '999px',
-                      padding: '0.15rem 0.55rem',
-                    }}>
-                      ✓ Klart!
+              {/* Right: progress bar + X/3 + chevron */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+                {completedSteps === 3 ? (
+                  <span style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    color: '#16a34a',
+                    background: '#DCFCE7',
+                    border: '1px solid #86EFAC',
+                    borderRadius: '999px',
+                    padding: '0.15rem 0.55rem',
+                  }}>
+                    ✓ Klart!
+                  </span>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151' }}>
+                      {completedSteps}/3
                     </span>
-                  ) : (
-                    <>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151' }}>
-                        {completedSteps}/3
-                      </span>
-                      <div style={{ width: '52px', height: '5px', background: '#F3F4F6', borderRadius: '999px', overflow: 'hidden' }}>
-                        <div style={{
-                          width: `${progressPct}%`,
-                          height: '100%',
-                          background: 'linear-gradient(90deg, #1E3A5F, #3b82f6)',
-                          borderRadius: '999px',
-                          transition: 'width 0.4s ease',
-                        }} />
-                      </div>
-                    </>
-                  )}
-                </div>
+                    <div style={{ width: '96px', height: '5px', background: '#F3F4F6', borderRadius: '999px', overflow: 'hidden' }}>
+                      <div style={{
+                        width: `${progressPct}%`,
+                        height: '100%',
+                        background: 'linear-gradient(90deg, #1E3A5F, #3b82f6)',
+                        borderRadius: '999px',
+                        transition: 'width 0.4s ease',
+                      }} />
+                    </div>
+                  </div>
+                )}
                 <ChevronDown
                   size={18}
                   color="#9CA3AF"
@@ -1097,17 +1085,13 @@ function DashboardTab({
               </div>
             </div>
 
-            {/* Caption: shown when closed */}
-            {!isOpen && (
-              <div style={{ paddingLeft: '2.35rem' }}>
-                <p style={{
-                  margin: 0,
-                  fontSize: '0.78rem',
-                  color: '#9CA3AF',
-                }}>
+            {/* Caption: shown when OPEN only */}
+            {isOpen && (
+              <div style={{ paddingLeft: '2.2rem' }}>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: '#9CA3AF' }}>
                   {completedSteps === 3
                     ? 'Alla steg klara — din salong är redo att publiceras!'
-                    : `Fyll i stegen för att låsa upp publicering`}
+                    : 'Fyll i stegen för att låsa upp publicering'}
                 </p>
               </div>
             )}
