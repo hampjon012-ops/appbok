@@ -17,6 +17,8 @@ import {
   GripVertical,
   Plus,
   CalendarOff,
+  Shield,
+  Download,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
@@ -533,6 +535,7 @@ export default function Admin() {
       { id: 'staff',     label: 'Personal',      Icon: SidebarStaffIcon,     roles: ['admin'] },
       { id: 'services',  label: 'Tjänster',      Icon: SidebarServicesIcon,  roles: ['admin'] },
       { id: 'schedule',  label: 'Schema',        Icon: SidebarScheduleIcon,  roles: ['admin', 'staff'] },
+      { id: 'gdpr',      label: 'GDPR',          Icon: Shield,               roles: ['admin'] },
       { id: 'settings',  label: 'Inställningar', Icon: SidebarSettingsIcon,  roles: ['admin', 'staff'] },
     ].filter((t) => t.roles.includes(user?.role || 'admin'));
   }, [isSuperAdmin, isStaffImpersonation, user?.role]);
@@ -702,6 +705,7 @@ export default function Admin() {
         )}
         {activeTab === 'superadmin' && <SuperadminTab />}
         {activeTab === 'billing'    && <BillingTab user={user} />}
+        {activeTab === 'gdpr'       && <GdprTab user={user} />}
       </main>
       </div>
     </div>
@@ -2944,6 +2948,269 @@ function StaffSettingsTab() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── GDPR Tab ─────────────────────────────────────────────────────────────────
+function GdprTab() {
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [searchDone, setSearchDone] = useState(false);
+  const [anonymizeModal, setAnonymizeModal] = useState(null); // booking to anonymize
+  const [anonymizeBusy, setAnonymizeBusy] = useState(false);
+  const [anonymizeDone, setAnonymizeDone] = useState('');
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    const q = search.trim();
+    if (!q) return;
+    setLoading(true);
+    setSearchDone(true);
+    setResults(null);
+    setAnonymizeDone('');
+    try {
+      const params = new URLSearchParams({ email: q });
+      const res = await fetch(`/api/gdpr/export?${params}`, { headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Något gick fel.');
+      setResults(data);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExport = () => {
+    if (!results) return;
+    const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `appbok-export-${search.trim().replace(/[^a-z0-9]/gi, '_')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleAnonymize = async () => {
+    if (!anonymizeModal) return;
+    setAnonymizeBusy(true);
+    try {
+      const res = await fetch('/api/gdpr/anonymize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ booking_id: anonymizeModal.id, reason: 'admin_request' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Kunde inte radera uppgifter.');
+      toast.success('Kunduppgifter har raderats och anonymiserats.');
+      setAnonymizeModal(null);
+      setAnonymizeDone(anonymizeModal.id);
+      // Re-search to get updated data
+      if (search.trim()) {
+        setSearch(search.trim());
+        const params = new URLSearchParams({ email: search.trim() });
+        const r = await fetch(`/api/gdpr/export?${params}`, { headers: authHeaders() });
+        const d = await r.json();
+        if (r.ok) setResults(d);
+      }
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setAnonymizeBusy(false);
+    }
+  };
+
+  const consentBadge = (consent) =>
+    consent ? (
+      <span className="gdpr-consent-badge gdpr-consent-badge--yes">SMS ✓</span>
+    ) : (
+      <span className="gdpr-consent-badge gdpr-consent-badge--no">SMS —</span>
+    );
+
+  return (
+    <div className="admin-section gdpr-tab-section">
+      <div className="admin-section-header">
+        <h2 className="admin-section-title">GDPR</h2>
+      </div>
+
+      {/* ── Kundsök ── */}
+      <div className="admin-card" style={{ marginBottom: '1.5rem' }}>
+        <p className="gdpr-search-label">Sök kund</p>
+        <form onSubmit={handleSearch} className="gdpr-search-form">
+          <input
+            className="admin-input"
+            style={{ flex: 2, fontFamily: 'var(--font-sans)', fontSize: '0.95rem' }}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="E-post, telefonnummer eller namn..."
+          />
+          <button type="submit" className="btn-admin-primary" disabled={loading || !search.trim()}>
+            {loading ? 'Söker...' : 'Sök'}
+          </button>
+        </form>
+      </div>
+
+      {/* ── Sökresultat ── */}
+      {searchDone && !loading && results && (
+        <>
+          <div className="gdpr-results-header">
+            <p className="gdpr-results-summary">
+              {results.bookings?.length > 0
+                ? `${results.bookings.length} bokning(ar) för ${results.customer?.name || search}`
+                : 'Inga bokningar hittades.'}
+            </p>
+            {results.bookings?.length > 0 && (
+              <button className="btn-gdpr-export" onClick={handleExport}>
+                <Download size={15} strokeWidth={2} aria-hidden />
+                Exportera
+              </button>
+            )}
+          </div>
+
+          {results.bookings?.length > 0 && (
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Datum</th>
+                    <th>Tid</th>
+                    <th>Tjänst</th>
+                    <th>Stylist</th>
+                    <th>Status</th>
+                    <th>Samtycke</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.bookings.map((b) => (
+                    <tr key={b.id || `${b.date}-${b.time}`} className="gdpr-result-row">
+                      <td>{b.date || '—'}</td>
+                      <td>{b.time ? b.time.slice(0, 5) : '—'}</td>
+                      <td>{b.service || '—'}</td>
+                      <td>{b.stylist || 'Valfri'}</td>
+                      <td>
+                        <span className={`status-badge status-${b.status}`}>
+                          {b.status === 'confirmed' ? 'Bekräftad' : b.status === 'rebooked' ? 'Ombokad' : b.status === 'cancelled' ? 'Avbokad' : b.status === 'completed' ? 'Genomförd' : b.status}
+                        </span>
+                      </td>
+                      <td>{consentBadge(b.marketing_consent)}</td>
+                      <td className="gdpr-actions-cell">
+                        {b.status !== 'cancelled' && anonymizeDone !== (b.id || `${b.date}-${b.time}`) && (
+                          <button
+                            className="gdpr-delete-btn"
+                            onClick={() => setAnonymizeModal({ id: b.id || `${b.date}-${b.time}`, date: b.date, time: b.time, service: b.service })}
+                          >
+                            Radera uppg.
+                          </button>
+                        )}
+                        {anonymizeDone === (b.id || `${b.date}-${b.time}`) && (
+                          <span className="gdpr-anonymized-label">Raderat</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── DPA-kort ── */}
+      <div className="gdpr-dpa-section">
+        <h3 className="gdpr-section-heading">Databehandlingsavtal (DPA)</h3>
+        <div className="gdpr-dpa-card">
+          <div className="gdpr-dpa-doc-icon" aria-hidden>📄</div>
+          <div className="gdpr-dpa-content">
+            <p className="gdpr-dpa-title">Databehandlingsavtal — Appbok AB</p>
+            <p className="gdpr-dpa-body">
+              Salonger som behandlar personuppgifter via Appbok ska ha ett signerat DPA med Appbok AB.
+            </p>
+            <a
+              href="mailto:hej@appbok.se?subject=Förfrågan%20om%20DPA"
+              className="btn-gdpr-export"
+              style={{ display: 'inline-flex', marginTop: '0.75rem', textDecoration: 'none' }}
+            >
+              <Download size={15} strokeWidth={2} aria-hidden />
+              Begär DPA via e-post
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Register (Artikel 30) ── */}
+      <div className="gdpr-dpa-section">
+        <h3 className="gdpr-section-heading">Register över behandling (Artikel 30)</h3>
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Behandling</th>
+                <th>Ändamål</th>
+                <th>Rättslig grund</th>
+                <th>Lagringstid</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Bokningsuppgifter</td>
+                <td>Avtalsförpliktelse — bekräftelse, påminnelse, betalning</td>
+                <td>Kontraktsrättslig</td>
+                <td>24 månader</td>
+              </tr>
+              <tr>
+                <td>E-postmeddelanden</td>
+                <td>Kommunikation med kund</td>
+                <td>Berättigat intresse</td>
+                <td>12 månader</td>
+              </tr>
+              <tr>
+                <td>Betalningsuppgifter</td>
+                <td>Redovisning och bokföring</td>
+                <td>Rättslig förpliktelse</td>
+                <td>7 år</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Anonymiseringsmodal ── */}
+      {anonymizeModal && (
+        <div className="modal-overlay" onClick={() => !anonymizeBusy && setAnonymizeModal(null)}>
+          <div className="modal-box gdpr-anonymize-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Radera kunduppgifter</h3>
+            <p className="modal-body-text">
+              Detta kommer att anonymisera <strong>alla bokningar</strong> för denna kunds e-postadress.
+              Namn, e-post och telefonnummer ersätts med generiska placeholder-värden.
+              Anteckningar och samtycken tas bort.
+            </p>
+            <p className="modal-booking-detail">
+              Berörd bokning: {anonymizeModal.date} kl {anonymizeModal.time} — {anonymizeModal.service}
+            </p>
+            <p className="modal-warning">Åtgärden kan inte ångras.</p>
+            <div className="modal-actions">
+              <button
+                className="btn-admin-primary"
+                onClick={handleAnonymize}
+                disabled={anonymizeBusy}
+              >
+                {anonymizeBusy ? 'Raderar...' : 'Ja, radera'}
+              </button>
+              <button
+                className="btn-sm btn-ghost"
+                onClick={() => setAnonymizeModal(null)}
+                disabled={anonymizeBusy}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

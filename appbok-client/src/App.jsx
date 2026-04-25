@@ -16,6 +16,8 @@ import { usePreviewEmbedUi } from './hooks/usePreviewEmbedUi.js';
 import { useSalonCatalog } from './hooks/useSalonCatalog.js';
 import PreviewDeviceStatusBar from './components/PreviewDeviceStatusBar.jsx';
 import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
+import PrivacyCheckbox from './components/PrivacyCheckbox.jsx';
+import CookieBanner from './components/CookieBanner.jsx';
 import { Plus, User, Users } from 'lucide-react';
 
 function isPreviewEmbedClient() {
@@ -637,7 +639,7 @@ function App() {
           <div className="container footer-simple-content">
             <p>© {new Date().getFullYear()} {displaySalonName(config.salonName)}. Alla rättigheter förbehållna.</p>
             <div className="footer-links">
-              <a href="#">Integritetspolicy</a>
+              <Link to="/privacy">Integritetspolicy</Link>
               <a href="#">Villkor</a>
             </div>
           </div>
@@ -711,6 +713,7 @@ function BookingSection({
   const [selectedDate, setDate]           = useState(null);
   const [selectedTime, setTime]           = useState(null);
   const [form, setForm]                   = useState({ name:'', phone:'', email:'' });
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [termsAccepted, setTerms]         = useState(false);
   const [notes, setNotes]                 = useState('');
   const [loading, setLoading]             = useState(false);
@@ -765,6 +768,7 @@ function BookingSection({
       setForm({ name: '', phone: '', email: '' });
       setNotes('');
       setTerms(false);
+      setMarketingConsent(false);
       setApiError('');
       setLoading(false);
       setPaymentChoice('swish');
@@ -1027,6 +1031,8 @@ function BookingSection({
       stripe_session_id: stripeSessionId || null,
       stripe_payment_intent_id: paymentIntentId || null,
       notes: notes.trim() ? notes.trim().slice(0, 500) : undefined,
+      marketing_consent: marketingConsent,
+      consent_sms_at: marketingConsent ? new Date().toISOString() : null,
     };
     const bookRes = await fetch('/api/bookings', {
       method: 'POST',
@@ -1043,6 +1049,7 @@ function BookingSection({
     form.email,
     form.name,
     form.phone,
+    marketingConsent,
     notes,
     selectedDate,
     selectedServices,
@@ -1570,6 +1577,9 @@ function BookingSection({
                 </div>
               </div>
 
+              {/* GDPR SMS consent */}
+              <PrivacyCheckbox checked={marketingConsent} onChange={setMarketingConsent} />
+
               <div className="payment-choice-section">
                 <h4 className="payment-choice-title">Betalningssätt</h4>
                 {allowPayOnSite ? (
@@ -1675,6 +1685,7 @@ function BookingSection({
           </div>
         </div>
       </div>
+      <CookieBanner />
     </>
   );
 }

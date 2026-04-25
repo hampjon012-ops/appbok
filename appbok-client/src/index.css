@@ -1531,6 +1531,71 @@ a.insta-item-link:focus-visible {
   font-size: 0.92rem;
 }
 
+/* ── Privacy toggle (GDPR SMS consent) ──────────────────────────── */
+.privacy-checkbox-block {
+  margin-bottom: 1rem;
+  animation: fadeUp 0.4s ease forwards;
+}
+.privacy-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: #111827;
+}
+/* Accessible real checkbox (visually hidden, we use the track) */
+.privacy-checkbox-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+/* The pill track */
+.privacy-checkbox-track {
+  position: relative;
+  display: inline-flex;
+  width: 44px;
+  height: 24px;
+  border-radius: 9999px;
+  background: #d1d5db;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+.privacy-checkbox-input:checked + .privacy-checkbox-track {
+  background: var(--accent-color, #1a1a1a);
+}
+/* The sliding thumb */
+.privacy-checkbox-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.privacy-checkbox-input:checked + .privacy-checkbox-track .privacy-checkbox-thumb {
+  transform: translateX(20px);
+}
+.privacy-checkbox-input:focus-visible + .privacy-checkbox-track {
+  outline: 2px solid var(--accent-color, #1a1a1a);
+  outline-offset: 2px;
+}
+.privacy-checkbox-text {
+  line-height: 1.4;
+}
+.privacy-checkbox-hint {
+  margin: 0.35rem 0 0 calc(44px + 0.75rem);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 /* Terms */
 .terms-block {
   background: #F7F6F3;
@@ -2054,6 +2119,128 @@ a.insta-item-link:focus-visible {
   margin-bottom: 0.4rem;
 }
 .terms-section p:last-child { margin-bottom: 0; }
+
+/* =========================================
+   PRIVACY PAGE (/privacy)
+   ========================================= */
+.privacy-page {
+  min-height: 100vh;
+  background: var(--bg-color, #FAFAFA);
+  padding-top: max(3rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(5rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+}
+.privacy-page-inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.privacy-back-link {
+  display: inline-block;
+  color: var(--text-muted, #666);
+  text-decoration: none;
+  font-size: 0.9rem;
+  margin-bottom: 2.5rem;
+  transition: color 0.15s;
+}
+.privacy-back-link:hover { color: var(--text-color, #1A1A1A); }
+.privacy-page-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+.privacy-page-lock-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+.privacy-page-title {
+  font-family: var(--font-sans, sans-serif);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text-color, #1A1A1A);
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.5px;
+}
+.privacy-page-subtitle {
+  font-size: 1.1rem;
+  color: var(--text-muted, #666);
+  margin: 0 0 0.6rem;
+  font-weight: 400;
+}
+.privacy-page-meta {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin: 0;
+}
+.privacy-section {
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border-color, #EAEAEA);
+}
+.privacy-section:last-of-type { border-bottom: none; }
+.privacy-section-heading {
+  font-family: var(--font-sans, sans-serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-color, #1A1A1A);
+  margin: 0 0 0.75rem;
+}
+.privacy-section-body {
+  font-size: 0.95rem;
+  color: var(--text-muted, #555);
+  line-height: 1.7;
+  margin: 0 0 0.4rem;
+}
+.privacy-section-body:last-child { margin-bottom: 0; }
+.privacy-list {
+  margin: 0.4rem 0 0.75rem;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.privacy-list li {
+  font-size: 0.95rem;
+  color: var(--text-muted, #555);
+  line-height: 1.6;
+  list-style: disc;
+}
+.privacy-link {
+  color: var(--accent-color, #1a1a1a);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.privacy-dpa-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: #ffffff;
+  border: 1px solid var(--border-color, #EAEAEA);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  margin: 2rem 0;
+}
+.privacy-dpa-icon { font-size: 1.75rem; flex-shrink: 0; }
+.privacy-dpa-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #111827;
+  margin: 0 0 0.35rem;
+}
+.privacy-dpa-body {
+  font-size: 0.85rem;
+  color: var(--text-muted, #555);
+  line-height: 1.55;
+  margin: 0;
+}
+.privacy-footer-note {
+  font-size: 0.82rem;
+  color: #9ca3af;
+  text-align: center;
+  margin-top: 2.5rem;
+  line-height: 1.6;
+}
 
 /* =========================================
    LOGIN PAGE
@@ -7184,4 +7371,321 @@ a.insta-handle-link:focus-visible {
 .signup-onboarding-skip:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* =========================================
+   GDPR TAB (admin)
+   ========================================= */
+.gdpr-tab-section .admin-section-title {
+  margin-bottom: 0;
+}
+.gdpr-search-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.75rem;
+}
+.gdpr-search-form {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.gdpr-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.gdpr-results-summary {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-color);
+  margin: 0;
+}
+.gdpr-result-row td {
+  font-size: 0.875rem;
+}
+.gdpr-consent-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.gdpr-consent-badge--yes {
+  background: #d1fae5;
+  color: #065f46;
+}
+.gdpr-consent-badge--no {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.gdpr-actions-cell {
+  text-align: right;
+  vertical-align: middle;
+}
+.gdpr-delete-btn {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #dc2626;
+  background: transparent;
+  border: 0;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  font-family: var(--font-sans);
+}
+.gdpr-delete-btn:hover {
+  background: #fef2f2;
+  color: #991b1b;
+}
+.gdpr-delete-btn:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+.gdpr-anonymized-label {
+  font-size: 0.78rem;
+  color: #6b7280;
+  font-style: italic;
+}
+.gdpr-dpa-section {
+  margin-top: 2.5rem;
+}
+.gdpr-section-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 1rem;
+}
+.gdpr-dpa-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: #ffffff;
+  border: 1px solid var(--border-color, #EAEAEA);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  max-width: 38rem;
+}
+.gdpr-dpa-doc-icon { font-size: 1.75rem; flex-shrink: 0; }
+.gdpr-dpa-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #111827;
+  margin: 0 0 0.35rem;
+}
+.gdpr-dpa-body {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+.btn-gdpr-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #1a1a1a;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  text-decoration: none;
+}
+.btn-gdpr-export:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* GDPR anonymize modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+.gdpr-anonymize-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.75rem;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.08);
+  animation: sa-modal-in 0.2s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+@keyframes sa-modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-title {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #111827;
+}
+.modal-body-text {
+  font-size: 0.9rem;
+  color: #374151;
+  line-height: 1.6;
+  margin: 0 0 0.75rem;
+}
+.modal-booking-detail {
+  font-size: 0.82rem;
+  color: #6b7280;
+  background: #f9fafb;
+  border-radius: 7px;
+  padding: 0.6rem 0.8rem;
+  margin: 0 0 0.75rem;
+}
+.modal-warning {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #dc2626;
+  margin: 0 0 1.25rem;
+}
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* =========================================
+   COOKIE BANNER
+   ========================================= */
+.cookie-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9000;
+  background: #ffffff;
+  border-top: 1px solid #e5e5e5;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+  padding: max(1rem, env(safe-area-inset-bottom, 0px)) 1.5rem;
+  padding-bottom: max(1rem, calc(env(safe-area-inset-bottom, 0px) + 1rem));
+}
+.cookie-banner-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.cookie-banner-icon { font-size: 1.4rem; flex-shrink: 0; }
+.cookie-banner-text {
+  flex: 1;
+  font-size: 0.88rem;
+  color: #374151;
+  line-height: 1.45;
+  min-width: 0;
+}
+.cookie-banner-link {
+  color: var(--accent-color, #1a1a1a);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cookie-banner-accept-btn {
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--accent-color, #1a1a1a);
+  color: #ffffff;
+  border: 0;
+  border-radius: 7px;
+  padding: 0.5rem 1.2rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.cookie-banner-accept-btn:hover { opacity: 0.88; }
+.cookie-banner-accept-btn:focus-visible {
+  outline: 2px solid var(--accent-color, #1a1a1a);
+  outline-offset: 2px;
+}
+
+/* =========================================
+   COOKIES PAGE (/cookies)
+   ========================================= */
+.cookies-page {
+  min-height: 100vh;
+  background: var(--bg-color, #FAFAFA);
+  padding-top: max(3rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(5rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+}
+.cookies-page-inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.cookies-back-link {
+  display: inline-block;
+  color: var(--text-muted, #666);
+  text-decoration: none;
+  font-size: 0.9rem;
+  margin-bottom: 2.5rem;
+  transition: color 0.15s;
+}
+.cookies-back-link:hover { color: var(--text-color, #1A1A1A); }
+.cookies-page-title {
+  font-family: var(--font-sans, sans-serif);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text-color, #1A1A1A);
+  margin-bottom: 2.5rem;
+  letter-spacing: -0.5px;
+}
+.cookies-cookie-item {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color, #EAEAEA);
+}
+.cookies-cookie-item:last-of-type { border-bottom: none; }
+.cookies-cookie-category {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color, #1A1A1A);
+  margin: 0 0 0.4rem;
+}
+.cookies-cookie-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+.cookies-cookie-status--on {
+  background: #d1fae5;
+  color: #065f46;
+}
+.cookies-cookie-status--off {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.cookies-cookie-desc {
+  font-size: 0.88rem;
+  color: var(--text-muted, #555);
+  line-height: 1.6;
+  margin: 0;
 }

@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MobileBookingFrontend from '../MobileBookingFrontend.jsx';
 import ThankYou from '../ThankYou.jsx';
 import Terms from '../Terms.jsx';
+import PrivacyPage from '../pages/PrivacyPage.jsx';
+import CookiesPage from '../pages/CookiesPage.jsx';
 import Invite from '../pages/Invite.jsx';
 import LoginRoute from '../components/LoginRoute.jsx';
 import AdminDashboardRedirect from '../components/AdminDashboardRedirect.jsx';
@@ -31,6 +33,8 @@ export default function TenantBookingApp() {
         <Route path="/preview/mobile" element={<MobileBookingFrontend />} />
         <Route path="/tack" element={<ThankYou />} />
         <Route path="/villkor" element={<Terms />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/cookies" element={<CookiesPage />} />
         <Route path="/login" element={<LoginRoute />} />
         <Route path="/admin" element={<AdminDashboardRedirect />} />
         <Route path="/cancel/:id" element={<BookingCancel />} />
