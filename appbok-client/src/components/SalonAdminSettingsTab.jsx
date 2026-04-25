@@ -625,6 +625,21 @@ function SalonHoursPanel({ salon, onSaved }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Kunde inte spara.');
       setSaveMsg('Sparat!');
+
+      // Uppdatera localStorage så att getAuth() i Admin/DashboardTab läser rätt värde
+      try {
+        const stored = JSON.parse(localStorage.getItem('sb_salon') || '{}');
+        const updated = {
+          ...stored,
+          opening_hours_configured: true,
+          contact: {
+            ...(stored.contact && typeof stored.contact === 'object' ? stored.contact : {}),
+            opening_hours_week: week,
+          },
+        };
+        localStorage.setItem('sb_salon', JSON.stringify(updated));
+      } catch (_) { /* ignore */ }
+      notifySalonConfigUpdated();
       toast.success('Öppettider sparade!');
       onSaved?.(data);
       setTimeout(() => setSaveMsg(''), 3000);
@@ -1401,7 +1416,7 @@ function SalonPaymentsPanel({ salon, onTrialStarted }) {
   );
 }
 
-export default function SalonAdminSettingsTab() {
+export default function SalonAdminSettingsTab({ onSalonUpdate }) {
   const [salon, setSalon] = useState(null);
   const [tab, setTab] = useState('theme');
   const [loading, setLoading] = useState(true);
@@ -1459,7 +1474,13 @@ export default function SalonAdminSettingsTab() {
     if (patch && typeof patch === 'object' && patch.logo_url !== undefined) {
       setSalon((prev) => (prev ? { ...prev, logo_url: patch.logo_url } : null));
     }
-    load({ silent: true }).then(() => notifySalonConfigUpdated());
+    load({ silent: true }).then((fresh) => {
+      if (fresh && typeof fresh === 'object') {
+        setSalon(fresh);
+        onSalonUpdate?.(fresh);
+      }
+      notifySalonConfigUpdated();
+    });
   }, [load]);
 
   if (loading) {

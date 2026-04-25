@@ -343,6 +343,13 @@ export default function Admin() {
   const [servicesRefreshKey, setServicesRefreshKey] = useState(0);
   /** Bumpar så getAuth() + sidomeny (schema-påminnelse) läser om efter onboarding / DB-uppdatering. */
   const [salonStorageBump, setSalonStorageBump] = useState(0);
+  /** Reaktiv salon som uppdateras när localStorage ändras (t.ex. efter sparade öppettider). */
+  const [salonState, setSalonState] = useState(() => getAuth().salon);
+
+  /** När salonStorageBump ökar (efter SALON_CONFIG_UPDATED), läs om från localStorage. */
+  useEffect(() => {
+    setSalonState(getAuth().salon);
+  }, [salonStorageBump]);
   /** null = laddar; true = minst en har sparat schema; false = inget schema */
   const [scheduleConfiguredForReminder, setScheduleConfiguredForReminder] = useState(null);
   const isStaffImpersonation = user?.originalRole === 'superadmin' && user?.role === 'staff';
@@ -666,7 +673,7 @@ export default function Admin() {
             showSalonLifecycleBanner={!isSuperAdmin && user?.role === 'admin'}
             showOnboardingWidget={!isSuperAdmin && user?.role === 'admin'}
             salonHideOnboardingWidget={Boolean(salon?.hide_onboarding_widget)}
-            openingHoursConfigured={Boolean(salon?.opening_hours_configured)}
+            openingHoursConfigured={Boolean(salonState?.opening_hours_configured)}
             onOnboardingDismissed={(data) => {
               try {
                 localStorage.setItem('sb_salon', JSON.stringify(data));
@@ -714,7 +721,7 @@ export default function Admin() {
           ) : user?.role === 'admin' ? (
             <SalonAdminSettingsTab
               onSalonUpdate={(updated) => {
-                setSalon((prev) => (prev ? { ...prev, ...updated } : prev));
+                setSalonState((prev) => (prev ? { ...prev, ...updated } : prev));
               }}
             />
           ) : (
