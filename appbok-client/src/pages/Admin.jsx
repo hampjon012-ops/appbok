@@ -939,10 +939,27 @@ function DashboardTab({
       (ls?.contact && typeof ls.contact === 'object' && ls.contact.stripe_connected),
   );
   const previewBookingUrl = ls ? getSalonPublicBookingPreviewUrl(ls) : '';
+  const openingHoursFromLifecycle = Boolean(
+    ls?.opening_hours_configured ||
+      (ls?.contact &&
+        typeof ls.contact === 'object' &&
+        Array.isArray(ls.contact.opening_hours_week) &&
+        ls.contact.opening_hours_week.length > 0),
+  );
+  const openingHoursSavedFlag = (() => {
+    try {
+      return sessionStorage.getItem('appbok_opening_hours_saved') === '1';
+    } catch {
+      return false;
+    }
+  })();
 
   const step1Done = dashboardServiceCount > 0;
-  const step2Done = scheduleConfigured ||
-    (typeof openingHoursConfigured === 'boolean' ? openingHoursConfigured : false);
+  const step2Done =
+    scheduleConfigured ||
+    (typeof openingHoursConfigured === 'boolean' ? openingHoursConfigured : false) ||
+    openingHoursFromLifecycle ||
+    openingHoursSavedFlag;
   const step3Done = stripeConnected;
   const completedSteps = [step1Done, step2Done, step3Done].filter(Boolean).length;
   const progressPct = Math.round((completedSteps / 3) * 100);
