@@ -21,6 +21,7 @@ import {
   Download,
   ChevronDown,
   ListChecks,
+  Copy,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
@@ -916,6 +917,19 @@ function DashboardTab({
     }
   }, [onOnboardingDismissed]);
 
+  const handleCopyLink = useCallback(() => {
+    const url = getSalonPublicBookingPreviewUrl(ls);
+    if (!url) {
+      toast.error('Kunde inte hämta bokningslänk.');
+      return;
+    }
+    navigator.clipboard.writeText(url).then(() => {
+      toast.success('Bokningslänken har kopierats till urklipp!');
+    }).catch(() => {
+      toast.error('Kunde inte kopiera länken.');
+    });
+  }, [ls]);
+
   const dashboardServiceCount = useMemo(() => {
     const cats = servicePreview.categories || [];
     return cats.reduce((n, c) => n + (Array.isArray(c.services) ? c.services.length : 0), 0);
@@ -1571,6 +1585,30 @@ function DashboardTab({
               </ul>
             ) : null}
           </div>
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '6px',
+              backgroundColor: '#fff',
+              padding: '7px 12px',
+              fontSize: '0.8125rem',
+              fontWeight: 500,
+              color: '#374151',
+              border: '1px solid #D1D5DB',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              marginRight: '0.75rem',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F9FAFB')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
+          >
+            <Copy size={14} strokeWidth={2} style={{ marginRight: '6px' }} />
+            Kopiera länk
+          </button>
           {showNewBookingButton ? (
             <button type="button" className="dashboard-new-booking-btn" onClick={onNewBooking}>
               + Ny bokning
