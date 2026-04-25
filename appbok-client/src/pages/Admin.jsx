@@ -943,7 +943,8 @@ function DashboardTab({
   const previewBookingUrl = ls ? getSalonPublicBookingPreviewUrl(ls) : '';
 
   const step1Done = dashboardServiceCount > 0;
-  const step2Done = scheduleConfigured || openingHoursConfigured;
+  const step2Done = scheduleConfigured ||
+    (typeof openingHoursConfigured === 'boolean' ? openingHoursConfigured : false);
   const step3Done = stripeConnected;
   const completedSteps = [step1Done, step2Done, step3Done].filter(Boolean).length;
   const progressPct = Math.round((completedSteps / 3) * 100);
