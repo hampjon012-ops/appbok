@@ -138,6 +138,14 @@ function findStylistForPrefill(stylistList, prefill) {
   return null;
 }
 
+/** Touch-feedback i bokningsmodalen (Tailwind utilities, se @tailwind i index.css) */
+const BTN_TOUCH_CARD =
+  'active:scale-[0.99] active:bg-gray-50 transition-transform duration-75';
+const BTN_TOUCH_PRIMARY =
+  'active:scale-[0.98] active:opacity-80 transition-all duration-75';
+const BTN_TOUCH_SECONDARY =
+  'active:scale-[0.98] active:bg-gray-100 transition-all duration-75';
+
 function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -217,7 +225,7 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
       <PaymentElement />
       <button
         type="button"
-        className="btn-pay"
+        className={`btn-pay ${BTN_TOUCH_PRIMARY}`}
         disabled={disabled || !stripe || confirming}
         onClick={handleConfirmPayment}
       >
@@ -711,7 +719,7 @@ function App() {
 }
 
 // ─── BookingSection ───────────────────────────────────────────────────────────
-const STEPS = ['service','stylist','time','details','checkout'];
+const STEPS = ['service', 'stylist', 'time', 'details', 'checkout'];
 
 function BookingSection({
   config,
@@ -1209,7 +1217,7 @@ function BookingSection({
               <span className="ssc-meta">{svc.price}</span>
               <button
                 type="button"
-                className="selected-service-chip-remove"
+                className={`selected-service-chip-remove ${BTN_TOUCH_SECONDARY}`}
                 onClick={() => removeService(svc.id)}
                 aria-label={`Ta bort ${svc.name}`}
               >
@@ -1218,7 +1226,7 @@ function BookingSection({
             </div>
           ))}
           {selectedServices.length >= 1 && selectedServices.length < 8 ? (
-            <button type="button" className="add-service-chip-btn" onClick={goAddAnotherService}>
+            <button type="button" className={`add-service-chip-btn ${BTN_TOUCH_SECONDARY}`} onClick={goAddAnotherService}>
               <Plus className="add-service-chip-icon" size={16} strokeWidth={2.25} aria-hidden />
               <span>Lägg till tjänst</span>
             </button>
@@ -1241,7 +1249,7 @@ function BookingSection({
             </p>
           ) : null}
         </div>
-        <button type="button" onClick={onClose} className="close-btn" aria-label="Stäng">
+        <button type="button" onClick={onClose} className={`close-btn ${BTN_TOUCH_SECONDARY}`} aria-label="Stäng">
           ✕
         </button>
       </div>
@@ -1270,7 +1278,7 @@ function BookingSection({
                       <button
                         key={c.label}
                         type="button"
-                        className="popular-combo-btn"
+                        className={`popular-combo-btn ${BTN_TOUCH_CARD}`}
                         onClick={() => applyPopularCombo(c)}
                       >
                         {c.label}
@@ -1290,7 +1298,12 @@ function BookingSection({
               ) : (
                 <div className="category-selection-list">
                   {categories.map(cat => (
-                    <button key={cat.id} className="category-selection-btn" onClick={() => handleSelectCategory(cat)}>
+                    <button
+                      key={cat.id}
+                      type="button"
+                      className={`category-selection-btn ${BTN_TOUCH_CARD}`}
+                      onClick={() => handleSelectCategory(cat)}
+                    >
                       <div className="cat-sel-info">
                         <h4>{cat.name}</h4>
                         <p>{cat.description}</p>
@@ -1307,7 +1320,9 @@ function BookingSection({
           {step === 'service' && selectedCategory && (
             <>
               <div className="booking-step-header-with-back">
-                <button className="back-arrow-btn" onClick={goBack}>←</button>
+                <button type="button" className={`back-arrow-btn ${BTN_TOUCH_SECONDARY}`} onClick={goBack}>
+                  ←
+                </button>
                 <h3 className="booking-step-title">{selectedCategory.name}</h3>
               </div>
               {selectedServices.length >= 1 && popularCombos.length > 0 ? (
@@ -1318,7 +1333,7 @@ function BookingSection({
                       <button
                         key={`svc-${c.label}`}
                         type="button"
-                        className="popular-combo-btn"
+                        className={`popular-combo-btn ${BTN_TOUCH_CARD}`}
                         onClick={() => applyPopularCombo(c)}
                       >
                         {c.label}
@@ -1328,8 +1343,13 @@ function BookingSection({
                 </div>
               ) : null}
               <div className="category-selection-list">
-                {selectedCategory.services.map(svc => (
-                  <button key={svc.id} className="category-selection-btn" onClick={() => handleSelectService(svc)}>
+                {selectedCategory.services.map((svc) => (
+                  <button
+                    key={svc.id}
+                    type="button"
+                    className={`category-selection-btn ${BTN_TOUCH_CARD}`}
+                    onClick={() => handleSelectService(svc)}
+                  >
                     <div className="cat-sel-info">
                       <h4>{svc.name}</h4>
                       <p>{svc.duration}</p>
@@ -1345,14 +1365,17 @@ function BookingSection({
           {step === 'stylist' && selectedServices.length > 0 && (
             <>
               <div className="booking-step-header-with-back">
-                <button className="back-arrow-btn" onClick={goBack}>←</button>
+                <button type="button" className={`back-arrow-btn ${BTN_TOUCH_SECONDARY}`} onClick={goBack}>
+                  ←
+                </button>
                 <h3 className="booking-step-title">Välj stylist</h3>
               </div>
               <SelectedServicesSummary />
               <div className="category-selection-list">
                 {/* Valfri stylist — högst upp */}
                 <button
-                  className={`category-selection-btn stylist-row-btn ${selectedStylist === null ? 'selected' : ''}`}
+                  type="button"
+                  className={`category-selection-btn stylist-row-btn ${BTN_TOUCH_CARD} ${selectedStylist === null ? 'selected' : ''}`}
                   onClick={() => handleSelectStylist(null)}
                 >
                   <div className="stylist-row-left">
@@ -1374,7 +1397,8 @@ function BookingSection({
                 {stylists.filter(s => s.id !== 'any').map(st => (
                   <button
                     key={st.id}
-                    className={`category-selection-btn stylist-row-btn ${selectedStylist?.id === st.id ? 'selected' : ''}`}
+                    type="button"
+                    className={`category-selection-btn stylist-row-btn ${BTN_TOUCH_CARD} ${selectedStylist?.id === st.id ? 'selected' : ''}`}
                     onClick={() => handleSelectStylist(st)}
                   >
                     <div className="stylist-row-left">
@@ -1405,7 +1429,9 @@ function BookingSection({
           {step === 'time' && selectedServices.length > 0 && (
             <>
               <div className="booking-step-header-with-back">
-                <button className="back-arrow-btn" onClick={goBack}>←</button>
+                <button type="button" className={`back-arrow-btn ${BTN_TOUCH_SECONDARY}`} onClick={goBack}>
+                  ←
+                </button>
                 <h3 className="booking-step-title">Välj datum & tid</h3>
               </div>
               <SelectedServicesSummary />
@@ -1415,8 +1441,12 @@ function BookingSection({
                 {availableDates.map((d, idx) => (
                   <button
                     key={idx}
-                    className={`date-chip ${selectedDate?.toDateString() === d.toDateString() ? 'selected' : ''}`}
-                    onClick={() => { setDate(d); setTime(null); }}
+                    type="button"
+                    className={`date-chip ${BTN_TOUCH_CARD} ${selectedDate?.toDateString() === d.toDateString() ? 'selected' : ''}`}
+                    onClick={() => {
+                      setDate(d);
+                      setTime(null);
+                    }}
                   >
                     <span className="date-chip-weekday">{d.toLocaleDateString('sv-SE',{weekday:'short'})}</span>
                     <span className="date-chip-day">{d.getDate()}</span>
@@ -1438,8 +1468,9 @@ function BookingSection({
                         return (
                           <button
                             key={slot}
+                            type="button"
                             disabled={booked}
-                            className={`timeslot ${booked ? 'booked' : ''} ${selectedTime === slot ? 'selected' : ''}`}
+                            className={`timeslot ${booked ? 'booked' : ''} ${selectedTime === slot ? 'selected' : ''} ${!booked ? BTN_TOUCH_CARD : ''}`}
                             onClick={() => !booked && setTime(slot)}
                           >
                             {slot}
@@ -1454,7 +1485,7 @@ function BookingSection({
 
               {selectedDate && selectedTime && (
                 <div className="step-cta">
-                  <button className="btn-continue" onClick={handleContinueTime}>
+                  <button type="button" className={`btn-continue ${BTN_TOUCH_PRIMARY}`} onClick={handleContinueTime}>
                     Fortsätt →
                   </button>
                 </div>
@@ -1466,7 +1497,9 @@ function BookingSection({
           {step === 'details' && selectedServices.length > 0 && (
             <>
               <div className="booking-step-header-with-back">
-                <button className="back-arrow-btn" onClick={goBack}>←</button>
+                <button type="button" className={`back-arrow-btn ${BTN_TOUCH_SECONDARY}`} onClick={goBack}>
+                  ←
+                </button>
                 <h3 className="booking-step-title">Dina uppgifter</h3>
               </div>
               <SelectedServicesSummary />
@@ -1505,7 +1538,8 @@ function BookingSection({
 
                 <div className="step-cta">
                   <button
-                    className="btn-continue"
+                    type="button"
+                    className={`btn-continue ${BTN_TOUCH_PRIMARY}`}
                     disabled={!form.name.trim() || !form.phone.trim() || !form.email.trim()}
                     onClick={handleContinueDetails}
                   >
@@ -1520,7 +1554,9 @@ function BookingSection({
           {step === 'checkout' && selectedServices.length > 0 && (
             <>
               <div className="booking-step-header-with-back">
-                <button className="back-arrow-btn" onClick={goBack}>←</button>
+                <button type="button" className={`back-arrow-btn ${BTN_TOUCH_SECONDARY}`} onClick={goBack}>
+                  ←
+                </button>
                 <h3 className="booking-step-title">Bekräfta & betala</h3>
               </div>
 
@@ -1610,7 +1646,7 @@ function BookingSection({
                   <div className="payment-choice-grid">
                     <button
                       type="button"
-                      className={`payment-choice-card ${paymentChoice === 'swish' ? 'payment-choice-card--active' : ''}`}
+                      className={`payment-choice-card ${BTN_TOUCH_CARD} ${paymentChoice === 'swish' ? 'payment-choice-card--active' : ''}`}
                       onClick={() => {
                         setPaymentChoice('swish');
                         setApiError('');
@@ -1621,7 +1657,7 @@ function BookingSection({
                     </button>
                     <button
                       type="button"
-                      className={`payment-choice-card ${paymentChoice === 'on_site' ? 'payment-choice-card--active' : ''}`}
+                      className={`payment-choice-card ${BTN_TOUCH_CARD} ${paymentChoice === 'on_site' ? 'payment-choice-card--active' : ''}`}
                       onClick={() => {
                         setPaymentChoice('on_site');
                         setApiError('');
@@ -1646,7 +1682,7 @@ function BookingSection({
                     <div className="embedded-payment-shell">
                       <button
                         type="button"
-                        className="btn-pay btn-pay--preview-locked"
+                        className={`btn-pay btn-pay--preview-locked ${BTN_TOUCH_PRIMARY}`}
                         disabled
                         aria-disabled="true"
                       >
@@ -1660,7 +1696,7 @@ function BookingSection({
                         <div className="step-cta">
                           <button
                             type="button"
-                            className="btn-continue"
+                            className={`btn-continue ${BTN_TOUCH_PRIMARY}`}
                             onClick={() => {
                               setIntentRequested(false);
                               fetchPaymentIntent();
@@ -1690,7 +1726,8 @@ function BookingSection({
               ) : (
                 <div className="step-cta">
                   <button
-                    className="btn-pay"
+                    type="button"
+                    className={`btn-pay ${BTN_TOUCH_PRIMARY}`}
                     disabled={previewBookingLocked || !termsAccepted || loading}
                     onClick={previewBookingLocked ? undefined : handleBookPayOnSite}
                   >
