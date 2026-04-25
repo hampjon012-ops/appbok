@@ -560,37 +560,77 @@ function SalonContactPanel({ salon, onSaved, onSalonNameLive }) {
 }
 
 function SalonHoursPanel({ salon, onSaved }) {
+  const WD_LABELS = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag'];
+  const STEP = 15; // minutes
+
+  function generateTimeSlots() {
+    const slots = [];
+    for (let h = 0; h < 24; h++) {
+      for (let m = 0; m < 60; m += STEP) {
+        slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+      }
+    }
+    return slots;
+  }
+  const TIME_SLOTS = generateTimeSlots();
+
+  function defaultWeek() {
+    return [
+      { day: 'Måndag',   isOpen: true,  openTime: '09:00', closeTime: '18:00' },
+      { day: 'Tisdag',   isOpen: true,  openTime: '09:00', closeTime: '18:00' },
+      { day: 'Onsdag',   isOpen: true,  openTime: '09:00', closeTime: '18:00' },
+      { day: 'Torsdag',  isOpen: true,  openTime: '09:00', closeTime: '18:00' },
+      { day: 'Fredag',   isOpen: true,  openTime: '09:00', closeTime: '17:00' },
+      { day: 'Lördag',   isOpen: true,  openTime: '10:00', closeTime: '15:00' },
+      { day: 'Söndag',   isOpen: false, openTime: '09:00', closeTime: '18:00' },
+    ];
+  }
+
+  function parseFromContact(c) {
+    const weekData = c?.opening_hours_week;
+    if (Array.isArray(weekData) && weekData.length === 7) {
+      return weekData.map((d, i) => ({
+        day:      String(d.day      || WD_LABELS[i]),
+        isOpen:   Boolean(d.isOpen),
+        openTime: String(d.openTime || '09:00'),
+        closeTime: String(d.closeTime || '18:00'),
+      }));
+    }
+    return defaultWeek();
+  }
+
   const c0 = contactFromSalon(salon);
-  const initialText = Array.isArray(c0.hours) && c0.hours.length
-    ? c0.hours.join('\n')
-    : c0.opening_hours || '';
-  const [text, setText] = useState(initialText);
-  const [msg, setMsg] = useState('');
+  const [week, setWeek] = useState(() => parseFromContact(c0));
   const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
 
   useEffect(() => {
-    const c = contactFromSalon(salon);
-    const t = Array.isArray(c.hours) && c.hours.length ? c.hours.join('\n') : c.opening_hours || '';
-    setText(t);
+    setWeek(parseFromContact(contactFromSalon(salon)));
   }, [salon]);
+
+  const updateDay = (idx, patch) => {
+    setWeek((prev) => prev.map((d, i) => (i === idx ? { ...d, ...patch } : d)));
+  };
 
   const save = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setMsg('');
+    setSaveMsg('');
     try {
-      const res = await fetch('/api/salons', {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({ opening_hours: text }),
+      const res = await fetch('/api/salons/current/opening-hours', {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ week }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Kunde inte spara.');
-      setMsg('Sparat!');
+      setSaveMsg('Sparat!');
+      toast.success('Öppettider sparade!');
       onSaved?.(data);
-      setTimeout(() => setMsg(''), 2500);
-    } catch (x) {
-      setMsg(x.message);
+      setTimeout(() => setSaveMsg(''), 3000);
+    } catch (err) {
+      setSaveMsg(err.message || 'Fel');
+      toast.error(err.message || 'Kunde inte spara öppettider.');
     } finally {
       setSaving(false);
     }
@@ -599,22 +639,85 @@ function SalonHoursPanel({ salon, onSaved }) {
   return (
     <div className="admin-card">
       <h3 className="admin-card-title">⏰ Öppettider</h3>
-      <p className="admin-hint">En rad per tidsintervall, t.ex. &quot;Mån–Fre 09–18&quot;.</p>
-      <form className="superadmin-modal-form" onSubmit={save}>
-        <label>
-          Öppettider
-          <textarea
-            className="admin-input"
-            rows={6}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={'Mån–Fre 09–18\nLör 10–15'}
-          />
-        </label>
-        <button type="submit" className="btn-superadmin-gold" disabled={saving}>
-          {saving ? 'Sparar…' : 'Spara'}
-        </button>
-        {msg && <p className={msg === 'Sparat!' ? 'superadmin-success' : 'superadmin-error'}>{msg}</p>}
+      <p className="admin-hint" style={{ marginBottom: '1.25rem' }}>
+        Ange öppettider för varje dag. Stängd? Stäng av dagen och spara.
+      </p>
+
+      <form onSubmit={save}>
+        <div className="opening-hours-list">
+          {week.map((day, idx) => (
+            <div
+              key={day.day}
+              className="opening-hours-row"
+              style={{ borderBottom: '1px solid #F3F4F6' }}
+            >
+              {/* Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', paddingRight: '1rem' }}>
+                <label className="hours-toggle" htmlFor={`oh-toggle-${idx}`} aria-label={`${day.day} öppen`}>
+                  <input
+                    id={`oh-toggle-${idx}`}
+                    type="checkbox"
+                    className="hours-toggle__input"
+                    checked={day.isOpen}
+                    onChange={(e) => updateDay(idx, { isOpen: e.target.checked })}
+                  />
+                  <span className="hours-toggle__track">
+                    <span className="hours-toggle__thumb" />
+                  </span>
+                </label>
+              </div>
+
+              {/* Day name */}
+              <div style={{ flex: '0 0 96px', paddingRight: '1rem' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.95rem', color: '#374151' }}>
+                  {day.day}
+                </span>
+              </div>
+
+              {/* Time pickers or "Stängt" */}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {day.isOpen ? (
+                  <>
+                    <select
+                      className="hours-time-select"
+                      value={day.openTime}
+                      disabled={!day.isOpen}
+                      onChange={(e) => updateDay(idx, { openTime: e.target.value })}
+                      aria-label={`${day.day} öppnar`}
+                    >
+                      {TIME_SLOTS.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                    <span style={{ color: '#9CA3AF', fontSize: '0.875rem', userSelect: 'none' }}>till</span>
+                    <select
+                      className="hours-time-select"
+                      value={day.closeTime}
+                      disabled={!day.isOpen}
+                      onChange={(e) => updateDay(idx, { closeTime: e.target.value })}
+                      aria-label={`${day.day} stänger`}
+                    >
+                      {TIME_SLOTS.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </>
+                ) : (
+                  <span style={{ color: '#9CA3AF', fontSize: '0.875rem', fontStyle: 'italic' }}>Stängt</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button type="submit" className="btn-superadmin-gold" disabled={saving}>
+            {saving ? 'Sparar…' : 'Spara öppettider'}
+          </button>
+          {saveMsg && saveMsg !== 'Sparat!' ? (
+            <p className="superadmin-error">{saveMsg}</p>
+          ) : null}
+        </div>
       </form>
     </div>
   );

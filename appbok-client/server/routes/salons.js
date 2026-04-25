@@ -360,6 +360,62 @@ router.post('/current/trial', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// POST /api/salons/current/opening-hours — Spara strukturerade öppettider
+router.post('/current/opening-hours', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const raw = req.body;
+    if (!raw || typeof raw !== 'object') {
+      return res.status(400).json({ error: 'Ogiltig data.' });
+    }
+
+    const week = raw.week;
+    if (!Array.isArray(week) || week.length !== 7) {
+      return res.status(400).json({ error: 'Sju dagar krävs.' });
+    }
+
+    const validated = week.map((day, i) => {
+      if (typeof day !== 'object' || day === null) {
+        return res.status(400).json({ error: `Ogiltig data för dag ${i + 1}.` });
+      }
+      return {
+        day: String(day.day || ''),
+        isOpen: Boolean(day.isOpen),
+        openTime: String(day.openTime || '09:00'),
+        closeTime: String(day.closeTime || '18:00'),
+      };
+    });
+
+    const contactPatch = {
+      opening_hours_week: validated,
+    };
+
+    const { data: existing } = await supabase
+      .from('salons')
+      .select('contact')
+      .eq('id', req.user.salonId)
+      .single();
+    const currentContact = existing?.contact && typeof existing.contact === 'object' ? existing.contact : {};
+
+    const { data, error } = await supabase
+      .from('salons')
+      .update({
+        contact: { ...currentContact, ...contactPatch },
+        opening_hours_configured: true,
+      })
+      .eq('id', req.user.salonId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    ensureSalonThemeAccent(data);
+    res.json({ ok: true, opening_hours_configured: true });
+  } catch (err) {
+    console.error('[opening-hours] save error:', err);
+    const msg = err?.error?.message || err?.message || err?.details || String(err);
+    res.status(500).json({ error: `Kunde inte spara öppettider: ${msg}` });
+  }
+});
+
 // POST /api/salons/current/soft-delete — Radera salong mjukt (admin för aktuell salong)
 router.post('/current/soft-delete', requireAuth, requireAdmin, async (req, res) => {
   try {

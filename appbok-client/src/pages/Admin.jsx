@@ -659,6 +659,7 @@ export default function Admin() {
             showSalonLifecycleBanner={!isSuperAdmin && user?.role === 'admin'}
             showOnboardingWidget={!isSuperAdmin && user?.role === 'admin'}
             salonHideOnboardingWidget={Boolean(salon?.hide_onboarding_widget)}
+            openingHoursConfigured={Boolean(salon?.opening_hours_configured)}
             onOnboardingDismissed={(data) => {
               try {
                 localStorage.setItem('sb_salon', JSON.stringify(data));
@@ -683,6 +684,10 @@ export default function Admin() {
             onNavigateToSchedule={() => {
               setActiveTab('schedule');
               navigate('/admin/schema');
+            }}
+            onNavigateToHours={() => {
+              try { sessionStorage.setItem('salonAdminInitialTab', 'hours'); } catch (_) { /* ignore */ }
+              setActiveTab('settings');
             }}
             onNavigateToServices={() => {
               setActiveTab('services');
@@ -725,7 +730,9 @@ function DashboardTab({
   salonHideOnboardingWidget = false,
   onOnboardingDismissed,
   onNavigateToSchedule,
+  onNavigateToHours,
   onNavigateToServices,
+  openingHoursConfigured = false,
 }) {
   const [stats, setStats] = useState(null);
   const [monthlyStats, setMonthlyStats] = useState([]);
@@ -911,7 +918,7 @@ function DashboardTab({
   const previewBookingUrl = ls ? getSalonPublicBookingPreviewUrl(ls) : '';
 
   const step1Done = dashboardServiceCount > 0;
-  const step2Done = scheduleConfigured;
+  const step2Done = scheduleConfigured || openingHoursConfigured;
   const step3Done = stripeConnected;
   const completedSteps = [step1Done, step2Done, step3Done].filter(Boolean).length;
   const progressPct = Math.round((completedSteps / 3) * 100);
@@ -1144,7 +1151,7 @@ function DashboardTab({
                       done: scheduleConfigured,
                       label: 'Ställ in dina öppettider',
                       actionLabel: 'Gå till Öppettider',
-                      action: typeof onNavigateToSchedule === 'function' ? onNavigateToSchedule : null,
+                      action: typeof onNavigateToHours === 'function' ? onNavigateToHours : null,
                     },
                     {
                       done: stripeConnected,
