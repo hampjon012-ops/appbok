@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import {
   applyThemeToDocument,
@@ -20,7 +20,7 @@ import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
 import { getValidOpeningHoursWeek } from './lib/publicOpeningHours.js';
 import PrivacyCheckbox from './components/PrivacyCheckbox.jsx';
 import CookieBanner from './components/CookieBanner.jsx';
-import { ChevronRight, Plus, User, Users, X } from 'lucide-react';
+import { ChevronRight, Lock, Plus, User, Users, X } from 'lucide-react';
 
 function isPreviewEmbedClient() {
   if (typeof window === 'undefined') return false;
@@ -150,10 +150,11 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
   const stripe = useStripe();
   const elements = useElements();
   const [confirming, setConfirming] = useState(false);
-  const [expressReady, setExpressReady] = useState(false);
+  const [paymentComplete, setPaymentComplete] = useState(false);
+  const isPayDisabled = disabled || !stripe || confirming || !paymentComplete;
 
   const handleConfirmPayment = async () => {
-    if (!stripe || !elements || disabled || confirming) return;
+    if (!stripe || !elements || isPayDisabled) return;
     setConfirming(true);
     onError?.('');
     try {
@@ -186,47 +187,23 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
     }
   };
 
-  const handleExpressConfirm = async () => {
-    await handleConfirmPayment();
-  };
-
   return (
     <div className="embedded-payment-shell">
-      <div className="express-checkout-wrap" style={expressReady ? undefined : { position: 'absolute', opacity: 0, pointerEvents: 'none' }}>
-        <ExpressCheckoutElement
-          onConfirm={handleExpressConfirm}
-          onReady={({ availablePaymentMethods }) => {
-            const hasWallet = availablePaymentMethods?.applePay || availablePaymentMethods?.googlePay;
-            setExpressReady(Boolean(hasWallet));
-          }}
-          options={{
-            paymentMethods: {
-              applePay: 'always',
-              googlePay: 'always',
-            },
-            buttonTheme: {
-              applePay: 'black',
-              googlePay: 'black',
-            },
-            buttonType: {
-              applePay: 'buy',
-              googlePay: 'buy',
-            },
-          }}
-        />
-      </div>
-      {expressReady && (
-        <div className="payment-divider">
-          <span>eller betala med kort</span>
-        </div>
-      )}
-      {/* PaymentElement är alltid synlig så användaren kan betala med kort
-          om Apple Pay/Google Pay inte är tillgängliga eller om de avbryter */}
-      <PaymentElement />
+      <PaymentElement
+        onChange={(event) => {
+          setPaymentComplete(Boolean(event.complete));
+          if (event.error?.message) onError?.(event.error.message);
+          else onError?.('');
+        }}
+      />
       <button
         type="button"
-        className={`btn-pay ${BTN_TOUCH_PRIMARY}`}
-        disabled={disabled || !stripe || confirming}
+        className={`btn-pay w-full py-4 sm:py-3 mt-6 text-center flex justify-center items-center rounded-md font-medium transition-all ${
+          isPayDisabled
+            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            : 'bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98] cursor-pointer'
+        }`}
+        disabled={isPayDisabled}
         onClick={handleConfirmPayment}
       >
         {confirming ? 'Bekräftar betalning...' : `Bekräfta och betala (${payLabel})`}
@@ -1740,9 +1717,9 @@ function BookingSection({
                           />
                         </Elements>
                       ) : null}
-                      <p className="stripe-note">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        Säker inbäddad betalning via Stripe
+                      <p className="stripe-note flex items-center justify-center mt-3 text-xs text-gray-400">
+                        <Lock className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                        Säker betalning via Stripe
                       </p>
                     </>
                   )}
