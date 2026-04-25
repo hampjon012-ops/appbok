@@ -913,6 +913,19 @@ function DashboardTab({
   const step3Done = stripeConnected;
   const completedSteps = [step1Done, step2Done, step3Done].filter(Boolean).length;
   const progressPct = Math.round((completedSteps / 3) * 100);
+  const lifecycleLabel = isDraftSalon
+    ? 'Utkast'
+    : isDemoSalon
+      ? 'Demo'
+      : isActiveSalon
+        ? 'Förhandsvisning'
+        : isTrialSalon
+          ? 'Trial'
+          : isLiveSalon
+            ? 'Live'
+            : isExpiredSalon
+              ? 'Utgången'
+              : (ls?.status || 'Okänd');
 
   const handleGoLive = async () => {
     if (
@@ -987,8 +1000,8 @@ function DashboardTab({
 
   return (
     <div className="admin-section dashboard-section">
-      {/* ── ONBOARDING-CHECKLIST – draft ── */}
-      {showSalonLifecycleBanner && ls && isDraftSalon && (
+      {/* ── ONBOARDING-CHECKLIST – pre-trial ── */}
+      {showSalonLifecycleBanner && ls && isPreTrialSalon && (
         <div style={{
           marginBottom: '1.25rem',
           background: '#FFFFFF',
@@ -1044,6 +1057,17 @@ function DashboardTab({
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#111827', flex: 1 }}>
                   Kom igång med din salong
                 </h3>
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: '#1e3a8a',
+                  background: '#dbeafe',
+                  border: '1px solid #93c5fd',
+                  borderRadius: '999px',
+                  padding: '0.15rem 0.5rem',
+                }}>
+                  {lifecycleLabel}
+                </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
@@ -1584,7 +1608,7 @@ function DashboardTab({
         </p>
       ) : null}
 
-      {showOnboardingWidget && showOnboardingCard && servicePreview.loading ? (
+      {showOnboardingWidget && showOnboardingCard && !isPreTrialSalon && servicePreview.loading ? (
         <div className="admin-card" style={{ marginTop: '1.25rem', fontSize: '0.9rem', color: '#6b7280' }}>
           Laddar kom igång…
         </div>
@@ -1592,6 +1616,7 @@ function DashboardTab({
 
       {showOnboardingWidget &&
       showOnboardingCard &&
+      !isPreTrialSalon &&
       !servicePreview.loading &&
       !(dashboardServiceCount > 0 && scheduleConfigured) ? (
         <div
