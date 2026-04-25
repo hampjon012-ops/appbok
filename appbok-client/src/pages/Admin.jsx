@@ -454,6 +454,13 @@ export default function Admin() {
     emailVerifyToastShownRef.current = false;
   }, [token, location.search, location.pathname, location.hash, navigate]);
 
+  /** Lyssa på SALON_CONFIG_UPDATED så att Dashboard uppdateras när öppettider / andra inställningar sparas. */
+  useEffect(() => {
+    const handler = () => setSalonStorageBump((b) => b + 1);
+    window.addEventListener('appbok:salon-config-updated', handler);
+    return () => window.removeEventListener('appbok:salon-config-updated', handler);
+  }, []);
+
   const loadScheduleConfiguredForReminder = useCallback(() => {
     if (!token || isSuperAdmin || user?.role !== 'admin') {
       setScheduleConfiguredForReminder(null);
@@ -705,7 +712,11 @@ export default function Admin() {
           isSuperAdmin ? (
             <SuperadminSettingsTab user={user} />
           ) : user?.role === 'admin' ? (
-            <SalonAdminSettingsTab />
+            <SalonAdminSettingsTab
+              onSalonUpdate={(updated) => {
+                setSalon((prev) => (prev ? { ...prev, ...updated } : prev));
+              }}
+            />
           ) : (
             <StaffSettingsTab />
           )
