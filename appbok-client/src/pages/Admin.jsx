@@ -949,7 +949,7 @@ function DashboardTab({
   const handleDashboardStartTrial = async () => {
     if (
       !confirm(
-        'Starta 14 dagars testperiod? Efter 14 dagar behöver du koppla Stripe för att fortsätta.',
+        'Publicera din bokningssida och starta 14 dagars provperiod? Efter 14 dagar behöver du ha ett aktivt Stripe-konto.',
       )
     ) {
       return;
@@ -970,7 +970,7 @@ function DashboardTab({
         /* ignore */
       }
       notifySalonConfigUpdated();
-      setTrialMsg('✓ Testperiod startad — er bokningssida kan nu ta emot bokningar.');
+      setTrialMsg('✓ Grattis! Din bokningssida är nu live.');
     } catch (err) {
       setTrialMsg(`✗ ${err.message}`);
     } finally {
@@ -980,91 +980,142 @@ function DashboardTab({
 
   return (
     <div className="admin-section dashboard-section">
-      {/* ── DEMO-BANNER ── */}
+      {/* ── ONBOARDING-BANNER – draft/demo ── */}
       {showSalonLifecycleBanner && ls && isPreTrialSalon && (
         <div style={{
           marginBottom: '1.25rem',
-          background: '#FFFFFF',
-          borderRadius: '12px',
-          padding: '0.5rem 1rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+          background: '#F0F7FF',
+          borderRadius: '14px',
+          padding: '1.25rem 1.5rem',
+          border: '1px solid #BFDBFE',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
           display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          flexDirection: 'column',
+          gap: '0.9rem',
           width: '100%',
-          gap: '0.75rem',
         }}>
-          {/* ── Vänster: Badge + Text ── */}
-          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.6rem', flexShrink: 1, minWidth: 0 }}>
-            <span style={{
-              background: '#FFF7ED',
-              color: '#9A3412',
-              fontWeight: 700,
-              fontSize: '0.7rem',
-              letterSpacing: '0.05em',
-              padding: '0.2rem 0.55rem',
-              borderRadius: '9999px',
-              border: '1px solid #FED7AA',
-              flexShrink: 0,
-            }}>{isDemoSalon ? 'DEMO' : isDraftSalon ? 'UTKAST' : 'FÖRHANDSGRANSNING'}</span>
-            <span style={{ fontSize: '0.8rem', color: '#4B5563', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {isDemoSalon
-                ? 'Du är i demoläge — starta en 14 dagars testperiod för att ta emot riktiga bokningar.'
-                : 'Din sida är i förhandsgranskningsläge. Starta testperioden när du är redo.'}
-            </span>
+          {/* ── Header ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#1E3A5F' }}>
+              Publicera din bokningssida
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#4B6287', lineHeight: 1.5 }}>
+              För att garantera en trygg plattform för både dig och dina kunder behöver du aktivera betalningar innan du kan gå live.
+            </p>
           </div>
 
-          {/* ── Höger: Knappar ── */}
-          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
-            {previewBookingUrl && (
-              <button
-                type="button"
-                onClick={handleCopyPreviewLink}
+          {/* ── Steg 1 + Steg 2 ── */}
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+
+            {/* Steg 1: Koppla Stripe */}
+            {stripeConnected ? (
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                background: '#DCFCE7',
+                border: '1px solid #86EFAC',
+                borderRadius: '9px',
+                padding: '0.55rem 1rem',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                color: '#15803D',
+              }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Stripe är kopplat!
+              </div>
+            ) : (
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (typeof onGoToSalonPaymentsSettings === 'function') onGoToSalonPaymentsSettings();
+                }}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.3rem',
-                  background: '#F3F4F6',
-                  color: '#374151',
+                  gap: '0.5rem',
+                  background: '#1E3A5F',
+                  color: '#fff',
                   border: 'none',
-                  borderRadius: '7px',
-                  padding: '0.35rem 0.75rem',
-                  fontSize: '0.78rem',
-                  fontWeight: 500,
+                  borderRadius: '9px',
+                  padding: '0.55rem 1rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
                   cursor: 'pointer',
+                  textDecoration: 'none',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = '#E5E7EB'}
-                onMouseLeave={e => e.currentTarget.style.background = '#F3F4F6'}
+                onMouseEnter={e => e.currentTarget.style.background = '#2a4a73'}
+                onMouseLeave={e => e.currentTarget.style.background = '#1E3A5F'}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                  <line x1="1" y1="10" x2="23" y2="10"/>
                 </svg>
-                {previewLinkCopied ? 'Länk kopierad!' : 'Kopiera länk'}
-              </button>
+                1. Koppla Stripe säkert
+              </a>
             )}
-            <button
-              type="button"
-              disabled={trialBusy}
-              onClick={handleDashboardStartTrial}
-              style={{
-                background: '#171717',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '7px',
-                padding: '0.4rem 1rem',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                opacity: trialBusy ? 0.6 : 1,
-              }}
-            >
-              {trialBusy ? 'Startar...' : 'Starta 14 dagars testperiod'}
-            </button>
+
+            {/* Steg 2: Starta trial */}
+            {stripeConnected ? (
+              <button
+                type="button"
+                disabled={trialBusy}
+                onClick={handleDashboardStartTrial}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: '#171717',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '9px',
+                  padding: '0.55rem 1rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: trialBusy ? 'wait' : 'pointer',
+                  opacity: trialBusy ? 0.6 : 1,
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+                {trialBusy ? 'Startar…' : 'Publicera bokningssidan (Starta 14 dagars provperiod)'}
+              </button>
+            ) : (
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                background: '#F3F4F6',
+                color: '#9CA3AF',
+                border: '1px solid #E5E7EB',
+                borderRadius: '9px',
+                padding: '0.55rem 1rem',
+                fontSize: '0.82rem',
+                fontWeight: 500,
+                opacity: 0.7,
+              }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ opacity: 0.4 }}>
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                2. Starta 14 dagars provperiod (Kräver Stripe)
+              </div>
+            )}
           </div>
+
+          {/* ── Status-meddelande ── */}
           {trialMsg && (
-            <p style={{ margin: 0, fontSize: '0.75rem', color: trialMsg.startsWith('✓') ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
+            <p style={{
+              margin: 0,
+              fontSize: '0.8rem',
+              color: trialMsg.startsWith('✓') ? '#16a34a' : '#dc2626',
+              fontWeight: 500,
+            }}>
               {trialMsg}
             </p>
           )}
