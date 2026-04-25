@@ -1496,7 +1496,11 @@ function BookingSection({
 
               {selectedDate && selectedTime && (
                 <div className="step-cta">
-                  <button type="button" className={`btn-continue ${BTN_TOUCH_PRIMARY}`} onClick={handleContinueTime}>
+                  <button
+                    type="button"
+                    className={`btn-continue ${BTN_TOUCH_PRIMARY} w-full sm:w-auto mt-6 py-4 sm:py-2 text-center`}
+                    onClick={handleContinueTime}
+                  >
                     Fortsätt →
                   </button>
                 </div>
