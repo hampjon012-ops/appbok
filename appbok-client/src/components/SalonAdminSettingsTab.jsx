@@ -1476,6 +1476,14 @@ export default function SalonAdminSettingsTab({ onSalonUpdate }) {
     }
     load({ silent: true }).then((fresh) => {
       if (fresh && typeof fresh === 'object') {
+        // Om opening_hours_configured kom från en panel, spegla det i localStorage
+        // så att getAuth().salon läser rätt värde efter SALON_CONFIG_UPDATED
+        if (patch?.opening_hours_configured === true) {
+          try {
+            const stored = JSON.parse(localStorage.getItem('sb_salon') || '{}');
+            localStorage.setItem('sb_salon', JSON.stringify({ ...stored, opening_hours_configured: true }));
+          } catch (_) { /* ignore */ }
+        }
         setSalon(fresh);
         onSalonUpdate?.(fresh);
       }
