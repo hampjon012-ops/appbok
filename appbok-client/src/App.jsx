@@ -1352,14 +1352,17 @@ function BookingSection({
                   <button
                     key={svc.id}
                     type="button"
-                    className={`category-selection-btn ${BTN_TOUCH_CARD}`}
+                    className="category-selection-btn category-card-service min-w-0 w-full cursor-pointer text-left transition-all duration-75 active:scale-[0.99] active:bg-gray-50"
                     onClick={() => handleSelectService(svc)}
                   >
-                    <div className="cat-sel-info">
-                      <h4>{svc.name}</h4>
-                      <p>{svc.duration}</p>
+                    <div className="cat-sel-info cat-sel-info--service flex min-w-0 flex-1 flex-col pr-4 text-left">
+                      <h4 className="font-medium text-gray-900 line-clamp-2 break-words">{svc.name}</h4>
+                      <p className="mt-1 text-sm text-gray-500">{svc.duration}</p>
                     </div>
-                    <div className="cat-sel-count">{svc.price}</div>
+                    <div className="flex shrink-0 items-center text-sm text-gray-500">
+                      <span className="whitespace-nowrap">{svc.price}</span>
+                      <ChevronRight className="ml-3 h-4 w-4 shrink-0 text-gray-400" strokeWidth={2} aria-hidden />
+                    </div>
                   </button>
                 ))}
               </div>

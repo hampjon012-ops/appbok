@@ -632,6 +632,23 @@ a.insta-item-link:focus-visible {
   margin-bottom: 0;
 }
 
+/* Tjänstekort (bokningsmodal steg 2): samma flex/truncering som kategorikort */
+.category-selection-btn.category-card-service {
+  min-width: 0;
+}
+.category-selection-btn.category-card-service .cat-sel-info--service {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+.category-selection-btn.category-card-service .cat-sel-info--service h4 {
+  margin-bottom: 0;
+  font-family: var(--font-sans);
+}
+.category-selection-btn.category-card-service .cat-sel-info--service p {
+  margin-bottom: 0;
+  font-weight: 400;
+}
+
 .services-selection-list {
   display: flex;
   flex-direction: column;
