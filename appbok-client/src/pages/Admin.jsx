@@ -918,7 +918,7 @@ function DashboardTab({
   }, [onOnboardingDismissed]);
 
   const handleCopyLink = useCallback(() => {
-    const url = getSalonPublicBookingPreviewUrl(ls);
+    const url = getSalonPublicBookingPreviewUrl(lifecycleSalon);
     if (!url) {
       toast.error('Kunde inte hämta bokningslänk.');
       return;
@@ -928,7 +928,7 @@ function DashboardTab({
     }).catch(() => {
       toast.error('Kunde inte kopiera länken.');
     });
-  }, [ls]);
+  }, [lifecycleSalon]);
 
   const dashboardServiceCount = useMemo(() => {
     const cats = servicePreview.categories || [];
