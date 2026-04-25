@@ -721,13 +721,11 @@ export default function Admin() {
           ) : user?.role === 'admin' ? (
             <SalonAdminSettingsTab
               onSalonUpdate={(updated) => {
-                setSalonState((prev) => (prev ? { ...prev, ...updated } : prev));
+                setSalonState((prev) => ({ ...(prev || {}), ...(updated || {}) }));
               }}
               onOpeningHoursSaved={() => {
                 // Uppdatera salonState direkt med rätt värde så att DashboardTab uppdateras
-                setSalonState((prev) =>
-                  prev ? { ...prev, opening_hours_configured: true } : prev
-                );
+                setSalonState((prev) => ({ ...(prev || {}), opening_hours_configured: true }));
                 setActiveTab('dashboard');
               }}
             />
