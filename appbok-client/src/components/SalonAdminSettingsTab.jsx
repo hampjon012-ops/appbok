@@ -641,7 +641,7 @@ function SalonHoursPanel({ salon, onSaved }) {
       } catch (_) { /* ignore */ }
       notifySalonConfigUpdated();
       toast.success('Öppettider sparade!');
-      onSaved?.(data);
+      onSaved?.({ ...data, openingHoursSaved: true });
       setTimeout(() => setSaveMsg(''), 3000);
     } catch (err) {
       setSaveMsg(err.message || 'Fel');
@@ -1416,7 +1416,7 @@ function SalonPaymentsPanel({ salon, onTrialStarted }) {
   );
 }
 
-export default function SalonAdminSettingsTab({ onSalonUpdate }) {
+export default function SalonAdminSettingsTab({ onSalonUpdate, onOpeningHoursSaved }) {
   const [salon, setSalon] = useState(null);
   const [tab, setTab] = useState('theme');
   const [loading, setLoading] = useState(true);
@@ -1471,6 +1471,7 @@ export default function SalonAdminSettingsTab({ onSalonUpdate }) {
   }, []);
 
   const onSaved = useCallback((patch) => {
+    const isOpeningHoursSaved = patch?.openingHoursSaved === true;
     if (patch && typeof patch === 'object' && patch.logo_url !== undefined) {
       setSalon((prev) => (prev ? { ...prev, logo_url: patch.logo_url } : null));
     }
@@ -1478,7 +1479,7 @@ export default function SalonAdminSettingsTab({ onSalonUpdate }) {
       if (fresh && typeof fresh === 'object') {
         // Om opening_hours_configured kom från en panel, spegla det i localStorage
         // så att getAuth().salon läser rätt värde efter SALON_CONFIG_UPDATED
-        if (patch?.opening_hours_configured === true) {
+        if (patch?.opening_hours_configured === true || isOpeningHoursSaved) {
           try {
             const stored = JSON.parse(localStorage.getItem('sb_salon') || '{}');
             localStorage.setItem('sb_salon', JSON.stringify({ ...stored, opening_hours_configured: true }));
@@ -1488,6 +1489,9 @@ export default function SalonAdminSettingsTab({ onSalonUpdate }) {
         onSalonUpdate?.(fresh);
       }
       notifySalonConfigUpdated();
+      if (isOpeningHoursSaved) {
+        onOpeningHoursSaved?.();
+      }
     });
   }, [load]);
 
