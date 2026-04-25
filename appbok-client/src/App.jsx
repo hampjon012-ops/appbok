@@ -1440,21 +1440,28 @@ function BookingSection({
 
               {/* Date strip */}
               <div className="date-strip">
-                {availableDates.map((d, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className={`date-chip ${BTN_TOUCH_CARD} ${selectedDate?.toDateString() === d.toDateString() ? 'selected' : ''}`}
-                    onClick={() => {
-                      setDate(d);
-                      setTime(null);
-                    }}
-                  >
-                    <span className="date-chip-weekday">{d.toLocaleDateString('sv-SE',{weekday:'short'})}</span>
-                    <span className="date-chip-day">{d.getDate()}</span>
-                    <span className="date-chip-month">{d.toLocaleDateString('sv-SE',{month:'short'})}</span>
-                  </button>
-                ))}
+                {availableDates.map((d, idx) => {
+                  const isSelectedDate = selectedDate?.toDateString() === d.toDateString();
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      className={`date-chip ${
+                        isSelectedDate
+                          ? 'selected bg-gray-900 text-white border-transparent'
+                          : 'bg-white border border-gray-200 active:scale-[0.95] active:bg-gray-50 transition-all duration-75 cursor-pointer'
+                      }`}
+                      onClick={() => {
+                        setDate(d);
+                        setTime(null);
+                      }}
+                    >
+                      <span className="date-chip-weekday">{d.toLocaleDateString('sv-SE',{weekday:'short'})}</span>
+                      <span className="date-chip-day">{d.getDate()}</span>
+                      <span className="date-chip-month">{d.toLocaleDateString('sv-SE',{month:'short'})}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Time slots */}
@@ -1464,7 +1471,7 @@ function BookingSection({
                   {busyLoading ? (
                     <p className="timeslots-loading">Kontrollerar tillgänglighet...</p>
                   ) : (
-                    <div className="timeslots-grid">
+                    <div className="timeslots-grid grid grid-cols-3 gap-3 mt-6">
                       {ALL_SLOTS.map(slot => {
                         const booked = busySlots.has(slot);
                         return (
@@ -1472,7 +1479,9 @@ function BookingSection({
                             key={slot}
                             type="button"
                             disabled={booked}
-                            className={`timeslot ${booked ? 'booked' : ''} ${selectedTime === slot ? 'selected' : ''} ${!booked ? BTN_TOUCH_CARD : ''}`}
+                            className={`timeslot ${
+                              booked ? 'booked' : 'py-3 border border-gray-200 rounded-md text-center text-sm font-medium text-gray-900 hover:border-black active:scale-[0.95] transition-all cursor-pointer'
+                            } ${selectedTime === slot ? 'selected' : ''}`}
                             onClick={() => !booked && setTime(slot)}
                           >
                             {slot}
