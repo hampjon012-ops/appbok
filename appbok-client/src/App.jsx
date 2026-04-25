@@ -15,7 +15,9 @@ import './App.css';
 import { usePreviewEmbedUi } from './hooks/usePreviewEmbedUi.js';
 import { useSalonCatalog } from './hooks/useSalonCatalog.js';
 import PreviewDeviceStatusBar from './components/PreviewDeviceStatusBar.jsx';
+import PublicOpeningHours from './components/PublicOpeningHours.jsx';
 import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
+import { getValidOpeningHoursWeek } from './lib/publicOpeningHours.js';
 import PrivacyCheckbox from './components/PrivacyCheckbox.jsx';
 import CookieBanner from './components/CookieBanner.jsx';
 import { Plus, User, Users } from 'lucide-react';
@@ -312,6 +314,10 @@ function App() {
   }, []);
 
   const accentColor = useMemo(() => resolvePrimaryAccentHex(config?.theme), [config?.theme]);
+  const validOpeningWeek = useMemo(() => {
+    if (!config || config.tenantNotFound) return null;
+    return getValidOpeningHoursWeek(config.contact);
+  }, [config]);
   const previewEmbed = isPreviewEmbedClient();
 
   if (!config) return <div className="loading-screen">Laddar...</div>;
@@ -322,6 +328,21 @@ function App() {
 
   const isSalonPreviewMode = isSalonPreviewBookingMode(config.salonStatus);
   const isExpired = config.salonStatus === 'expired';
+  const hasLegacyHours = Array.isArray(config.contact?.hours) && config.contact.hours.length > 0;
+  const showStructuredOpeningHours = validOpeningWeek != null;
+  const showLegacyOpeningHours = hasLegacyHours && !showStructuredOpeningHours;
+  const showOpeningHoursPlaceholder =
+    !showStructuredOpeningHours &&
+    !hasLegacyHours &&
+    (Boolean(config.contact?.address) ||
+      Boolean(config.contact?.phone) ||
+      (isSalonPreviewMode && !isExpired));
+  const showContactSection =
+    Boolean(config.contact?.address) ||
+    Boolean(config.contact?.phone) ||
+    hasLegacyHours ||
+    showStructuredOpeningHours ||
+    (isSalonPreviewMode && !isExpired);
 
   return (
     <div className="app-wrapper">
@@ -577,7 +598,7 @@ function App() {
         })()}
 
         {/* ── 4. KONTAKT & KARTA ── */}
-        {(config.contact?.address || config.contact?.phone || (config.contact?.hours && config.contact.hours.length > 0)) && (
+        {showContactSection && (
           <section id="kontakt" className="contact-section">
             <div className="container">
               <h2 className="contact-title">Kontakt</h2>
@@ -603,7 +624,10 @@ function App() {
                       <div><h4>Telefon</h4><p>{config.contact.phone}</p></div>
                     </div>
                   )}
-                  {config.contact?.hours && config.contact.hours.length > 0 && (
+                  {(showStructuredOpeningHours || showOpeningHoursPlaceholder) && (
+                    <PublicOpeningHours week={validOpeningWeek} />
+                  )}
+                  {showLegacyOpeningHours && (
                     <div className="contact-info-item align-top">
                       <div className="contact-icon">
                         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">

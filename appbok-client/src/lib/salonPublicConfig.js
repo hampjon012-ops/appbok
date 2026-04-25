@@ -151,6 +151,9 @@ export function mergePublicSalon(base, api) {
       hours: hours ?? base.contact?.hours,
       instagramHandle: c.instagram_handle ?? base.contact?.instagramHandle,
       about: c.about ?? base.contact?.about,
+      opening_hours_week: Array.isArray(c.opening_hours_week)
+        ? c.opening_hours_week
+        : base.contact?.opening_hours_week,
     },
     theme: mergeThemeObjects(theme, baseTheme),
   };
