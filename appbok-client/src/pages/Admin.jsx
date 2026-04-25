@@ -748,6 +748,7 @@ function DashboardTab({
     error: '',
   });
   const [scheduleConfigured, setScheduleConfigured] = useState(false);
+  const [isChecklistOpen, setIsChecklistOpen] = useState(true);
   const [showOnboardingCard, setShowOnboardingCard] = useState(() => !salonHideOnboardingWidget);
   const [onboardingLeaving, setOnboardingLeaving] = useState(false);
 
@@ -912,7 +913,6 @@ function DashboardTab({
   const step3Done = stripeConnected;
   const completedSteps = [step1Done, step2Done, step3Done].filter(Boolean).length;
   const progressPct = Math.round((completedSteps / 3) * 100);
-  const [isChecklistOpen, setIsChecklistOpen] = useState(true);
 
   const handleGoLive = async () => {
     if (
