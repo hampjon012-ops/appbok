@@ -19,6 +19,7 @@ import {
   CalendarOff,
   Shield,
   Download,
+  ChevronDown,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
@@ -748,7 +749,7 @@ function DashboardTab({
     error: '',
   });
   const [scheduleConfigured, setScheduleConfigured] = useState(false);
-  const [isChecklistOpen, setIsChecklistOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [showOnboardingCard, setShowOnboardingCard] = useState(() => !salonHideOnboardingWidget);
   const [onboardingLeaving, setOnboardingLeaving] = useState(false);
 
@@ -1014,8 +1015,8 @@ function DashboardTab({
           {/* ── Clickable header ── */}
           <button
             type="button"
-            onClick={() => setIsChecklistOpen(o => !o)}
-            aria-expanded={isChecklistOpen}
+            onClick={() => setIsOpen((o) => !o)}
+            aria-expanded={isOpen}
             style={{
               width: '100%',
               background: 'none',
@@ -1035,33 +1036,9 @@ function DashboardTab({
             {/* Top row: title + progress summary + chevron */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
-                {/* Animated chevron */}
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#9CA3AF"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
-                  style={{
-                    flexShrink: 0,
-                    transition: 'transform 0.25s ease',
-                    transform: isChecklistOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
-                  }}
-                >
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#111827', flex: 1 }}>
-                  Kom igång med din salong
+                  Kom igång med din salong ({completedSteps}/3 klara)
                 </h3>
-                {!isChecklistOpen ? (
-                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#6B7280' }}>
-                    {completedSteps} av 3 steg slutförda
-                  </span>
-                ) : null}
                 <span style={{
                   fontSize: '0.72rem',
                   fontWeight: 700,
@@ -1107,11 +1084,21 @@ function DashboardTab({
                     </>
                   )}
                 </div>
+                <ChevronDown
+                  size={18}
+                  color="#9CA3AF"
+                  aria-hidden
+                  style={{
+                    flexShrink: 0,
+                    transition: 'transform 0.25s ease',
+                    transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  }}
+                />
               </div>
             </div>
 
             {/* Caption: shown when closed */}
-            {!isChecklistOpen && (
+            {!isOpen && (
               <div style={{ paddingLeft: '2.35rem' }}>
                 <p style={{
                   margin: 0,
@@ -1128,14 +1115,14 @@ function DashboardTab({
 
           {/* ── Expanded content ── */}
           <div style={{
-            padding: isChecklistOpen ? '0 1.5rem 1.25rem' : '0 1.5rem',
+            padding: isOpen ? '0 1.5rem 1.25rem' : '0 1.5rem',
             display: 'flex',
             flexDirection: 'column',
             gap: '1rem',
-            animation: isChecklistOpen ? 'fadeSlideDown 0.2s ease' : 'none',
+            animation: isOpen ? 'fadeSlideDown 0.2s ease' : 'none',
           }}>
             {/* Progress bar — shown when open */}
-            {isChecklistOpen && (
+            {isOpen && (
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
