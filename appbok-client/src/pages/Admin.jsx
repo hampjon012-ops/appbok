@@ -907,6 +907,12 @@ function DashboardTab({
   );
   const previewBookingUrl = ls ? getSalonPublicBookingPreviewUrl(ls) : '';
 
+  const step1Done = dashboardServiceCount > 0;
+  const step2Done = scheduleConfigured;
+  const step3Done = stripeConnected;
+  const completedSteps = [step1Done, step2Done, step3Done].filter(Boolean).length;
+  const progressPct = Math.round((completedSteps / 3) * 100);
+
   const handleGoLive = async () => {
     if (
       !confirm(
@@ -980,145 +986,216 @@ function DashboardTab({
 
   return (
     <div className="admin-section dashboard-section">
-      {/* ── ONBOARDING-BANNER – draft/demo ── */}
-      {showSalonLifecycleBanner && ls && isPreTrialSalon && (
+      {/* ── ONBOARDING-CHECKLIST – draft ── */}
+      {showSalonLifecycleBanner && ls && isDraftSalon && (
         <div style={{
           marginBottom: '1.25rem',
-          background: '#F0F7FF',
-          borderRadius: '14px',
-          padding: '1.25rem 1.5rem',
-          border: '1px solid #BFDBFE',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          padding: '1.5rem 1.75rem',
+          border: '1px solid #E5E7EB',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04)',
+          width: '100%',
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.9rem',
-          width: '100%',
+          gap: '1.1rem',
         }}>
-          {/* ── Header ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#1E3A5F' }}>
-              Publicera din bokningssida
-            </h3>
-            <p style={{ margin: 0, fontSize: '0.82rem', color: '#4B6287', lineHeight: 1.5 }}>
-              För att garantera en trygg plattform för både dig och dina kunder behöver du aktivera betalningar innan du kan gå live.
-            </p>
+          {/* ── Header + Progress ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#111827' }}>
+                  Kom igång med din salong
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: '#6B7280' }}>
+                  Slutför alla steg nedan för att publicera din bokningssida.
+                </p>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151' }}>
+                  {completedSteps}/3 steg klara
+                </span>
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: completedSteps === 3 ? '#16a34a' : '#d97706',
+                  letterSpacing: '0.02em',
+                }}>
+                  {completedSteps === 3 ? '✓ Klar!' : `${progressPct}%`}
+                </span>
+              </div>
+            </div>
+            {/* Progress bar */}
+            <div style={{ width: '100%', height: '6px', background: '#F3F4F6', borderRadius: '999px', overflow: 'hidden' }}>
+              <div style={{
+                width: `${progressPct}%`,
+                height: '100%',
+                background: completedSteps === 3
+                  ? 'linear-gradient(90deg, #16a34a, #22c55e)'
+                  : 'linear-gradient(90deg, #1E3A5F, #3b82f6)',
+                borderRadius: '999px',
+                transition: 'width 0.4s ease',
+              }} />
+            </div>
           </div>
 
-          {/* ── Steg 1 + Steg 2 ── */}
-          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-
-            {/* Steg 1: Koppla Stripe */}
-            {stripeConnected ? (
-              <div style={{
-                display: 'inline-flex',
+          {/* ── Steg-lista ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            {/* Steg 1: Tjänster */}
+            {[
+              {
+                done: dashboardServiceCount > 0,
+                label: 'Skapa din första tjänst',
+                actionLabel: 'Gå till Tjänster',
+                action: typeof onNavigateToServices === 'function' ? onNavigateToServices : null,
+              },
+              {
+                done: scheduleConfigured,
+                label: 'Ställ in dina öppettider',
+                actionLabel: 'Gå till Öppettider',
+                action: typeof onNavigateToSchedule === 'function' ? onNavigateToSchedule : null,
+              },
+              {
+                done: stripeConnected,
+                label: 'Koppla betalningar (Stripe)',
+                actionLabel: 'Koppla Stripe',
+                action: typeof onGoToSalonPaymentsSettings === 'function' ? onGoToSalonPaymentsSettings : null,
+              },
+            ].map((step, idx) => (
+              <div key={idx} style={{
+                display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                background: '#DCFCE7',
-                border: '1px solid #86EFAC',
-                borderRadius: '9px',
-                padding: '0.55rem 1rem',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                color: '#15803D',
+                gap: '0.75rem',
+                padding: '0.6rem 0',
+                borderTop: idx > 0 ? '1px solid #F3F4F6' : 'none',
               }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                Stripe är kopplat!
-              </div>
-            ) : (
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (typeof onGoToSalonPaymentsSettings === 'function') onGoToSalonPaymentsSettings();
-                }}
-                style={{
-                  display: 'inline-flex',
+                {/* Ikon: grå cirkel eller grön check */}
+                <div style={{
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  background: step.done ? '#DCFCE7' : '#F3F4F6',
+                  border: step.done ? '1.5px solid #86EFAC' : '1.5px solid #D1D5DB',
+                  display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  background: '#1E3A5F',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '9px',
-                  padding: '0.55rem 1rem',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textDecoration: 'none',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = '#2a4a73'}
-                onMouseLeave={e => e.currentTarget.style.background = '#1E3A5F'}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                  <line x1="1" y1="10" x2="23" y2="10"/>
-                </svg>
-                1. Koppla Stripe säkert
-              </a>
-            )}
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  {step.done ? (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  ) : (
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#9CA3AF', display: 'block' }} />
+                  )}
+                </div>
 
-            {/* Steg 2: Starta trial */}
-            {stripeConnected ? (
-              <button
-                type="button"
-                disabled={trialBusy}
-                onClick={handleDashboardStartTrial}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  background: '#171717',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '9px',
-                  padding: '0.55rem 1rem',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  cursor: trialBusy ? 'wait' : 'pointer',
-                  opacity: trialBusy ? 0.6 : 1,
-                }}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-                {trialBusy ? 'Startar…' : 'Publicera bokningssidan (Starta 14 dagars provperiod)'}
-              </button>
-            ) : (
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                background: '#F3F4F6',
-                color: '#9CA3AF',
-                border: '1px solid #E5E7EB',
-                borderRadius: '9px',
-                padding: '0.55rem 1rem',
-                fontSize: '0.82rem',
+                {/* Label */}
+                <span style={{
+                  flex: 1,
+                  fontSize: '0.88rem',
+                  fontWeight: step.done ? 500 : 400,
+                  color: step.done ? '#374151' : '#6B7280',
+                  textDecoration: step.done ? 'none' : 'none',
+                }}>
+                  {step.label}
+                </span>
+
+                {/* Aktionsknapp / klar */}
+                {step.done ? (
+                  <span style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: '#16a34a',
+                    background: '#DCFCE7',
+                    border: '1px solid #86EFAC',
+                    borderRadius: '6px',
+                    padding: '0.2rem 0.6rem',
+                  }}>
+                    Klart
+                  </span>
+                ) : step.action ? (
+                  <button
+                    type="button"
+                    onClick={step.action}
+                    style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      color: '#1E3A5F',
+                      background: '#EFF6FF',
+                      border: '1px solid #BFDBFE',
+                      borderRadius: '7px',
+                      padding: '0.3rem 0.75rem',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#DBEAFE'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#EFF6FF'; }}
+                  >
+                    {step.actionLabel}
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          {/* ── Divider + Go Live ── */}
+          <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {trialMsg && (
+              <p style={{
+                margin: 0,
+                fontSize: '0.8rem',
+                color: trialMsg.startsWith('✓') ? '#16a34a' : '#dc2626',
                 fontWeight: 500,
-                opacity: 0.7,
               }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ opacity: 0.4 }}>
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                2. Starta 14 dagars provperiod (Kräver Stripe)
-              </div>
+                {trialMsg}
+              </p>
+            )}
+            <button
+              type="button"
+              disabled={trialBusy || completedSteps < 3}
+              onClick={handleDashboardStartTrial}
+              title={completedSteps < 3 ? 'Slutför alla steg först för att kunna publicera.' : 'Publicera och starta 14 dagars provperiod'}
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem',
+                borderRadius: '10px',
+                border: 'none',
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                cursor: completedSteps < 3 ? 'not-allowed' : 'pointer',
+                opacity: completedSteps < 3 ? 0.45 : 1,
+                background: completedSteps < 3 ? '#F3F4F6' : '#171717',
+                color: completedSteps < 3 ? '#9CA3AF' : '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                transition: 'background 0.15s, opacity 0.15s',
+                letterSpacing: '0.01em',
+              }}
+              onMouseEnter={e => { if (completedSteps >= 3) e.currentTarget.style.background = '#2d2d2d'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#171717'; }}
+            >
+              {trialBusy ? (
+                <>
+                  <span style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                  Startar…
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                  Publicera bokningssidan &amp; Starta gratis provperiod
+                </>
+              )}
+            </button>
+            {completedSteps < 3 && (
+              <p style={{ margin: 0, textAlign: 'center', fontSize: '0.72rem', color: '#9CA3AF' }}>
+                Slutför alla steg ovan för att låsa upp
+              </p>
             )}
           </div>
-
-          {/* ── Status-meddelande ── */}
-          {trialMsg && (
-            <p style={{
-              margin: 0,
-              fontSize: '0.8rem',
-              color: trialMsg.startsWith('✓') ? '#16a34a' : '#dc2626',
-              fontWeight: 500,
-            }}>
-              {trialMsg}
-            </p>
-          )}
         </div>
       )}
 
