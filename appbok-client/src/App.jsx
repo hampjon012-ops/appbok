@@ -20,7 +20,7 @@ import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
 import { getValidOpeningHoursWeek } from './lib/publicOpeningHours.js';
 import PrivacyCheckbox from './components/PrivacyCheckbox.jsx';
 import CookieBanner from './components/CookieBanner.jsx';
-import { ChevronRight, Plus, User, Users } from 'lucide-react';
+import { ChevronRight, Plus, User, Users, X } from 'lucide-react';
 
 function isPreviewEmbedClient() {
   if (typeof window === 'undefined') return false;
@@ -1217,11 +1217,11 @@ function BookingSection({
               <span className="ssc-meta">{svc.price}</span>
               <button
                 type="button"
-                className={`selected-service-chip-remove ${BTN_TOUCH_SECONDARY}`}
+                className="selected-service-chip-remove -mr-2 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full p-2 text-gray-400 transition-colors hover:text-red-500 active:bg-red-50"
                 onClick={() => removeService(svc.id)}
                 aria-label={`Ta bort ${svc.name}`}
               >
-                ×
+                <X className="h-4 w-4" strokeWidth={2} aria-hidden />
               </button>
             </div>
           ))}
@@ -1383,7 +1383,7 @@ function BookingSection({
                 {/* Valfri stylist — högst upp */}
                 <button
                   type="button"
-                  className={`category-selection-btn stylist-row-btn ${BTN_TOUCH_CARD} ${selectedStylist === null ? 'selected' : ''}`}
+                  className="category-selection-btn stylist-row-btn min-w-0 w-full cursor-pointer text-left transition-all duration-75 active:scale-[0.99] active:bg-gray-50"
                   onClick={() => handleSelectStylist(null)}
                 >
                   <div className="stylist-row-left">
@@ -1397,16 +1397,13 @@ function BookingSection({
                       <p>Hitta första lediga tid</p>
                     </div>
                   </div>
-                  {selectedStylist === null
-                    ? <div className="stylist-check-inline">✓</div>
-                    : <div className="cat-sel-count">›</div>
-                  }
+                  <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-gray-400" strokeWidth={2} aria-hidden />
                 </button>
                 {stylists.filter(s => s.id !== 'any').map(st => (
                   <button
                     key={st.id}
                     type="button"
-                    className={`category-selection-btn stylist-row-btn ${BTN_TOUCH_CARD} ${selectedStylist?.id === st.id ? 'selected' : ''}`}
+                    className="category-selection-btn stylist-row-btn min-w-0 w-full cursor-pointer text-left transition-all duration-75 active:scale-[0.99] active:bg-gray-50"
                     onClick={() => handleSelectStylist(st)}
                   >
                     <div className="stylist-row-left">
@@ -1423,10 +1420,7 @@ function BookingSection({
                         <p>{st.title}</p>
                       </div>
                     </div>
-                    {selectedStylist?.id === st.id
-                      ? <div className="stylist-check-inline">✓</div>
-                      : <div className="cat-sel-count">›</div>
-                    }
+                    <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-gray-400" strokeWidth={2} aria-hidden />
                   </button>
                 ))}
               </div>
