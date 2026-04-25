@@ -1454,7 +1454,7 @@ function DashboardTab({
         <div className="admin-card chart-card dashboard-chart-card">
           <h3>{revenueChartYear ? `Omsättning (${revenueChartYear})` : 'Omsättning'}</h3>
           <div className="dashboard-chart-wrap">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={260} minWidth={240} minHeight={220}>
               <BarChart data={revenueChartData} margin={{ top: 10, right: 8, left: 4, bottom: 4 }} barCategoryGap="12%">
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -1489,7 +1489,7 @@ function DashboardTab({
           <h3>Toppstylister (Månad)</h3>
           <div className="dashboard-chart-wrap">
             {topStylists.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={260} minWidth={240} minHeight={220}>
                 <BarChart
                   data={topStylists}
                   layout="vertical"
