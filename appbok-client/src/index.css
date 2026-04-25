@@ -619,6 +619,19 @@ a.insta-item-link:focus-visible {
   padding-left: 1rem;
 }
 
+/* Kategorikort (bokningsmodal steg 1): långa namn, meta + chevron krymper inte */
+.category-selection-btn.category-card-category {
+  min-width: 0;
+}
+.category-selection-btn.category-card-category .cat-sel-info--category {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+.category-selection-btn.category-card-category .cat-sel-desc {
+  margin-top: 0.2rem;
+  margin-bottom: 0;
+}
+
 .services-selection-list {
   display: flex;
   flex-direction: column;

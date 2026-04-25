@@ -20,7 +20,7 @@ import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
 import { getValidOpeningHoursWeek } from './lib/publicOpeningHours.js';
 import PrivacyCheckbox from './components/PrivacyCheckbox.jsx';
 import CookieBanner from './components/CookieBanner.jsx';
-import { Plus, User, Users } from 'lucide-react';
+import { ChevronRight, Plus, User, Users } from 'lucide-react';
 
 function isPreviewEmbedClient() {
   if (typeof window === 'undefined') return false;
@@ -1297,18 +1297,23 @@ function BookingSection({
                 </div>
               ) : (
                 <div className="category-selection-list">
-                  {categories.map(cat => (
+                  {categories.map((cat) => (
                     <button
                       key={cat.id}
                       type="button"
-                      className={`category-selection-btn ${BTN_TOUCH_CARD}`}
+                      className={`category-selection-btn category-card-category ${BTN_TOUCH_CARD} min-w-0 w-full text-left`}
                       onClick={() => handleSelectCategory(cat)}
                     >
-                      <div className="cat-sel-info">
-                        <h4>{cat.name}</h4>
-                        <p>{cat.description}</p>
+                      <div className="cat-sel-info cat-sel-info--category flex-1 min-w-0 pr-4 text-left">
+                        <h4 className="line-clamp-2 break-words">{cat.name}</h4>
+                        {cat.description ? (
+                          <p className="cat-sel-desc line-clamp-2 break-words">{cat.description}</p>
+                        ) : null}
                       </div>
-                      <div className="cat-sel-count">{cat.services.length} val</div>
+                      <div className="flex shrink-0 items-center gap-1 text-sm text-gray-500">
+                        <span className="whitespace-nowrap">{cat.services.length} val</span>
+                        <ChevronRight className="shrink-0 opacity-70" size={18} strokeWidth={2} aria-hidden />
+                      </div>
                     </button>
                   ))}
                 </div>
