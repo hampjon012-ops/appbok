@@ -167,9 +167,9 @@ router.get('/salons', async (req, res) => {
   }
 });
 
-// PUT /api/superadmin/salons/:id — status / deleted_at (soft delete, återställning)
+// PUT /api/superadmin/salons/:id — status / deleted_at (soft delete, återställning) / trial_ends_at
 router.put('/salons/:id', async (req, res) => {
-  const { status, deleted_at } = req.body || {};
+  const { status, deleted_at, trial_ends_at } = req.body || {};
 
   try {
     const salon = await salonEditable(req.params.id);
@@ -189,6 +189,28 @@ router.put('/salons/:id', async (req, res) => {
         updates.deleted_at = deleted_at;
       } else {
         return res.status(400).json({ error: 'Ogiltigt deleted_at.' });
+      }
+    }
+    if (trial_ends_at !== undefined) {
+      if (trial_ends_at === null || trial_ends_at === '') {
+        updates.trial_ends_at = null;
+      } else if (typeof trial_ends_at === 'string') {
+        const parsed = new Date(trial_ends_at);
+        if (isNaN(parsed.getTime())) {
+          return res.status(400).json({ error: 'Ogiltigt datum för trial_ends_at.' });
+        }
+        updates.trial_ends_at = parsed.toISOString();
+      } else {
+        return res.status(400).json({ error: 'Ogiltigt trial_ends_at.' });
+      }
+    }
+
+    // Auto-unlock: om trial_ends_at sätts till framtiden och salon var 'expired', återställ till 'live'
+    if (updates.trial_ends_at) {
+      const newTrialDate = new Date(updates.trial_ends_at);
+      const isInFuture = newTrialDate > new Date();
+      if (isInFuture && salon.status === 'expired') {
+        updates.status = 'live';
       }
     }
 

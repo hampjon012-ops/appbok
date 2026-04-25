@@ -283,6 +283,137 @@ function SalonStaffPanel({ salon }) {
   );
 }
 
+/** Inline trial-date editor with +7d / +30d / +1å quick buttons for a single salon row. */
+function TrialEditor({ salon }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const st = String(salon.status ?? '').toLowerCase();
+  const isTrialLike = ['trial', 'active', 'demo', 'draft'].includes(st) || salon.trial_ends_at;
+
+  const getCurrentDate = () => {
+    if (salon.trial_ends_at) {
+      try {
+        return new Date(salon.trial_ends_at).toISOString().slice(0, 10);
+      } catch { /* fall through */ }
+    }
+    return '';
+  };
+
+  const [dateValue, setDateValue] = useState(getCurrentDate);
+
+  const save = async (newDate) => {
+    setBusy(true);
+    setMsg('');
+    try {
+      const body = { trial_ends_at: newDate || null };
+      const res = await fetch(`/api/superadmin/salons/${salon.id}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify(body),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || 'Kunde inte spara.');
+      setMsg('✓ Sparat');
+      setTimeout(() => setMsg(''), 2000);
+    } catch (err) {
+      setMsg(`✗ ${err.message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const adjustDays = async (days) => {
+    const base = salon.trial_ends_at ? new Date(salon.trial_ends_at) : new Date();
+    base.setDate(base.getDate() + days);
+    const iso = base.toISOString().slice(0, 10);
+    setDateValue(iso);
+    await save(iso);
+  };
+
+  const handleDateChange = (e) => {
+    setDateValue(e.target.value);
+  };
+
+  const handleDateBlur = () => {
+    if (!dateValue) return;
+    save(dateValue);
+  };
+
+  if (!isTrialLike) return <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>—</span>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '120px' }}>
+      {/* Current value display */}
+      <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>
+        {salon.trial_ends_at
+          ? new Date(salon.trial_ends_at).toLocaleDateString('sv-SE', { year: 'numeric', month: 'short', day: 'numeric' })
+          : 'Inget datum'}
+      </span>
+
+      {/* Date picker + quick buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+        <input
+          type="date"
+          value={dateValue}
+          onChange={handleDateChange}
+          onBlur={handleDateBlur}
+          disabled={busy}
+          style={{
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            padding: '0.25rem 0.4rem',
+            fontSize: '0.72rem',
+            color: '#374151',
+            background: '#fff',
+            width: '110px',
+            cursor: busy ? 'wait' : 'default',
+            opacity: busy ? 0.6 : 1,
+          }}
+          title="Ändra trial-slutdatum"
+        />
+        {msg && (
+          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: msg.startsWith('✓') ? '#16a34a' : '#dc2626', whiteSpace: 'nowrap' }}>
+            {msg}
+          </span>
+        )}
+      </div>
+
+      {/* Quick-adjust buttons */}
+      <div style={{ display: 'flex', gap: '0.3rem' }}>
+        {[
+          { label: '+7d', days: 7 },
+          { label: '+30d', days: 30 },
+          { label: '+1år', days: 365 },
+        ].map(({ label, days }) => (
+          <button
+            key={label}
+            type="button"
+            disabled={busy}
+            onClick={() => adjustDays(days)}
+            title={`Lägg till ${days} dagar`}
+            style={{
+              padding: '0.15rem 0.4rem',
+              fontSize: '0.68rem',
+              fontWeight: 600,
+              borderRadius: '5px',
+              border: '1px solid #e5e7eb',
+              background: '#f9fafb',
+              color: '#374151',
+              cursor: busy ? 'not-allowed' : 'pointer',
+              opacity: busy ? 0.5 : 1,
+              lineHeight: 1.4,
+            }}
+            onMouseEnter={e => { if (!busy) e.currentTarget.style.background = '#e5e7eb'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#f9fafb'; }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function fmtSalonDeletedAt(iso) {
   if (!iso) return '—';
   try {
@@ -615,6 +746,7 @@ export default function SuperadminTab() {
                 <th>Subdomän</th>
                 <th>Plan</th>
                 <th>Status</th>
+                <th>Trial-slut</th>
                 <th>Åtgärder</th>
               </tr>
             </thead>
@@ -633,6 +765,9 @@ export default function SuperadminTab() {
                     <td className="sa-td-plan">{superadminPlanLabel(s.plan)}</td>
                     <td>
                       <SuperadminSalonStatusCell salon={s} />
+                    </td>
+                    <td>
+                      <TrialEditor salon={s} />
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
