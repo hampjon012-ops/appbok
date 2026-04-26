@@ -1321,25 +1321,24 @@ a.insta-item-link:focus-visible {
 }
 
 /* =========================================
-   STEP 6 — KASSA / CHECKOUT (iOS grouped-list)
+   STEP 6 — KASSA / CHECKOUT (clean premium)
    ========================================= */
 
-/* ── Grouped checkout wrapper ───────────────────────────────── */
-.checkout-grouped {
+/* ── A. HEADER ──────────────────────────────────────────────── */
+.checkout-clean {
   display: flex;
   flex-direction: column;
   gap: 0;
 }
-
-/* Navigation header */
-.checkout-nav-header {
+.checkout-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem 0.75rem;
+  padding: 0.85rem 1.25rem 0.75rem;
   border-bottom: 1px solid #f3f4f6;
+  background: #fff;
 }
-.checkout-nav-back {
+.checkout-back {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1354,158 +1353,95 @@ a.insta-item-link:focus-visible {
   transition: background 0.15s;
   flex-shrink: 0;
 }
-.checkout-nav-back:active { background: #f3f4f6; }
-.checkout-nav-title {
-  font-size: 1.05rem;
+.checkout-back:active { background: #f3f4f6; }
+.checkout-header-title {
+  font-size: 1rem;
   font-weight: 600;
   color: #111827;
   text-align: center;
   flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 0.25rem;
 }
 
-/* Grouped sections */
-.checkout-group {
-  background: #f9fafb;
-  border-bottom: 8px solid #fff;
-  padding: 0;
-}
-.checkout-group-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #9ca3af;
-  padding: 0.75rem 1.25rem 0.5rem;
-  margin: 0;
-}
-.checkout-group-rows {
+/* ── B. RECEIPT / SAMMANFATTNING ──────────────────────────────── */
+.checkout-receipt {
+  background: #f8f9fa;
+  border-radius: 14px;
+  padding: 1rem 1.15rem;
+  margin: 0.85rem 1rem 0.6rem;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  gap: 0.55rem;
 }
-
-/* Row lines */
-.checkout-row-line {
+.checkout-receipt-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.7rem 1.25rem;
-  border-bottom: 1px solid #f3f4f6;
-  min-height: 44px;
-}
-.checkout-row-line:last-child { border-bottom: none; }
-.checkout-row-left {
   font-size: 0.875rem;
+  min-height: 28px;
+}
+.checkout-receipt-left {
   color: #6b7280;
   flex-shrink: 0;
 }
-.checkout-row-right {
-  font-size: 0.875rem;
+.checkout-receipt-right {
   font-weight: 500;
   color: #111827;
   text-align: right;
   max-width: 55%;
   word-break: break-word;
 }
-.checkout-divider {
+.checkout-receipt-divider {
   height: 1px;
   background: #e5e7eb;
-  margin: 0.15rem 0;
+  margin: 0.2rem 0;
 }
-.checkout-total-line .checkout-row-left,
-.checkout-total-line .checkout-row-right {
+.checkout-receipt-total .checkout-receipt-left,
+.checkout-receipt-total .checkout-receipt-right {
   font-weight: 700;
   font-size: 1rem;
   color: #111827;
 }
-.checkout-duration-chip {
+.checkout-receipt-duration {
   font-size: 0.75rem;
   color: #9ca3af;
-  padding: 0.2rem 1.25rem 0.7rem;
   margin: 0;
 }
 
-/* Payment method row */
-.checkout-method-row {
+/* ── C. TILLVAL (note + SMS) ────────────────────────────────── */
+.checkout-options {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.85rem 1.25rem;
-  border: none;
+  flex-direction: column;
   background: #fff;
-  border-bottom: 1px solid #f3f4f6;
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-  color: inherit;
-  transition: background 0.15s;
-  min-height: 44px;
-}
-.checkout-method-row:active { background: #f9fafb; }
-.checkout-method-row--active { color: var(--accent-color, #6f4e37); }
-.checkout-method-icons {
-  display: flex;
-  gap: 0.4rem;
-  flex-shrink: 0;
-  color: #6b7280;
-}
-.checkout-method-row--active .checkout-method-icons { color: var(--accent-color, #6f4e37); }
-.checkout-method-text {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #111827;
-  flex: 1;
-}
-.checkout-method-row--active .checkout-method-text { color: var(--accent-color, #6f4e37); }
-.checkout-method-chevron {
-  color: #9ca3af;
-  flex-shrink: 0;
-}
-.checkout-method-locked {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.85rem 1.25rem;
-  background: #fff;
-  border-bottom: 1px solid #f3f4f6;
-  color: #6b7280;
-}
-
-/* Stripe wrapper */
-.checkout-stripe-wrap {
-  padding: 0.85rem 1.25rem;
-  background: #fff;
+  border-top: 1px solid #f3f4f6;
   border-bottom: 1px solid #f3f4f6;
 }
-
-/* Add note accordion button */
-.checkout-add-note-btn {
+.checkout-note-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0.85rem 1.25rem;
+  padding: 0.8rem 1.25rem;
   border: none;
   background: #fff;
   cursor: pointer;
   font-family: inherit;
-  color: #6b7280;
+  color: #374151;
   font-size: 0.875rem;
   min-height: 44px;
   text-align: left;
-  border-bottom: 1px solid #f3f4f6;
   transition: background 0.15s;
 }
-.checkout-add-note-btn:active { background: #f9fafb; }
-
-/* Note expanded area */
-.checkout-note-expanded {
+.checkout-note-toggle:active { background: #f9fafb; }
+.checkout-note-toggle span { color: #374151; }
+.checkout-note-area {
   display: flex;
   flex-direction: column;
-  padding: 0.75rem 1.25rem 0.5rem;
+  padding: 0.75rem 1.25rem 0.6rem;
   background: #fff;
-  border-bottom: 1px solid #f3f4f6;
   animation: bookingNotesReveal 0.28s ease forwards;
 }
 .checkout-note-label {
@@ -1536,7 +1472,10 @@ a.insta-item-link:focus-visible {
   align-items: center;
   margin-top: 0.4rem;
 }
-.checkout-note-footer .char-count { font-size: 0.72rem; color: #9ca3af; }
+.checkout-note-count {
+  font-size: 0.72rem;
+  color: #9ca3af;
+}
 .checkout-note-hide {
   font-size: 0.78rem;
   color: #9ca3af;
@@ -1546,30 +1485,159 @@ a.insta-item-link:focus-visible {
   padding: 0;
   text-decoration: underline;
 }
-
-/* Toggle rows (terms + SMS) */
-.checkout-tog-row {
+.checkout-sms-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.8rem 1.25rem;
-  background: #fff;
-  border-bottom: 1px solid #f3f4f6;
   cursor: pointer;
-  min-height: 44px;
   font-family: inherit;
+  border-top: 1px solid #f3f4f6;
+  min-height: 44px;
 }
-.checkout-tog-row:last-child { border-bottom: none; }
-.checkout-tog-input {
+.checkout-sms-input {
   width: 18px;
   height: 18px;
   min-width: 18px;
   accent-color: var(--accent-color, #6f4e37);
   cursor: pointer;
 }
-.checkout-tog-text {
+.checkout-sms-text {
   font-size: 0.875rem;
   color: #374151;
+}
+
+/* ── D & E. BETALNINGSVAL ────────────────────────────────────── */
+.checkout-payment-section {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-top: 1px solid #f3f4f6;
+  border-bottom: 1px solid #f3f4f6;
+  margin-top: 0.5rem;
+}
+.checkout-pay-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: #374151;
+  transition: background 0.15s;
+  min-height: 48px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.checkout-pay-option:last-child { border-bottom: none; }
+.checkout-pay-option:active { background: #f9fafb; }
+.checkout-pay-option--active {
+  color: var(--accent-color, #6f4e37);
+}
+.checkout-pay-icon {
+  color: #9ca3af;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.checkout-pay-option--active .checkout-pay-icon { color: var(--accent-color, #6f4e37); }
+.checkout-pay-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  flex: 1;
+}
+.checkout-pay-chevron {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+.checkout-pay-locked {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+/* ── E. STRIPE AREA ───────────────────────────────────────────── */
+.checkout-stripe-area {
+  padding: 0.85rem 1.25rem;
+  background: #fff;
+  border-top: 1px solid #f3f4f6;
+}
+.checkout-stripe-message {
+  font-size: 0.82rem;
+  color: #6b7280;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+.checkout-stripe-loading {
+  margin: 0 0 0.75rem 0;
+  border-radius: 10px;
+  background: #F3F4F6;
+  color: #374151;
+  font-size: 0.82rem;
+  padding: 0.65rem 0.75rem;
+}
+
+/* ── G. CTA SECTION (terms + button) ─────────────────────────── */
+.checkout-cta-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.85rem 1.25rem 1.5rem;
+  background: #fff;
+}
+.checkout-terms-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  cursor: pointer;
+  font-family: inherit;
+  margin-bottom: 0.85rem;
+  padding: 0.5rem 0;
+}
+.checkout-terms-input {
+  width: 17px;
+  height: 17px;
+  min-width: 17px;
+  accent-color: var(--accent-color, #6f4e37);
+  cursor: pointer;
+  margin-top: 2px;
+}
+.checkout-terms-text {
+  font-size: 0.82rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+.checkout-cta-btn {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+}
+.checkout-cta-btn--active {
+  background: #111827;
+  color: #fff;
+}
+.checkout-cta-btn--active:hover { background: #1f2937; }
+.checkout-cta-btn--active:active { transform: scale(0.99); opacity: 0.9; }
+.checkout-cta-btn--disabled {
+  background: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
 }
 
 /* Legacy styles */

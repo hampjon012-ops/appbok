@@ -20,7 +20,7 @@ import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
 import { getValidOpeningHoursWeek } from './lib/publicOpeningHours.js';
 import PrivacyCheckbox from './components/PrivacyCheckbox.jsx';
 import CookieBanner from './components/CookieBanner.jsx';
-import { ChevronRight, ChevronLeft, Lock, Plus, User, Users, X } from 'lucide-react';
+import { ChevronRight, ChevronLeft, CreditCard, Store, Lock, Plus, User, Users, X } from 'lucide-react';
 
 function isPreviewEmbedClient() {
   if (typeof window === 'undefined') return false;
@@ -198,17 +198,17 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
       />
       <button
         type="button"
-        className={`w-full rounded-lg bg-gray-900 py-4 mt-8 mb-4 text-center font-medium text-white transition-all active:scale-[0.98] ${
+        className={`checkout-cta-btn w-full mt-4 mb-2 ${
           isPayDisabled
-            ? 'cursor-not-allowed bg-gray-300 text-gray-500'
-            : 'cursor-pointer hover:bg-gray-800'
+            ? 'checkout-cta-btn--disabled'
+            : 'checkout-cta-btn--active'
         }`}
         disabled={isPayDisabled}
         onClick={handleConfirmPayment}
       >
-        {confirming ? 'Bekräftar betalning...' : `Bekräfta och betala (${payLabel})`}
+        {confirming ? 'Bekräftar betalning...' : `Bekräfta och betala ${payLabel}`}
       </button>
-      <p className="mb-8 flex items-center justify-center gap-1 text-xs text-gray-400">
+      <p className="flex items-center justify-center gap-1 text-xs text-gray-400 mb-2">
         <Lock className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
         Säker betalning via Stripe
       </p>
@@ -1560,216 +1560,206 @@ function BookingSection({
 
           {/* ── STEG 6: Kassa ─────────────────────────────────────────────── */}
           {step === 'checkout' && selectedServices.length > 0 && (
-            <div className="checkout-grouped">
-              {/* Navigation header */}
-              <div className="checkout-nav-header">
+            <div className="checkout-clean">
+              {/* ── A. HEADER ── */}
+              <div className="checkout-header">
                 <button
                   type="button"
-                  className={`checkout-nav-back ${BTN_TOUCH_SECONDARY}`}
+                  className={`checkout-back ${BTN_TOUCH_SECONDARY}`}
                   onClick={goBack}
                   aria-label="Tillbaka"
                 >
                   <ChevronLeft size={20} strokeWidth={2} />
                 </button>
-                <h3 className="checkout-nav-title">Bekräfta och betala</h3>
-                <div className="w-10" />
+                <h3 className="checkout-header-title">Bekräfta och betala</h3>
+                <div className="w-10 shrink-0" />
               </div>
 
-              {/* ── DIN BOKNING ── */}
-              <div className="checkout-group">
-                <p className="checkout-group-label">Din bokning</p>
-                <div className="checkout-group-rows">
-                  {selectedServices.map((svc) => (
-                    <div key={svc.id} className="checkout-row-line">
-                      <span className="checkout-row-left">{svc.name}</span>
-                      <span className="checkout-row-right">{fmtPrice(servicePriceÖre(svc))}</span>
+              {/* ── B. SAMMANFATTNING (receipt card, no label) ── */}
+              <div className="checkout-receipt">
+                {selectedServices.map((svc) => (
+                  <div key={svc.id} className="checkout-receipt-row">
+                    <span className="checkout-receipt-left">{svc.name}</span>
+                    <span className="checkout-receipt-right">{fmtPrice(servicePriceÖre(svc))}</span>
+                  </div>
+                ))}
+                <div className="checkout-receipt-row">
+                  <span className="checkout-receipt-left">Stylist</span>
+                  <span className="checkout-receipt-right">{selectedStylist?.name}</span>
+                </div>
+                <div className="checkout-receipt-row">
+                  <span className="checkout-receipt-left">Datum</span>
+                  <span className="checkout-receipt-right">{selectedDate ? fmtDateLong(selectedDate) : '—'}</span>
+                </div>
+                <div className="checkout-receipt-row">
+                  <span className="checkout-receipt-left">Tid</span>
+                  <span className="checkout-receipt-right">{selectedTime}</span>
+                </div>
+                <div className="checkout-receipt-row">
+                  <span className="checkout-receipt-left">Kund</span>
+                  <span className="checkout-receipt-right">{form.name}</span>
+                </div>
+                <div className="checkout-receipt-divider" />
+                <div className="checkout-receipt-row checkout-receipt-total">
+                  <span className="checkout-receipt-left">Totalt</span>
+                  <span className="checkout-receipt-right">
+                    {selectedServices.length ? fmtPrice(totalPriceÖre) : '—'}
+                  </span>
+                </div>
+                {selectedServices.length > 0 && (
+                  <p className="checkout-receipt-duration">{fmtDurationTotal(totalDurationMin)}</p>
+                )}
+              </div>
+
+              {/* ── C. TILLVAL (note accordion + SMS) ── */}
+              <div className="checkout-options">
+                {!notesExpanded ? (
+                  <button
+                    type="button"
+                    className="checkout-note-toggle"
+                    onClick={() => setNotesExpanded(true)}
+                  >
+                    <span>+ Lägg till meddelande</span>
+                    <ChevronRight size={15} strokeWidth={2} />
+                  </button>
+                ) : (
+                  <div className="checkout-note-area">
+                    <label htmlFor="booking-notes-text" className="checkout-note-label">Meddelande till salongen</label>
+                    <textarea
+                      id="booking-notes-text"
+                      className="checkout-note-textarea"
+                      placeholder="Något salongen bör veta? T.ex. allergier..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+                      maxLength={500}
+                      rows={3}
+                    />
+                    <div className="checkout-note-footer">
+                      <span className="checkout-note-count">{notes.length}/500</span>
+                      <button type="button" className="checkout-note-hide" onClick={() => setNotesExpanded(false)}>Dölj</button>
                     </div>
-                  ))}
-                  <div className="checkout-row-line">
-                    <span className="checkout-row-left">Stylist</span>
-                    <span className="checkout-row-right">{selectedStylist?.name}</span>
                   </div>
-                  <div className="checkout-row-line">
-                    <span className="checkout-row-left">Datum</span>
-                    <span className="checkout-row-right">{selectedDate ? fmtDateLong(selectedDate) : '—'}</span>
-                  </div>
-                  <div className="checkout-row-line">
-                    <span className="checkout-row-left">Tid</span>
-                    <span className="checkout-row-right">{selectedTime}</span>
-                  </div>
-                  <div className="checkout-row-line">
-                    <span className="checkout-row-left">Kund</span>
-                    <span className="checkout-row-right">{form.name}</span>
-                  </div>
-                  <div className="checkout-divider" />
-                  <div className="checkout-row-line checkout-total-line">
-                    <span className="checkout-row-left">Totalt</span>
-                    <span className="checkout-row-right">
-                      {selectedServices.length ? fmtPrice(totalPriceÖre) : '—'}
-                    </span>
-                  </div>
-                  {selectedServices.length > 0 && (
-                    <p className="checkout-duration-chip">
-                      {fmtDurationTotal(totalDurationMin)}
-                    </p>
-                  )}
-                </div>
+                )}
+                <label className="checkout-sms-row">
+                  <input
+                    type="checkbox"
+                    checked={marketingConsent}
+                    onChange={e => setMarketingConsent(e.target.checked)}
+                    className="checkout-sms-input"
+                  />
+                  <span className="checkout-sms-text">SMS-aviseringar</span>
+                </label>
               </div>
 
-              {/* ── Betalning ── */}
-              <div className="checkout-group">
-                <p className="checkout-group-label">Betalning</p>
-                <div className="checkout-group-rows">
-                  {/* Payment method row */}
-                  {allowPayOnSite ? (
-                    <>
-                      <button
-                        type="button"
-                        className={`checkout-method-row ${paymentChoice === 'swish' ? 'checkout-method-row--active' : ''}`}
-                        onClick={() => { setPaymentChoice('swish'); setApiError(''); }}
-                      >
-                        <div className="checkout-method-icons">
-                          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden><path d="M19.47 12.04c.18-.37.27-.82.27-1.34 0-.88-.27-1.63-.86-2.26l.11-.56c.47-.2.84-.51 1.1-.93.26-.42.39-.93.39-1.53 0-1.13-.39-2.01-1.17-2.65-.78-.64-1.84-.96-3.18-.96h-1.96c-.55 0-1.08.19-1.58.58l-2.56 3.97v-5.5c0-.52-.22-1.02-.61-1.38-.39-.36-.9-.54-1.44-.54H6.68c-.54 0-1.05.19-1.44.54C4.94 2.19 4.72 2.69 4.72 3.21v13.58c0 .52.22 1.02.61 1.38.39.36.9.54 1.44.54h1.96v1.53c0 .52.22 1.02.61 1.38.39.36.9.54 1.44.54h6.32c1.04 0 1.95-.36 2.74-1.08.79-.72 1.18-1.69 1.18-2.92 0-.88-.27-1.63-.86-2.26l.11-.56c.47-.2.84-.51 1.1-.93z" /></svg>
-                          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>
-                        </div>
-                        <span className="checkout-method-text">
-                          {paymentChoice === 'swish' ? 'Onlinebetalning' : 'Betala på plats'}
-                        </span>
-                        <ChevronRight size={16} strokeWidth={2} className="checkout-method-chevron" />
-                      </button>
-                      {/* Stripe element — only shown when swish is selected */}
-                      {paymentChoice === 'swish' && (
-                        <div className="checkout-stripe-wrap">
-                          {previewBookingLocked ? (
-                            <div className="checkout-stripe-locked">Bokning inaktiverad i preview-läge</div>
-                          ) : (
-                            <>
-                              {intentLoading && <p className="payment-element-loading">Initierar onlinebetalning...</p>}
-                              {!intentLoading && !clientSecret && apiError ? (
-                                <button
-                                  type="button"
-                                  className={`btn-continue ${BTN_TOUCH_PRIMARY}`}
-                                  onClick={() => { setIntentRequested(false); fetchPaymentIntent(); }}
-                                >
-                                  Försök igen
-                                </button>
-                              ) : null}
-                              {!intentLoading && clientSecret && stripePromise && elementsOptions ? (
-                                <Elements stripe={stripePromise} options={elementsOptions}>
-                                  <SwishPaymentForm
-                                    disabled={!termsAccepted || loading}
-                                    payLabel={fmtPrice(priceAmount)}
-                                    onError={(msg) => setApiError(msg)}
-                                    onConfirm={handleSwishConfirmed}
-                                  />
-                                </Elements>
-                              ) : null}
-                            </>
-                          )}
-                        </div>
-                      )}
-                      {paymentChoice === 'on_site' && (
-                        <div className="checkout-stripe-wrap">
-                          <button
-                            type="button"
-                            className={`mt-6 w-full rounded-lg py-4 text-center font-medium transition-all active:scale-[0.98] ${
-                              canPayOnSiteCheckout
-                                ? 'cursor-pointer bg-gray-900 text-white hover:bg-gray-800'
-                                : 'cursor-not-allowed bg-gray-300 text-gray-500'
-                            }`}
-                            disabled={!canPayOnSiteCheckout}
-                            onClick={previewBookingLocked ? undefined : handleBookPayOnSite}
-                          >
-                            {previewBookingLocked
-                              ? 'Bokning inaktiverad i preview-läge'
-                              : loading
-                                ? 'Skapar bokning...'
-                                : 'Bekräfta bokning (betala på plats)'}
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div className="checkout-method-locked">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M19.47 12.04c.18-.37.27-.82.27-1.34 0-.88-.27-1.63-.86-2.26l.11-.56c.47-.2.84-.51 1.1-.93.26-.42.39-.93.39-1.53 0-1.13-.39-2.01-1.17-2.65-.78-.64-1.84-.96-3.18-.96h-1.96c-.55 0-1.08.19-1.58.58l-2.56 3.97v-5.5c0-.52-.22-1.02-.61-1.38-.39-.36-.9-.54-1.44-.54H6.68c-.54 0-1.05.19-1.44.54C4.94 2.19 4.72 2.69 4.72 3.21v13.58c0 .52.22 1.02.61 1.38.39.36.9.54 1.44.54h1.96v1.53c0 .52.22 1.02.61 1.38.39.36.9.54 1.44.54h6.32c1.04 0 1.95-.36 2.74-1.08.79-.72 1.18-1.69 1.18-2.92 0-.88-.27-1.63-.86-2.26l.11-.56c.47-.2.84-.51 1.1-.93z" /></svg>
-                        <span className="checkout-method-text">Onlinebetalning är obligatorisk</span>
-                      </div>
-                      <div className="checkout-stripe-wrap">
-                        {intentLoading && <p className="payment-element-loading">Initierar onlinebetalning...</p>}
-                        {!intentLoading && !clientSecret && apiError ? (
-                          <button
-                            type="button"
-                            className={`btn-continue ${BTN_TOUCH_PRIMARY}`}
-                            onClick={() => { setIntentRequested(false); fetchPaymentIntent(); }}
-                          >
-                            Försök igen
-                          </button>
-                        ) : null}
-                        {!intentLoading && clientSecret && stripePromise && elementsOptions ? (
-                          <Elements stripe={stripePromise} options={elementsOptions}>
-                            <SwishPaymentForm
-                              disabled={!termsAccepted || loading}
-                              payLabel={fmtPrice(priceAmount)}
-                              onError={(msg) => setApiError(msg)}
-                              onConfirm={handleSwishConfirmed}
-                            />
-                          </Elements>
-                        ) : null}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* ── MEDDELANDE (accordion) ── */}
-              <div className="checkout-group">
-                <div className="checkout-group-rows">
-                  {!notesExpanded ? (
+              {/* ── D & E. BETALNINGSVAL ── */}
+              <div className="checkout-payment-section">
+                {allowPayOnSite && (
+                  <>
                     <button
                       type="button"
-                      className="checkout-add-note-btn"
-                      onClick={() => setNotesExpanded(true)}
+                      className={`checkout-pay-option ${paymentChoice === 'swish' ? 'checkout-pay-option--active' : ''}`}
+                      onClick={() => { setPaymentChoice('swish'); setApiError(''); }}
                     >
-                      <span>+ Lägg till meddelande</span>
-                      <ChevronRight size={14} strokeWidth={2} />
+                      <CreditCard size={18} strokeWidth={1.8} className="checkout-pay-icon" />
+                      <span className="checkout-pay-label">Onlinebetalning</span>
+                      <ChevronRight size={16} strokeWidth={2} className="checkout-pay-chevron" />
                     </button>
+                    <button
+                      type="button"
+                      className={`checkout-pay-option ${paymentChoice === 'on_site' ? 'checkout-pay-option--active' : ''}`}
+                      onClick={() => { setPaymentChoice('on_site'); setApiError(''); }}
+                    >
+                      <Store size={18} strokeWidth={1.8} className="checkout-pay-icon" />
+                      <span className="checkout-pay-label">Betala på plats</span>
+                      <ChevronRight size={16} strokeWidth={2} className="checkout-pay-chevron" />
+                    </button>
+                  </>
+                )}
+                {!allowPayOnSite && (
+                  <div className="checkout-pay-locked">
+                    <CreditCard size={18} strokeWidth={1.8} />
+                    <span>Onlinebetalning är obligatorisk</span>
+                  </div>
+                )}
+              </div>
+
+              {/* ── E. STRIPE (when swish is selected) ── */}
+              {allowPayOnSite && paymentChoice === 'swish' && (
+                <div className="checkout-stripe-area">
+                  {previewBookingLocked ? (
+                    <div className="checkout-stripe-message">Bokning inaktiverad i preview-läge</div>
                   ) : (
-                    <div className="checkout-note-expanded">
-                      <label htmlFor="booking-notes-text" className="checkout-note-label">Meddelande till salongen</label>
-                      <textarea
-                        id="booking-notes-text"
-                        className="checkout-note-textarea"
-                        placeholder="Något salongen bör veta? T.ex. allergier..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value.slice(0, 500))}
-                        maxLength={500}
-                        rows={3}
-                      />
-                      <div className="checkout-note-footer">
-                        <span className="char-count">{notes.length}/500</span>
-                        <button type="button" className="checkout-note-hide" onClick={() => setNotesExpanded(false)}>Dölj</button>
-                      </div>
-                    </div>
+                    <>
+                      {intentLoading && <p className="checkout-stripe-loading">Initierar betalning...</p>}
+                      {!intentLoading && !clientSecret && apiError ? (
+                        <button
+                          type="button"
+                          className={`btn-continue ${BTN_TOUCH_PRIMARY}`}
+                          onClick={() => { setIntentRequested(false); fetchPaymentIntent(); }}
+                        >
+                          Försök igen
+                        </button>
+                      ) : null}
+                      {!intentLoading && clientSecret && stripePromise && elementsOptions ? (
+                        <Elements stripe={stripePromise} options={elementsOptions}>
+                          <SwishPaymentForm
+                            disabled={!termsAccepted || loading}
+                            payLabel={fmtPrice(priceAmount)}
+                            onError={(msg) => setApiError(msg)}
+                            onConfirm={handleSwishConfirmed}
+                          />
+                        </Elements>
+                      ) : null}
+                    </>
                   )}
                 </div>
-              </div>
+              )}
 
-              {/* ── VILLKOR ── */}
-              <div className="checkout-group">
-                <div className="checkout-group-rows">
-                  <label className="checkout-tog-row">
-                    <input type="checkbox" checked={termsAccepted} onChange={e => setTerms(e.target.checked)} className="checkout-tog-input" />
-                    <span className="checkout-tog-text">Jag godkänner villkoren</span>
-                  </label>
-                  <label className="checkout-tog-row">
-                    <input type="checkbox" checked={marketingConsent} onChange={e => setMarketingConsent(e.target.checked)} className="checkout-tog-input" />
-                    <span className="checkout-tog-text">SMS-aviseringar</span>
-                  </label>
-                </div>
-              </div>
+              {/* ── G. VILLKOR + HUVUDKNAPP ── */}
+              <div className="checkout-cta-section">
+                <label className="checkout-terms-row">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={e => setTerms(e.target.checked)}
+                    className="checkout-terms-input"
+                  />
+                  <span className="checkout-terms-text">
+                    Jag godkänner{' '}
+                    <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="underline">
+                      bokningsvillkoren
+                    </Link>
+                  </span>
+                </label>
 
-              {apiError && <p className="api-error">{apiError}</p>}
+                {apiError && <p className="api-error">{apiError}</p>}
+
+                {paymentChoice === 'swish' && !allowPayOnSite ? (
+                  // online-only salon — CTA comes from SwishPaymentForm above
+                  null
+                ) : paymentChoice === 'swish' ? (
+                  // swish selected with on-site option
+                  null // SwishPaymentForm renders its own CTA inside checkout-stripe-area
+                ) : (
+                  // on_site selected
+                  <button
+                    type="button"
+                    className={`checkout-cta-btn ${
+                      canPayOnSiteCheckout
+                        ? 'checkout-cta-btn--active'
+                        : 'checkout-cta-btn--disabled'
+                    }`}
+                    disabled={!canPayOnSiteCheckout}
+                    onClick={previewBookingLocked ? undefined : handleBookPayOnSite}
+                  >
+                    {previewBookingLocked
+                      ? 'Bokning inaktiverad i preview-läge'
+                      : loading
+                        ? 'Skapar bokning...'
+                        : 'Bekräfta och betala'}
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
