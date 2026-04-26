@@ -1043,13 +1043,24 @@ function BookingSection({
             border: '1px solid #f3f4f6',
             backgroundColor: '#ffffff',
             borderRadius: '8px',
-            marginBottom: '8px',
+            marginBottom: '12px',
             transition: 'all 0.2s ease',
           },
           '.AccordionItem--selected': {
             borderColor: '#111827',
-            borderWidth: '2px',
+            borderWidth: '1.5px',
             backgroundColor: '#f9fafb',
+          },
+          '.Block': {
+            border: 'none',
+            backgroundColor: 'transparent',
+            boxShadow: 'none',
+            padding: '0',
+          },
+          '.Message': {
+            border: 'none',
+            backgroundColor: 'transparent',
+            boxShadow: 'none',
           },
           '.Tab': {
             border: '1px solid #f3f4f6',
@@ -1058,7 +1069,7 @@ function BookingSection({
           },
           '.Tab--selected': {
             borderColor: '#111827',
-            borderWidth: '2px',
+            borderWidth: '1.5px',
             backgroundColor: '#f9fafb',
           },
           '.Input': {
