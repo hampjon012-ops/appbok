@@ -1571,7 +1571,7 @@ function BookingSection({
                 >
                   <ChevronLeft size={20} strokeWidth={2} />
                 </button>
-                <h3 className="checkout-header-title">Bekräfta och betala</h3>
+                <h3 className="checkout-header-title">Bekräfta</h3>
                 <div className="w-10 shrink-0" />
               </div>
 
@@ -1737,8 +1737,8 @@ function BookingSection({
                 </div>
               )}
 
-              {/* ── F. CHECKBOX VILLKOR ── */}
-              <div className="checkout-terms-section">
+              {/* ── G. HUVUDKNAPP (terms checkbox directly above) ── */}
+              <div className="checkout-cta-section">
                 <label className="checkout-terms-row">
                   <input
                     type="checkbox"
@@ -1753,17 +1753,12 @@ function BookingSection({
                     </Link>
                   </span>
                 </label>
-              </div>
 
-              {/* ── G. HUVUDKNAPP ── */}
-              <div className="checkout-cta-section">
                 {apiError && <p className="api-error">{apiError}</p>}
 
                 {paymentChoice === 'swish' ? (
-                  // SwishPaymentForm renders its own CTA inside checkout-stripe-area — show nothing extra
                   null
                 ) : (
-                  // on_site selected (or no choice yet)
                   <button
                     type="button"
                     className={`checkout-cta-btn w-full ${

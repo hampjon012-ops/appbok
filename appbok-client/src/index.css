@@ -1584,23 +1584,25 @@ a.insta-item-link:focus-visible {
   padding: 0.65rem 0.75rem;
 }
 
-/* ── F. TERMS SECTION ────────────────────────────────────────── */
-.checkout-terms-section {
+/* ── F. CTA SECTION (terms + button — terms is inside CTA) ── */
+.checkout-cta-section {
   display: flex;
   flex-direction: column;
+  gap: 0;
+  padding: 0.85rem 1.25rem 1.75rem;
   background: #fff;
-  border-top: 1px solid #f3f4f6;
-  padding: 0.85rem 1.25rem;
 }
-.checkout-terms-row {
+.checkout-cta-section .checkout-terms-row {
   display: flex;
   align-items: flex-start;
   gap: 0.7rem;
   cursor: pointer;
   font-family: inherit;
   padding: 0.5rem 0;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 0.85rem;
 }
-.checkout-terms-input {
+.checkout-cta-section .checkout-terms-input {
   width: 17px;
   height: 17px;
   min-width: 17px;
@@ -1608,7 +1610,7 @@ a.insta-item-link:focus-visible {
   cursor: pointer;
   margin-top: 2px;
 }
-.checkout-terms-text {
+.checkout-cta-section .checkout-terms-text {
   font-size: 0.82rem;
   color: #6b7280;
   line-height: 1.4;
