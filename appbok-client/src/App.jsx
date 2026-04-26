@@ -188,27 +188,35 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
   };
 
   return (
-    <div className="embedded-payment-shell">
-      <PaymentElement
-        onChange={(event) => {
-          setPaymentComplete(Boolean(event.complete));
-          if (event.error?.message) onError?.(event.error.message);
-          else onError?.('');
-        }}
-      />
-      <button
-        type="button"
-        className={`btn-pay w-full py-4 sm:py-3 mt-6 text-center flex justify-center items-center rounded-md font-medium transition-all ${
-          isPayDisabled
-            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            : 'bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98] cursor-pointer'
-        }`}
-        disabled={isPayDisabled}
-        onClick={handleConfirmPayment}
-      >
-        {confirming ? 'Bekräftar betalning...' : `Bekräfta och betala (${payLabel})`}
-      </button>
-    </div>
+    <>
+      <div className="embedded-payment-shell embedded-payment-shell--fields-only">
+        <PaymentElement
+          onChange={(event) => {
+            setPaymentComplete(Boolean(event.complete));
+            if (event.error?.message) onError?.(event.error.message);
+            else onError?.('');
+          }}
+        />
+      </div>
+      <div className="checkout-sticky-pay sticky bottom-0 left-0 z-10 w-full border-t border-gray-100 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        <button
+          type="button"
+          className={`w-full rounded-md py-4 text-center font-medium transition-all sm:py-3 flex items-center justify-center ${
+            isPayDisabled
+              ? 'cursor-not-allowed bg-gray-300 text-gray-500'
+              : 'cursor-pointer bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98]'
+          }`}
+          disabled={isPayDisabled}
+          onClick={handleConfirmPayment}
+        >
+          {confirming ? 'Bekräftar betalning...' : `Bekräfta och betala (${payLabel})`}
+        </button>
+        <p className="mt-3 flex items-center justify-center gap-1 text-xs text-gray-400">
+          <Lock className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+          Säker betalning via Stripe
+        </p>
+      </div>
+    </>
   );
 }
 
@@ -725,6 +733,7 @@ function BookingSection({
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [termsAccepted, setTerms]         = useState(false);
   const [notes, setNotes]                 = useState('');
+  const [notesExpanded, setNotesExpanded] = useState(false);
   const [loading, setLoading]             = useState(false);
   const [apiError, setApiError]           = useState('');
   const [busySlots, setBusySlots]         = useState(new Set());
@@ -776,6 +785,7 @@ function BookingSection({
       setStylistPreChosenFromHome(false);
       setForm({ name: '', phone: '', email: '' });
       setNotes('');
+      setNotesExpanded(false);
       setTerms(false);
       setMarketingConsent(false);
       setApiError('');
@@ -993,6 +1003,7 @@ function BookingSection({
   const handleContinueDetails= ()  => setStep('checkout');
   const isDetailsValid =
     Boolean(form.name.trim()) && Boolean(form.phone.trim()) && Boolean(form.email.trim());
+  const canPayOnSiteCheckout = !previewBookingLocked && termsAccepted && !loading;
 
   const priceAmount = totalPriceÖre;
   const selectedServiceIdsKey = selectedServices.map((s) => s.id).join(',');
@@ -1553,7 +1564,8 @@ function BookingSection({
 
           {/* ── STEG 6: Kassa ─────────────────────────────────────────────── */}
           {step === 'checkout' && selectedServices.length > 0 && (
-            <>
+            <div className="checkout-compact-flow">
+              <div className="checkout-step-scroll pb-44 sm:pb-40">
               <div className="booking-step-header-with-back">
                 <button type="button" className={`back-arrow-btn ${BTN_TOUCH_SECONDARY}`} onClick={goBack}>
                   ←
@@ -1599,22 +1611,43 @@ function BookingSection({
               </div>
 
               <div className="booking-notes">
-                <label htmlFor="booking-notes-text">Meddelande till salongen (valfritt)</label>
-                <textarea
-                  id="booking-notes-text"
-                  className="booking-notes-textarea"
-                  placeholder="Något salongen bör veta? T.ex. allergier, särskilda önskemål..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value.slice(0, 500))}
-                  maxLength={500}
-                  rows={4}
-                />
-                <span className="char-count booking-notes-char-count">{notes.length}/500</span>
+                {!notesExpanded ? (
+                  <button
+                    type="button"
+                    className="text-left text-sm font-medium text-gray-900 cursor-pointer bg-transparent border-0 p-0"
+                    onClick={() => setNotesExpanded(true)}
+                  >
+                    + Lägg till meddelande (valfritt)
+                  </button>
+                ) : (
+                  <>
+                    <label htmlFor="booking-notes-text">Meddelande till salongen (valfritt)</label>
+                    <div className="booking-notes-reveal">
+                      <textarea
+                        id="booking-notes-text"
+                        className="booking-notes-textarea"
+                        placeholder="Något salongen bör veta? T.ex. allergier, särskilda önskemål..."
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+                        maxLength={500}
+                        rows={4}
+                      />
+                    </div>
+                    <span className="char-count booking-notes-char-count">{notes.length}/500</span>
+                    <button
+                      type="button"
+                      className="mt-1 text-xs text-gray-500 underline cursor-pointer bg-transparent border-0 p-0"
+                      onClick={() => setNotesExpanded(false)}
+                    >
+                      Dölj
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* Terms */}
               <div className="terms-block">
-                <label className="terms-checkbox-label">
+                <label className="terms-checkbox-label terms-checkbox-label--solo">
                   <input
                     type="checkbox"
                     checked={termsAccepted}
@@ -1623,19 +1656,11 @@ function BookingSection({
                   />
                   <span>
                     Jag godkänner{' '}
-                    <Link to="/villkor" target="_blank" className="terms-link">
+                    <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="terms-link">
                       bokningsvillkoren
                     </Link>
                   </span>
                 </label>
-                <div className="terms-text">
-                  <p>Genom att boka godkänner du:</p>
-                  <ul>
-                    <li>Avbokning senare än 24 timmar före tid medför 50% avgift</li>
-                    <li>Förskottsbetalning online är icke‑återbetalbar om du inte avbokar inom 24 timmar</li>
-                    <li>Försenad ankomst kan leda till avbokning utan återbetalning</li>
-                  </ul>
-                </div>
               </div>
 
               {/* GDPR SMS consent */}
@@ -1680,10 +1705,10 @@ function BookingSection({
               {paymentChoice === 'swish' ? (
                 <>
                   {previewBookingLocked ? (
-                    <div className="embedded-payment-shell">
+                    <div className="checkout-sticky-pay sticky bottom-0 left-0 z-10 w-full border-t border-gray-100 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
                       <button
                         type="button"
-                        className={`btn-pay btn-pay--preview-locked ${BTN_TOUCH_PRIMARY}`}
+                        className="w-full cursor-not-allowed rounded-md bg-gray-300 py-4 text-center font-medium text-gray-500 sm:py-3"
                         disabled
                         aria-disabled="true"
                       >
@@ -1717,19 +1742,19 @@ function BookingSection({
                           />
                         </Elements>
                       ) : null}
-                      <p className="stripe-note flex items-center justify-center mt-3 text-xs text-gray-400">
-                        <Lock className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                        Säker betalning via Stripe
-                      </p>
                     </>
                   )}
                 </>
               ) : (
-                <div className="step-cta">
+                <div className="checkout-sticky-pay sticky bottom-0 left-0 z-10 w-full border-t border-gray-100 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
                   <button
                     type="button"
-                    className={`btn-pay ${BTN_TOUCH_PRIMARY}`}
-                    disabled={previewBookingLocked || !termsAccepted || loading}
+                    className={`w-full rounded-md py-4 text-center font-medium transition-all sm:py-3 flex items-center justify-center ${
+                      canPayOnSiteCheckout
+                        ? 'cursor-pointer bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98]'
+                        : 'cursor-not-allowed bg-gray-300 text-gray-500'
+                    }`}
+                    disabled={!canPayOnSiteCheckout}
                     onClick={previewBookingLocked ? undefined : handleBookPayOnSite}
                   >
                     {previewBookingLocked
@@ -1740,7 +1765,8 @@ function BookingSection({
                   </button>
                 </div>
               )}
-            </>
+              </div>
+            </div>
           )}
 
         </div>
