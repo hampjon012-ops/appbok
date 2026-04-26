@@ -190,6 +190,7 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel, termsAccepte
   return (
     <div className="swish-payment-clean">
       <PaymentElement
+        options={{ layout: 'accordion' }}
         onChange={(event) => {
           setPaymentComplete(Boolean(event.complete));
           if (event.error?.message) onError?.(event.error.message);
@@ -1030,10 +1031,79 @@ function BookingSection({
     return {
       clientSecret,
       appearance: {
-        theme: 'stripe',
+        theme: 'flat',
         variables: {
           colorPrimary: resolvePrimaryAccentHex(config?.theme),
-          borderRadius: '12px',
+          borderRadius: '0px',
+          colorBackground: '#ffffff',
+          colorText: '#111827',
+          colorDanger: '#ef4444',
+          fontFamily: 'inherit',
+          spacingUnit: '4px',
+          borderWidth: '0px',
+          focusBoxShadow: 'none',
+          focusOutline: '0px',
+        },
+        rules: {
+          '.Input': {
+            border: '1px solid #e5e7eb',
+            borderRadius: '10px',
+            boxShadow: 'none',
+            fontSize: '0.875rem',
+            padding: '0.7rem 0.85rem',
+          },
+          '.Input:focus': {
+            border: `1px solid ${resolvePrimaryAccentHex(config?.theme)}`,
+            boxShadow: 'none',
+            outline: '0px',
+          },
+          '.Label': {
+            fontSize: '0.78rem',
+            fontWeight: '500',
+            color: '#6b7280',
+            marginBottom: '0.35rem',
+          },
+          '.Tab': {
+            border: '1px solid transparent',
+            borderRadius: '0px',
+            boxShadow: 'none',
+            color: '#6b7280',
+            fontWeight: '400',
+            fontSize: '0.875rem',
+          },
+          '.Tab:hover': {
+            color: '#111827',
+          },
+          '.Tab--selected': {
+            border: '1px solid transparent',
+            borderBottom: `2px solid ${resolvePrimaryAccentHex(config?.theme)}`,
+            borderRadius: '0px',
+            boxShadow: 'none',
+            color: '#111827',
+            fontWeight: '600',
+          },
+          '.TabLabel': {
+            fontSize: '0.875rem',
+            fontWeight: '500',
+          },
+          '.TabIcon': {
+            width: '18px',
+            height: '18px',
+          },
+          '.Block': {
+            border: 'none',
+            borderRadius: '0px',
+            boxShadow: 'none',
+            backgroundColor: '#ffffff',
+            padding: '0.5rem 0',
+          },
+          '.CheckboxInput': {
+            accentColor: resolvePrimaryAccentHex(config?.theme),
+          },
+          '.Error': {
+            fontSize: '0.78rem',
+            color: '#ef4444',
+          },
         },
       },
     };
