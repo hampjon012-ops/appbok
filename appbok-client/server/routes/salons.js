@@ -610,15 +610,34 @@ router.post('/current/gallery-upload', requireAuth, requireAdmin, async (req, re
     if (fetchErr) throw fetchErr;
     if (!salonRow) return res.status(404).json({ error: 'Salong hittades inte.' });
 
-    const file = req.files?.file;
-    if (!file) return res.status(400).json({ error: 'Ingen fil skickades med.' });
+    const form = formidable({ maxFileSize: 6 * 1024 * 1024 });
+    const [fields, files] = await form.parse(req);
+
+    const fileEntry = Array.isArray(files.file) ? files.file[0] : files.file;
+    if (!fileEntry) {
+      return res.status(400).json({ error: 'Ingen fil skickades med.' });
+    }
+
+    const fs = await import('fs');
+    const fileBuffer = fs.readFileSync(fileEntry.filepath);
+    const fileName = fileEntry.originalFilename || 'gallery.jpg';
+    const mimeType = String(fileEntry.mimetype || '').trim().toLowerCase();
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/webp', 'image/png'];
+    if (!allowedTypes.includes(mimeType)) {
+      return res.status(400).json({ error: `Filtypen ${mimeType} är inte tillåten. Använd JPG, WEBP eller PNG.` });
+    }
+
+    if (fileBuffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Filen är för stor. Max 5 MB.' });
+    }
 
     const { uploadGalleryToSupabase } = await import('../lib/uploadGallery.js');
     const publicUrl = await uploadGalleryToSupabase({
       salonId: salonRow.id,
-      fileBuffer: file.data,
-      fileName: file.name,
-      mimeType: file.mimetype,
+      fileBuffer,
+      fileName,
+      mimeType,
     });
 
     res.json({ gallery_url: publicUrl });
