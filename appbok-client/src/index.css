@@ -2118,10 +2118,10 @@ a.insta-item-link:focus-visible {
 
 /* ── Ren kassa-flow ──────────────────────────────────────────────── */
 .swish-payment-clean .StripeElement {
-  padding: 0.9rem 0.85rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #fff;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   margin-bottom: 0;
 }
 .swish-payment-clean .checkout-terms-row {
