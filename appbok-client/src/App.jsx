@@ -1040,8 +1040,26 @@ function BookingSection({
         },
         rules: {
           '.AccordionItem': {
-            borderBottom: '1px solid #f3f4f6',
-            backgroundColor: 'transparent',
+            border: '1px solid #f3f4f6',
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            marginBottom: '8px',
+            transition: 'all 0.2s ease',
+          },
+          '.AccordionItem--selected': {
+            borderColor: '#111827',
+            borderWidth: '2px',
+            backgroundColor: '#f9fafb',
+          },
+          '.Tab': {
+            border: '1px solid #f3f4f6',
+            borderRadius: '8px',
+            backgroundColor: '#ffffff',
+          },
+          '.Tab--selected': {
+            borderColor: '#111827',
+            borderWidth: '2px',
+            backgroundColor: '#f9fafb',
           },
           '.Input': {
             border: '1px solid #e5e7eb',
