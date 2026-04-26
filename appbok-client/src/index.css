@@ -2124,6 +2124,29 @@ a.insta-item-link:focus-visible {
   background: #fff;
   margin-bottom: 0;
 }
+.swish-payment-clean .checkout-terms-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 0.75rem;
+}
+.swish-payment-clean .checkout-terms-input {
+  width: 17px;
+  height: 17px;
+  min-width: 17px;
+  accent-color: var(--accent-color, #6f4e37);
+  cursor: pointer;
+  margin-top: 2px;
+}
+.swish-payment-clean .checkout-terms-text {
+  font-size: 0.82rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
 
 /* Ren betalsätt-sektion */
 .payment-clean-section {

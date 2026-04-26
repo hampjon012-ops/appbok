@@ -146,7 +146,7 @@ const BTN_TOUCH_PRIMARY =
 const BTN_TOUCH_SECONDARY =
   'active:scale-[0.98] active:bg-gray-100 transition-all duration-75';
 
-function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
+function SwishPaymentForm({ onConfirm, onError, disabled, payLabel, termsAccepted, setTerms }) {
   const stripe = useStripe();
   const elements = useElements();
   const [confirming, setConfirming] = useState(false);
@@ -196,9 +196,23 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
           else onError?.('');
         }}
       />
+      <label className="checkout-terms-row">
+        <input
+          type="checkbox"
+          checked={termsAccepted}
+          onChange={e => setTerms(e.target.checked)}
+          className="checkout-terms-input"
+        />
+        <span className="checkout-terms-text">
+          Jag godkänner{' '}
+          <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="underline">
+            bokningsvillkoren
+          </Link>
+        </span>
+      </label>
       <button
         type="button"
-        className={`checkout-cta-btn w-full mt-4 mb-2 ${
+        className={`checkout-cta-btn w-full ${
           isPayDisabled
             ? 'checkout-cta-btn--disabled'
             : 'checkout-cta-btn--active'
@@ -1729,6 +1743,8 @@ function BookingSection({
                             payLabel={fmtPrice(priceAmount)}
                             onError={(msg) => setApiError(msg)}
                             onConfirm={handleSwishConfirmed}
+                            termsAccepted={termsAccepted}
+                            setTerms={setTerms}
                           />
                         </Elements>
                       ) : null}
