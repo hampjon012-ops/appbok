@@ -188,35 +188,31 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel }) {
   };
 
   return (
-    <>
-      <div className="embedded-payment-shell embedded-payment-shell--fields-only">
-        <PaymentElement
-          onChange={(event) => {
-            setPaymentComplete(Boolean(event.complete));
-            if (event.error?.message) onError?.(event.error.message);
-            else onError?.('');
-          }}
-        />
-      </div>
-      <div className="checkout-sticky-pay sticky bottom-0 left-0 z-10 w-full border-t border-gray-100 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
-        <button
-          type="button"
-          className={`w-full rounded-md py-4 text-center font-medium transition-all sm:py-3 flex items-center justify-center ${
-            isPayDisabled
-              ? 'cursor-not-allowed bg-gray-300 text-gray-500'
-              : 'cursor-pointer bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98]'
-          }`}
-          disabled={isPayDisabled}
-          onClick={handleConfirmPayment}
-        >
-          {confirming ? 'Bekräftar betalning...' : `Bekräfta och betala (${payLabel})`}
-        </button>
-        <p className="mt-3 flex items-center justify-center gap-1 text-xs text-gray-400">
-          <Lock className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-          Säker betalning via Stripe
-        </p>
-      </div>
-    </>
+    <div className="swish-payment-clean">
+      <PaymentElement
+        onChange={(event) => {
+          setPaymentComplete(Boolean(event.complete));
+          if (event.error?.message) onError?.(event.error.message);
+          else onError?.('');
+        }}
+      />
+      <button
+        type="button"
+        className={`w-full rounded-lg bg-gray-900 py-4 mt-8 mb-4 text-center font-medium text-white transition-all active:scale-[0.98] ${
+          isPayDisabled
+            ? 'cursor-not-allowed bg-gray-300 text-gray-500'
+            : 'cursor-pointer hover:bg-gray-800'
+        }`}
+        disabled={isPayDisabled}
+        onClick={handleConfirmPayment}
+      >
+        {confirming ? 'Bekräftar betalning...' : `Bekräfta och betala (${payLabel})`}
+      </button>
+      <p className="mb-8 flex items-center justify-center gap-1 text-xs text-gray-400">
+        <Lock className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+        Säker betalning via Stripe
+      </p>
+    </div>
   );
 }
 
@@ -1564,8 +1560,7 @@ function BookingSection({
 
           {/* ── STEG 6: Kassa ─────────────────────────────────────────────── */}
           {step === 'checkout' && selectedServices.length > 0 && (
-            <div className="checkout-compact-flow">
-              <div className="checkout-step-scroll pb-44 sm:pb-40">
+            <div>
               <div className="booking-step-header-with-back">
                 <button type="button" className={`back-arrow-btn ${BTN_TOUCH_SECONDARY}`} onClick={goBack}>
                   ←
@@ -1610,6 +1605,7 @@ function BookingSection({
                 </p>
               </div>
 
+              {/* Notes accordion */}
               <div className="booking-notes">
                 {!notesExpanded ? (
                   <button
@@ -1645,59 +1641,63 @@ function BookingSection({
                 )}
               </div>
 
-              {/* Terms */}
-              <div className="terms-block">
-                <label className="terms-checkbox-label terms-checkbox-label--solo">
+              {/* Payment method */}
+              {allowPayOnSite && (
+                <div className="payment-clean-section">
+                  <p className="payment-clean-heading">Betalningssätt</p>
+                  <button
+                    type="button"
+                    className={`payment-clean-row ${paymentChoice === 'swish' ? 'payment-clean-row--active' : ''}`}
+                    onClick={() => { setPaymentChoice('swish'); setApiError(''); }}
+                  >
+                    <span className="payment-clean-radio">
+                      {paymentChoice === 'swish' ? '●' : '○'}
+                    </span>
+                    <span className="font-medium text-gray-900 text-sm">Betala online</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`payment-clean-row ${paymentChoice === 'on_site' ? 'payment-clean-row--active' : ''}`}
+                    onClick={() => { setPaymentChoice('on_site'); setApiError(''); }}
+                  >
+                    <span className="payment-clean-radio">
+                      {paymentChoice === 'on_site' ? '●' : '○'}
+                    </span>
+                    <span className="font-medium text-gray-900 text-sm">Betala på plats</span>
+                  </button>
+                </div>
+              )}
+              {!allowPayOnSite && (
+                <p className="payment-clean-forced">Onlinebetalning är obligatorisk för denna salong.</p>
+              )}
+
+              {/* Checkboxes */}
+              <div className="clean-checkbox-list">
+                <label className="clean-checkbox-row">
                   <input
                     type="checkbox"
                     checked={termsAccepted}
                     onChange={e => setTerms(e.target.checked)}
-                    id="terms-accept"
+                    className="clean-checkbox-input"
                   />
-                  <span>
+                  <span className="text-sm text-gray-700">
                     Jag godkänner{' '}
-                    <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="terms-link">
+                    <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="underline">
                       bokningsvillkoren
                     </Link>
                   </span>
                 </label>
-              </div>
-
-              {/* GDPR SMS consent */}
-              <PrivacyCheckbox checked={marketingConsent} onChange={setMarketingConsent} />
-
-              <div className="payment-choice-section">
-                <h4 className="payment-choice-title">Betalningssätt</h4>
-                {allowPayOnSite ? (
-                  <div className="payment-choice-grid">
-                    <button
-                      type="button"
-                      className={`payment-choice-card ${BTN_TOUCH_CARD} ${paymentChoice === 'swish' ? 'payment-choice-card--active' : ''}`}
-                      onClick={() => {
-                        setPaymentChoice('swish');
-                        setApiError('');
-                      }}
-                    >
-                      <span className="payment-choice-heading">Betala online</span>
-                      <span className="payment-choice-copy">Kort, Apple Pay och Google Pay via säker Stripe-ruta.</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`payment-choice-card ${BTN_TOUCH_CARD} ${paymentChoice === 'on_site' ? 'payment-choice-card--active' : ''}`}
-                      onClick={() => {
-                        setPaymentChoice('on_site');
-                        setApiError('');
-                      }}
-                    >
-                      <span className="payment-choice-heading">Betala på plats</span>
-                      <span className="payment-choice-copy">Ingen förbetalning. Betala hela beloppet i salongen.</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="payment-choice-forced">
-                    Onlinebetalning är obligatorisk för denna salong.
-                  </div>
-                )}
+                <label className="clean-checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={marketingConsent}
+                    onChange={e => setMarketingConsent(e.target.checked)}
+                    className="clean-checkbox-input"
+                  />
+                  <span className="text-sm text-gray-700">
+                    Jag samtycker till att ta emot SMS-aviseringar om min bokning
+                  </span>
+                </label>
               </div>
 
               {apiError && <p className="api-error">{apiError}</p>}
@@ -1705,32 +1705,28 @@ function BookingSection({
               {paymentChoice === 'swish' ? (
                 <>
                   {previewBookingLocked ? (
-                    <div className="checkout-sticky-pay sticky bottom-0 left-0 z-10 w-full border-t border-gray-100 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
-                      <button
-                        type="button"
-                        className="w-full cursor-not-allowed rounded-md bg-gray-300 py-4 text-center font-medium text-gray-500 sm:py-3"
-                        disabled
-                        aria-disabled="true"
-                      >
-                        Bokning inaktiverad i preview-läge
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="mt-6 w-full cursor-not-allowed rounded-lg bg-gray-300 py-4 text-center font-medium text-gray-500"
+                      disabled
+                      aria-disabled="true"
+                    >
+                      Bokning inaktiverad i preview-läge
+                    </button>
                   ) : (
                     <>
                       {intentLoading && <p className="payment-element-loading">Initierar onlinebetalning...</p>}
                       {!intentLoading && !clientSecret && apiError ? (
-                        <div className="step-cta">
-                          <button
-                            type="button"
-                            className={`btn-continue ${BTN_TOUCH_PRIMARY}`}
-                            onClick={() => {
-                              setIntentRequested(false);
-                              fetchPaymentIntent();
-                            }}
-                          >
-                            Försök igen
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          className={`btn-continue ${BTN_TOUCH_PRIMARY}`}
+                          onClick={() => {
+                            setIntentRequested(false);
+                            fetchPaymentIntent();
+                          }}
+                        >
+                          Försök igen
+                        </button>
                       ) : null}
                       {!intentLoading && clientSecret && stripePromise && elementsOptions ? (
                         <Elements stripe={stripePromise} options={elementsOptions}>
@@ -1746,26 +1742,23 @@ function BookingSection({
                   )}
                 </>
               ) : (
-                <div className="checkout-sticky-pay sticky bottom-0 left-0 z-10 w-full border-t border-gray-100 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
-                  <button
-                    type="button"
-                    className={`w-full rounded-md py-4 text-center font-medium transition-all sm:py-3 flex items-center justify-center ${
-                      canPayOnSiteCheckout
-                        ? 'cursor-pointer bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98]'
-                        : 'cursor-not-allowed bg-gray-300 text-gray-500'
-                    }`}
-                    disabled={!canPayOnSiteCheckout}
-                    onClick={previewBookingLocked ? undefined : handleBookPayOnSite}
-                  >
-                    {previewBookingLocked
-                      ? 'Bokning inaktiverad i preview-läge'
-                      : loading
-                        ? 'Skapar bokning...'
-                        : 'Bekräfta bokning (betala på plats)'}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className={`mt-6 w-full rounded-lg py-4 text-center font-medium transition-all active:scale-[0.98] ${
+                    canPayOnSiteCheckout
+                      ? 'cursor-pointer bg-gray-900 text-white hover:bg-gray-800'
+                      : 'cursor-not-allowed bg-gray-300 text-gray-500'
+                  }`}
+                  disabled={!canPayOnSiteCheckout}
+                  onClick={previewBookingLocked ? undefined : handleBookPayOnSite}
+                >
+                  {previewBookingLocked
+                    ? 'Bokning inaktiverad i preview-läge'
+                    : loading
+                      ? 'Skapar bokning...'
+                      : 'Bekräfta bokning (betala på plats)'}
+                </button>
               )}
-              </div>
             </div>
           )}
 
