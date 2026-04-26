@@ -20,7 +20,7 @@ import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
 import { getValidOpeningHoursWeek } from './lib/publicOpeningHours.js';
 import PrivacyCheckbox from './components/PrivacyCheckbox.jsx';
 import CookieBanner from './components/CookieBanner.jsx';
-import { ChevronRight, ChevronLeft, CreditCard, Store, Lock, Plus, User, Users, X } from 'lucide-react';
+import { ChevronRight, ChevronLeft, CreditCard, Store, Lock, Plus, User, Users, X, CheckCircle2, Circle } from 'lucide-react';
 
 function isPreviewEmbedClient() {
   if (typeof window === 'undefined') return false;
@@ -1560,7 +1560,7 @@ function BookingSection({
 
           {/* ── STEG 6: Kassa ─────────────────────────────────────────────── */}
           {step === 'checkout' && selectedServices.length > 0 && (
-            <div className="checkout-clean">
+            <div className="checkout-final">
               {/* ── A. HEADER ── */}
               <div className="checkout-header">
                 <button
@@ -1575,34 +1575,44 @@ function BookingSection({
                 <div className="w-10 shrink-0" />
               </div>
 
-              {/* ── B. SAMMANFATTNING (receipt card, no label) ── */}
+              {/* ── B. SAMMANFATTNING (Kvitto) ── */}
               <div className="checkout-receipt">
                 {selectedServices.map((svc) => (
                   <div key={svc.id} className="checkout-receipt-row">
                     <span className="checkout-receipt-left">{svc.name}</span>
-                    <span className="checkout-receipt-right">{fmtPrice(servicePriceÖre(svc))}</span>
+                    <span className="checkout-receipt-right shrink-0 whitespace-nowrap text-right font-medium">
+                      {fmtPrice(servicePriceÖre(svc))}
+                    </span>
                   </div>
                 ))}
                 <div className="checkout-receipt-row">
                   <span className="checkout-receipt-left">Stylist</span>
-                  <span className="checkout-receipt-right">{selectedStylist?.name}</span>
+                  <span className="checkout-receipt-right shrink-0 whitespace-nowrap text-right font-medium">
+                    {selectedStylist?.name}
+                  </span>
                 </div>
                 <div className="checkout-receipt-row">
                   <span className="checkout-receipt-left">Datum</span>
-                  <span className="checkout-receipt-right">{selectedDate ? fmtDateLong(selectedDate) : '—'}</span>
+                  <span className="checkout-receipt-right shrink-0 whitespace-nowrap text-right font-medium">
+                    {selectedDate ? fmtDateLong(selectedDate) : '—'}
+                  </span>
                 </div>
                 <div className="checkout-receipt-row">
                   <span className="checkout-receipt-left">Tid</span>
-                  <span className="checkout-receipt-right">{selectedTime}</span>
+                  <span className="checkout-receipt-right shrink-0 whitespace-nowrap text-right font-medium">
+                    {selectedTime}
+                  </span>
                 </div>
                 <div className="checkout-receipt-row">
                   <span className="checkout-receipt-left">Kund</span>
-                  <span className="checkout-receipt-right">{form.name}</span>
+                  <span className="checkout-receipt-right shrink-0 whitespace-nowrap text-right font-medium">
+                    {form.name}
+                  </span>
                 </div>
                 <div className="checkout-receipt-divider" />
                 <div className="checkout-receipt-row checkout-receipt-total">
                   <span className="checkout-receipt-left">Totalt</span>
-                  <span className="checkout-receipt-right">
+                  <span className="checkout-receipt-right shrink-0 whitespace-nowrap text-right font-medium">
                     {selectedServices.length ? fmtPrice(totalPriceÖre) : '—'}
                   </span>
                 </div>
@@ -1611,7 +1621,7 @@ function BookingSection({
                 )}
               </div>
 
-              {/* ── C. TILLVAL (note accordion + SMS) ── */}
+              {/* ── C. TILLVAL (Meddelande + SMS) ── */}
               <div className="checkout-options">
                 {!notesExpanded ? (
                   <button
@@ -1651,27 +1661,39 @@ function BookingSection({
                 </label>
               </div>
 
-              {/* ── D & E. BETALNINGSVAL ── */}
+              {/* ── D. BETALNINGSMETOD (Radio) ── */}
               <div className="checkout-payment-section">
                 {allowPayOnSite && (
                   <>
                     <button
                       type="button"
-                      className={`checkout-pay-option ${paymentChoice === 'swish' ? 'checkout-pay-option--active' : ''}`}
+                      className={`checkout-radio-row ${paymentChoice === 'swish' ? 'checkout-radio-row--active' : ''}`}
                       onClick={() => { setPaymentChoice('swish'); setApiError(''); }}
                     >
-                      <CreditCard size={18} strokeWidth={1.8} className="checkout-pay-icon" />
-                      <span className="checkout-pay-label">Onlinebetalning</span>
-                      <ChevronRight size={16} strokeWidth={2} className="checkout-pay-chevron" />
+                      <span className="checkout-radio-left">
+                        <CreditCard size={18} strokeWidth={1.8} className="checkout-pay-icon" />
+                        <span className="checkout-pay-label">Onlinebetalning</span>
+                      </span>
+                      {paymentChoice === 'swish' ? (
+                        <CheckCircle2 size={20} strokeWidth={1.5} className="text-gray-900 fill-gray-900" />
+                      ) : (
+                        <Circle size={20} strokeWidth={1.5} className="text-gray-300" />
+                      )}
                     </button>
                     <button
                       type="button"
-                      className={`checkout-pay-option ${paymentChoice === 'on_site' ? 'checkout-pay-option--active' : ''}`}
+                      className={`checkout-radio-row ${paymentChoice === 'on_site' ? 'checkout-radio-row--active' : ''}`}
                       onClick={() => { setPaymentChoice('on_site'); setApiError(''); }}
                     >
-                      <Store size={18} strokeWidth={1.8} className="checkout-pay-icon" />
-                      <span className="checkout-pay-label">Betala på plats</span>
-                      <ChevronRight size={16} strokeWidth={2} className="checkout-pay-chevron" />
+                      <span className="checkout-radio-left">
+                        <Store size={18} strokeWidth={1.8} className="checkout-pay-icon" />
+                        <span className="checkout-pay-label">Betala på plats</span>
+                      </span>
+                      {paymentChoice === 'on_site' ? (
+                        <CheckCircle2 size={20} strokeWidth={1.5} className="text-gray-900 fill-gray-900" />
+                      ) : (
+                        <Circle size={20} strokeWidth={1.5} className="text-gray-300" />
+                      )}
                     </button>
                   </>
                 )}
@@ -1683,7 +1705,7 @@ function BookingSection({
                 )}
               </div>
 
-              {/* ── E. STRIPE (when swish is selected) ── */}
+              {/* ── E. STRIPE ELEMENT (Online — only when swish selected) ── */}
               {allowPayOnSite && paymentChoice === 'swish' && (
                 <div className="checkout-stripe-area">
                   {previewBookingLocked ? (
@@ -1715,8 +1737,8 @@ function BookingSection({
                 </div>
               )}
 
-              {/* ── G. VILLKOR + HUVUDKNAPP ── */}
-              <div className="checkout-cta-section">
+              {/* ── F. CHECKBOX VILLKOR ── */}
+              <div className="checkout-terms-section">
                 <label className="checkout-terms-row">
                   <input
                     type="checkbox"
@@ -1731,20 +1753,20 @@ function BookingSection({
                     </Link>
                   </span>
                 </label>
+              </div>
 
+              {/* ── G. HUVUDKNAPP ── */}
+              <div className="checkout-cta-section">
                 {apiError && <p className="api-error">{apiError}</p>}
 
-                {paymentChoice === 'swish' && !allowPayOnSite ? (
-                  // online-only salon — CTA comes from SwishPaymentForm above
+                {paymentChoice === 'swish' ? (
+                  // SwishPaymentForm renders its own CTA inside checkout-stripe-area — show nothing extra
                   null
-                ) : paymentChoice === 'swish' ? (
-                  // swish selected with on-site option
-                  null // SwishPaymentForm renders its own CTA inside checkout-stripe-area
                 ) : (
-                  // on_site selected
+                  // on_site selected (or no choice yet)
                   <button
                     type="button"
-                    className={`checkout-cta-btn ${
+                    className={`checkout-cta-btn w-full ${
                       canPayOnSiteCheckout
                         ? 'checkout-cta-btn--active'
                         : 'checkout-cta-btn--disabled'
