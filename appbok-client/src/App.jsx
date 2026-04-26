@@ -1753,22 +1753,24 @@ function BookingSection({
                 </div>
               )}
 
-              {/* ── G. HUVUDKNAPP (terms checkbox directly above) ── */}
+              {/* ── G. HUVUDKNAPP (terms checkbox directly above, only for on_site) ── */}
               <div className="checkout-cta-section">
-                <label className="checkout-terms-row">
-                  <input
-                    type="checkbox"
-                    checked={termsAccepted}
-                    onChange={e => setTerms(e.target.checked)}
-                    className="checkout-terms-input"
-                  />
-                  <span className="checkout-terms-text">
-                    Jag godkänner{' '}
-                    <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="underline">
-                      bokningsvillkoren
-                    </Link>
-                  </span>
-                </label>
+                {paymentChoice !== 'swish' && (
+                  <label className="checkout-terms-row">
+                    <input
+                      type="checkbox"
+                      checked={termsAccepted}
+                      onChange={e => setTerms(e.target.checked)}
+                      className="checkout-terms-input"
+                    />
+                    <span className="checkout-terms-text">
+                      Jag godkänner{' '}
+                      <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="underline">
+                        bokningsvillkoren
+                      </Link>
+                    </span>
+                  </label>
+                )}
 
                 {apiError && <p className="api-error">{apiError}</p>}
 
