@@ -757,6 +757,7 @@ function BookingSection({
   const [availableSlots, setAvailableSlots] = useState([]);
   const [busyLoading, setBusyLoading]     = useState(false);
   const [closedDateSet, setClosedDateSet] = useState(new Set());
+  const [slotFetchError, setSlotFetchError] = useState('');
   const allowPayOnSite = config?.allowPayOnSite !== false;
   const [paymentChoice, setPaymentChoice] = useState('swish');
   const [intentLoading, setIntentLoading] = useState(false);
@@ -767,6 +768,12 @@ function BookingSection({
 
   const selectedStylistRef = useRef(null);
   selectedStylistRef.current = selectedStylist;
+  const selectedDateRef = useRef(null);
+  selectedDateRef.current = selectedDate;
+  const salonIdRef = useRef(null);
+  salonIdRef.current = config?.salonId;
+  /** Ignorera avbrutna slot-fetch:ar så busyLoading och state inte fastnar. */
+  const slotsFetchGenRef = useRef(0);
 
   /** DB returnerar price_amount / duration_minutes; config.json använder priceAmount / durationMinutes */
   const servicePriceÖre = (svc) => {
@@ -800,6 +807,8 @@ function BookingSection({
       setDate(null);
       setTime(null);
       setAvailableSlots([]);
+      setBusyLoading(false);
+      setSlotFetchError('');
       setStylistPreChosenFromHome(false);
       setForm({ name: '', phone: '', email: '' });
       setNotes('');
@@ -807,6 +816,7 @@ function BookingSection({
       setTerms(false);
       setMarketingConsent(false);
       setApiError('');
+      setSlotFetchError('');
       setLoading(false);
       setPaymentChoice('swish');
       setIntentLoading(false);
@@ -882,46 +892,97 @@ function BookingSection({
       setClosedDateSet(new Set());
       return;
     }
-    setClosedDateSet(new Set());
+    const ac = new AbortController();
+    const stylistIdAtReq = selectedStylist.id;
+    const salonIdAtReq = config.salonId;
     const from = localYmd(new Date());
     const closedQ = new URLSearchParams({
-      salon_id: String(config.salonId),
-      stylist_id: String(selectedStylist.id),
+      salon_id: String(salonIdAtReq),
+      stylist_id: String(stylistIdAtReq),
       from,
       days: '30',
     });
-    fetch(`/api/booking-availability/closed-dates?${closedQ.toString()}`)
+    fetch(`/api/booking-availability/closed-dates?${closedQ.toString()}`, { signal: ac.signal })
       .then((r) => r.json())
-      .then((d) => setClosedDateSet(new Set(d.closedDates || [])))
-      .catch(() => setClosedDateSet(new Set()));
+      .then((d) => {
+        if (
+          selectedStylistRef.current?.id !== stylistIdAtReq ||
+          salonIdRef.current !== salonIdAtReq
+        ) {
+          return;
+        }
+        setClosedDateSet(new Set(d.closedDates || []));
+      })
+      .catch((err) => {
+        if (err?.name === 'AbortError') return;
+        if (
+          selectedStylistRef.current?.id !== stylistIdAtReq ||
+          salonIdRef.current !== salonIdAtReq
+        ) {
+          return;
+        }
+        setClosedDateSet(new Set());
+      });
+    return () => ac.abort();
   }, [selectedStylist, config?.salonId]);
 
   // Tillgängliga starttider: schema, lunch, block, Google, befintliga bokningar (server)
   useEffect(() => {
     if (!selectedDate || !selectedStylist || !config?.salonId) return;
-    setBusyLoading(true);
-    setAvailableSlots([]);
+    const ac = new AbortController();
+    const gen = ++slotsFetchGenRef.current;
+    const stylistIdAtReq = selectedStylist.id;
+    const salonIdAtReq = config.salonId;
     const dateStr = localYmd(selectedDate);
-    const stylistId = selectedStylist.id;
+    setBusyLoading(true);
+    setSlotFetchError('');
+    setAvailableSlots([]);
     const q = new URLSearchParams({
-      salon_id: String(config.salonId),
-      stylist_id: String(stylistId),
+      salon_id: String(salonIdAtReq),
+      stylist_id: String(stylistIdAtReq),
       date: dateStr,
     });
-    fetch(`/api/booking-availability?${q.toString()}`)
-      .then((r) => r.json())
-      .then((data) => {
+    const stillCurrent = () =>
+      slotsFetchGenRef.current === gen &&
+      selectedStylistRef.current?.id === stylistIdAtReq &&
+      salonIdRef.current === salonIdAtReq &&
+      localYmd(selectedDateRef.current) === dateStr;
+
+    fetch(`/api/booking-availability?${q.toString()}`, { signal: ac.signal })
+      .then(async (r) => {
+        let data = {};
+        try {
+          data = await r.json();
+        } catch {
+          data = {};
+        }
+        if (!stillCurrent()) return;
+        if (!r.ok) {
+          setAvailableSlots([]);
+          setTime(null);
+          setSlotFetchError(
+            typeof data.error === 'string' && data.error.trim()
+              ? data.error.trim()
+              : 'Kunde inte hämta tillgängliga tider.',
+          );
+          return;
+        }
         const raw = Array.isArray(data.slots) ? data.slots : [];
         const slots = [...new Set(raw.map((s) => String(s).slice(0, 5)))].sort(compareSlotTimes);
         setAvailableSlots(slots);
         setTime((prev) => (prev && slots.includes(prev) ? prev : null));
-        setBusyLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        if (err?.name === 'AbortError') return;
+        if (!stillCurrent()) return;
         setAvailableSlots([]);
         setTime(null);
-        setBusyLoading(false);
+        setSlotFetchError('Kunde inte hämta tillgängliga tider.');
+      })
+      .finally(() => {
+        if (slotsFetchGenRef.current === gen) setBusyLoading(false);
       });
+    return () => ac.abort();
   }, [selectedDate, selectedStylist, config?.salonId]);
 
   // Step index for stepper (0-based, total 6 visual steps including category)
@@ -1528,6 +1589,10 @@ function BookingSection({
                   <p className="timeslots-label">{fmtDateLong(selectedDate)}</p>
                   {busyLoading ? (
                     <p className="timeslots-loading">Kontrollerar tillgänglighet...</p>
+                  ) : slotFetchError ? (
+                    <p className="timeslots-empty text-sm text-red-600 mt-4" role="alert">
+                      {slotFetchError}
+                    </p>
                   ) : availableSlots.length === 0 ? (
                     <p className="timeslots-empty text-sm text-gray-600 mt-4">Inga lediga tider denna dag.</p>
                   ) : (

@@ -19,6 +19,12 @@ function normalizeStylistIdParam(raw) {
   return String(v).trim();
 }
 
+function normalizeSalonIdParam(raw) {
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  if (v == null) return '';
+  return String(v).trim();
+}
+
 function isAnyStylistId(stylistIdNorm) {
   return stylistIdNorm.toLowerCase() === 'any';
 }
@@ -45,14 +51,15 @@ function dayOpenFromSchedule(workSchedule, dateStr, salonSchedule) {
  */
 router.get('/', async (req, res) => {
   const { salon_id, stylist_id, date } = req.query;
+  const salonKey = normalizeSalonIdParam(salon_id);
   const stylistKey = normalizeStylistIdParam(stylist_id);
-  if (!salon_id || !stylistKey || !date) {
+  if (!salonKey || !stylistKey || !date) {
     return res.status(400).json({ error: 'salon_id, stylist_id och date krävs.' });
   }
   const dateStr = String(date).slice(0, 10);
 
   try {
-    const salon = await loadSalonMaybeExpire(salon_id);
+    const salon = await loadSalonMaybeExpire(salonKey);
     if (!salon) {
       return res.status(404).json({ error: 'Salong hittades inte.', slots: [], dateClosed: true });
     }
@@ -79,7 +86,7 @@ router.get('/', async (req, res) => {
       const { data: staff, error } = await supabase
         .from('users')
         .select('id, work_schedule')
-        .eq('salon_id', salon_id)
+        .eq('salon_id', salonKey)
         .in('role', ['staff', 'admin'])
         .eq('active', true);
       if (error) throw error;
@@ -87,7 +94,7 @@ router.get('/', async (req, res) => {
         return res.json({ slots: [], dateClosed: true });
       }
       const slots = await computeSlotsForAnyStylist({
-        salonId: salon_id,
+        salonId: salonKey,
         dateStr,
         staffList: staff,
         salonSchedule,
@@ -99,7 +106,7 @@ router.get('/', async (req, res) => {
       .from('users')
       .select('id, salon_id, work_schedule')
       .eq('id', stylistKey)
-      .eq('salon_id', salon_id)
+      .eq('salon_id', salonKey)
       .maybeSingle();
     if (uErr) throw uErr;
     if (!u) {
@@ -107,7 +114,7 @@ router.get('/', async (req, res) => {
     }
 
     const slots = await computeSlotsForStylist({
-      salonId: salon_id,
+      salonId: salonKey,
       stylistId: stylistKey,
       dateStr,
       workSchedule: u.work_schedule,
@@ -126,15 +133,16 @@ router.get('/', async (req, res) => {
  */
 router.get('/closed-dates', async (req, res) => {
   const { salon_id, stylist_id, from, days } = req.query;
+  const salonKey = normalizeSalonIdParam(salon_id);
   const stylistKey = normalizeStylistIdParam(stylist_id);
-  if (!salon_id || !stylistKey || !from) {
+  if (!salonKey || !stylistKey || !from) {
     return res.status(400).json({ error: 'salon_id, stylist_id och from krävs.' });
   }
   const n = Math.min(parseInt(String(days || '21'), 10) || 21, 90);
   const start = new Date(`${String(from).slice(0, 10)}T12:00:00`);
 
   try {
-    const salon = await loadSalonMaybeExpire(salon_id);
+    const salon = await loadSalonMaybeExpire(salonKey);
     if (!salon) {
       return res.status(404).json({ error: 'Salong hittades inte.', closedDates: [] });
     }
@@ -159,7 +167,7 @@ router.get('/closed-dates', async (req, res) => {
       const { data: staff, error: staffErr } = await supabase
         .from('users')
         .select('id, work_schedule')
-        .eq('salon_id', salon_id)
+        .eq('salon_id', salonKey)
         .in('role', ['staff', 'admin'])
         .eq('active', true);
       if (staffErr) throw staffErr;
@@ -178,7 +186,7 @@ router.get('/closed-dates', async (req, res) => {
           continue;
         }
         const slots = await computeSlotsForAnyStylist({
-          salonId: salon_id,
+          salonId: salonKey,
           dateStr,
           staffList: staffForAny,
           salonSchedule,
@@ -191,7 +199,7 @@ router.get('/closed-dates', async (req, res) => {
         .from('users')
         .select('work_schedule')
         .eq('id', stylistKey)
-        .eq('salon_id', salon_id)
+        .eq('salon_id', salonKey)
         .maybeSingle();
       if (!u) {
         closed.push(dateStr);
@@ -203,7 +211,7 @@ router.get('/closed-dates', async (req, res) => {
         continue;
       }
       const slots = await computeSlotsForStylist({
-        salonId: salon_id,
+        salonId: salonKey,
         stylistId: stylistKey,
         dateStr,
         workSchedule: u.work_schedule,
