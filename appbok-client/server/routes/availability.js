@@ -7,13 +7,14 @@ import {
   mergeWeekFromSchedule,
   dayConfigForWeekday,
   weekdayMonSun,
+  salonWeekFromContact,
 } from '../lib/stylistAvailability.js';
 
 const router = Router();
 
-function dayOpenFromSchedule(workSchedule, dateStr) {
+function dayOpenFromSchedule(workSchedule, dateStr, salonSchedule) {
   const wd = weekdayMonSun(dateStr);
-  const week = mergeWeekFromSchedule(workSchedule);
+  const week = mergeWeekFromSchedule(workSchedule, salonSchedule);
   const row = dayConfigForWeekday(week, wd);
   return Boolean(row?.enabled);
 }
@@ -50,6 +51,9 @@ router.get('/', async (req, res) => {
       });
     }
 
+    // Salongens öppettider → används för stylists med mode='salon'
+    const salonSchedule = salonWeekFromContact(salon.contact);
+
     if (stylist_id === 'any') {
       const { data: staff, error } = await supabase
         .from('users')
@@ -65,6 +69,7 @@ router.get('/', async (req, res) => {
         salonId: salon_id,
         dateStr,
         staffList: staff,
+        salonSchedule,
       });
       return res.json({ slots, dateClosed: slots.length === 0 });
     }
@@ -85,6 +90,7 @@ router.get('/', async (req, res) => {
       stylistId: stylist_id,
       dateStr,
       workSchedule: u.work_schedule,
+      salonSchedule,
     });
     return res.json({ slots, dateClosed: slots.length === 0 });
   } catch (err) {
@@ -123,6 +129,9 @@ router.get('/closed-dates', async (req, res) => {
       });
     }
 
+    // Salongens öppettider → används för stylists med mode='salon'
+    const salonSchedule = salonWeekFromContact(salon.contact);
+
     const closed = [];
     for (let i = 0; i < n; i++) {
       const d = new Date(start);
@@ -144,6 +153,7 @@ router.get('/closed-dates', async (req, res) => {
           salonId: salon_id,
           dateStr,
           staffList: staff,
+          salonSchedule,
         });
         if (slots.length === 0) closed.push(dateStr);
         continue;
@@ -160,7 +170,7 @@ router.get('/closed-dates', async (req, res) => {
         continue;
       }
       // Snabb väg: stängd veckodag utan att köra full beräkning
-      if (!dayOpenFromSchedule(u.work_schedule, dateStr)) {
+      if (!dayOpenFromSchedule(u.work_schedule, dateStr, salonSchedule)) {
         closed.push(dateStr);
         continue;
       }
@@ -169,6 +179,7 @@ router.get('/closed-dates', async (req, res) => {
         stylistId: stylist_id,
         dateStr,
         workSchedule: u.work_schedule,
+        salonSchedule,
       });
       if (slots.length === 0) closed.push(dateStr);
     }

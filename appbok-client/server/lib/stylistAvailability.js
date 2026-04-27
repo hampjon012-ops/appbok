@@ -28,6 +28,27 @@ export const DEFAULT_LUNCH_WEEK = [
 ];
 
 /**
+ * Konvertera salongens öppettider (contact.opening_hours_week) till internt format.
+ * entry: { day: "Måndag", isOpen: true, openTime: "09:00", closeTime: "18:00" }
+ * → { weekday: 0, enabled: true, from: "09:00", to: "18:00" }
+ */
+export function salonWeekFromContact(contact) {
+  const w = contact?.opening_hours_week;
+  if (!Array.isArray(w) || w.length !== 7) return null;
+  const dayIndex = { måndag: 0, tisdag: 1, onsdag: 2, torsdag: 3, fredag: 4, lördag: 5, söndag: 6 };
+  try {
+    return w.map((entry, i) => ({
+      weekday: dayIndex[String(entry.day).toLowerCase().trim()] ?? i,
+      enabled: Boolean(entry.isOpen),
+      from: String(entry.openTime || '09:00').trim(),
+      to: String(entry.closeTime || '18:00').trim(),
+    }));
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Generera en array av timmar (som heltal) mellan from och to.
  * from=09:00, to=17:00 → [9, 10, 11, 12, 13, 14, 15, 16]
  * from=10:00, to=15:00 → [10, 11, 12, 13, 14]
@@ -72,8 +93,8 @@ export function dayConfigForWeekday(week, wd) {
   return row || { weekday: wd, enabled: false, from: '09:00', to: '18:00' };
 }
 
-export function mergeWeekFromSchedule(ws) {
-  if (!ws || typeof ws !== 'object') return DEFAULT_SALON_WEEK;
+export function mergeWeekFromSchedule(ws, salonSchedule) {
+  if (!ws || typeof ws !== 'object') return salonSchedule || DEFAULT_SALON_WEEK;
   if (ws.mode === 'custom' && Array.isArray(ws.days) && ws.days.length) {
     return ws.days.map((d) => ({
       weekday: typeof d.weekday === 'number' ? d.weekday : 0,
@@ -82,7 +103,8 @@ export function mergeWeekFromSchedule(ws) {
       to: typeof d.to === 'string' ? d.to : '18:00',
     }));
   }
-  return DEFAULT_SALON_WEEK;
+  // mode === 'salon' → använd salongens faktiska öppettider om de finns
+  return salonSchedule || DEFAULT_SALON_WEEK;
 }
 
 function mergeLunchFromSchedule(ws) {
@@ -203,6 +225,7 @@ export async function computeSlotsForStylist({
   stylistId,
   dateStr,
   workSchedule: wsIn,
+  salonSchedule,
 }) {
   let workSchedule = wsIn;
   if (workSchedule === undefined && stylistId && stylistId !== 'any') {
@@ -215,7 +238,7 @@ export async function computeSlotsForStylist({
   }
 
   const wd = weekdayMonSun(dateStr);
-  const week = mergeWeekFromSchedule(workSchedule);
+  const week = mergeWeekFromSchedule(workSchedule, salonSchedule);
   const lunchPack = mergeLunchFromSchedule(workSchedule);
   const dayRow = dayConfigForWeekday(week, wd);
   const lunchRow = dayConfigForWeekday(lunchPack.days, wd);
@@ -238,6 +261,7 @@ export async function computeSlotsForAnyStylist({
   salonId,
   dateStr,
   staffList,
+  salonSchedule,
 }) {
   const union = new Set();
   for (const st of staffList) {
@@ -246,6 +270,7 @@ export async function computeSlotsForAnyStylist({
       stylistId: st.id,
       dateStr,
       workSchedule: st.work_schedule,
+      salonSchedule,
     });
     slots.forEach((s) => union.add(s));
   }
