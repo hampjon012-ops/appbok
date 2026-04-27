@@ -727,7 +727,6 @@ export default function Admin() {
               onOpeningHoursSaved={() => {
                 // Uppdatera salonState direkt med rätt värde så att DashboardTab uppdateras
                 setSalonState((prev) => ({ ...(prev || {}), opening_hours_configured: true }));
-                setActiveTab('dashboard');
               }}
             />
           ) : (

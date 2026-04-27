@@ -408,12 +408,12 @@ function SalonThemePanel({ salon, onSaved }) {
         </p>
         <button
           type="submit"
-          className="superadmin-theme-controls-save"
+          className="btn-appbok-save"
           disabled={saving}
         >
           {saving ? 'Sparar…' : 'Spara'}
         </button>
-        {msg && <p className={msg === 'Sparat!' ? 'superadmin-success' : 'superadmin-error'}>{msg}</p>}
+        {msg && <p className={msg === 'Sparat!' ? 'save-success' : 'save-error'}>{msg}</p>}
       </form>
 
       <ThemeLivePreviewColumn
@@ -550,10 +550,10 @@ function SalonContactPanel({ salon, onSaved, onSalonNameLive }) {
         <p className="admin-hint contact-place-save-hint">
           Spara skriver kontakt, adress och karta till er salong på en gång.
         </p>
-        <button type="submit" className="superadmin-theme-controls-save" disabled={saving}>
+        <button type="submit" className="btn-appbok-save" disabled={saving}>
           {saving ? 'Sparar…' : 'Spara'}
         </button>
-        {msg && <p className={msg === 'Sparat!' ? 'superadmin-success' : 'superadmin-error'}>{msg}</p>}
+        {msg && <p className={msg === 'Sparat!' ? 'save-success' : 'save-error'}>{msg}</p>}
       </form>
     </div>
   );
@@ -726,12 +726,10 @@ function SalonHoursPanel({ salon, onSaved }) {
         </div>
 
         <div style={{ marginTop: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button type="submit" className="btn-superadmin-gold" disabled={saving}>
+          <button type="submit" className="btn-appbok-save" disabled={saving}>
             {saving ? 'Sparar…' : 'Spara öppettider'}
           </button>
-          {saveMsg && saveMsg !== 'Sparat!' ? (
-            <p className="superadmin-error">{saveMsg}</p>
-          ) : null}
+          {saveMsg && <p className={saveMsg === 'Sparat!' ? 'save-success' : 'save-error'}>{saveMsg}</p>}
         </div>
       </form>
     </div>
@@ -925,7 +923,7 @@ function SalonInstagramPanel({ salon, onSaved }) {
         )}
 
         <div className="ig-panel-footer">
-          <button type="submit" className="superadmin-theme-controls-save" disabled={saving}>
+          <button type="submit" className="btn-appbok-save" disabled={saving}>
             {saving ? 'Sparar…' : 'Spara ändringar'}
           </button>
         </div>
@@ -1020,10 +1018,10 @@ function SalonTextsPanel({ salon, onSaved, onSalonNameLive }) {
             placeholder="Kort presentation av er salong..."
           />
         </label>
-        <button type="submit" className="btn-superadmin-gold" disabled={saving}>
+        <button type="submit" className="btn-appbok-save" disabled={saving}>
           {saving ? 'Sparar…' : 'Spara'}
         </button>
-        {msg && <p className={msg === 'Sparat!' ? 'superadmin-success' : 'superadmin-error'}>{msg}</p>}
+        {msg && <p className={msg === 'Sparat!' ? 'save-success' : 'save-error'}>{msg}</p>}
       </form>
     </div>
   );

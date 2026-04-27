@@ -6635,6 +6635,38 @@ textarea.admin-input {
   min-height: 80px;
 }
 
+/* ── Unified Admin Save Button ────────────────────────────────────────────── */
+.btn-appbok-save {
+  background: #1A1A1A;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  align-self: flex-start;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.btn-appbok-save:hover:not(:disabled) {
+  background: #333;
+}
+.btn-appbok-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.save-success {
+  color: #2e7d32;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
+}
+.save-error {
+  color: #c62828;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
+}
+
 /* ── Superadmin ───────────────────────────────────────────────────────────── */
 .superadmin-section {
   max-width: 1200px;
