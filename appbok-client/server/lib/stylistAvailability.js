@@ -49,14 +49,15 @@ export function salonWeekFromContact(contact) {
 }
 
 /**
- * Generera en array av timmar (som heltal) mellan from och to.
- * from=09:00, to=17:00 → [9, 10, 11, 12, 13, 14, 15, 16]
- * from=10:00, to=15:00 → [10, 11, 12, 13, 14]
+ * Generera en array av heltimmar mellan from och to (i minuter).
+ * from=540 (09:00), to=1020 (17:00) → [9, 10, 11, 12, 13, 14, 15, 16]
+ * from=510 (08:30), to=1080 (18:00) → [9, 10, 11, 12, 13, 14, 15, 16, 17]
  */
 function generateSlotHours(fromHM, toHM) {
   if (fromHM == null || toHM == null || toHM <= fromHM) return [];
   const hours = [];
-  for (let h = fromHM / 60; h < toHM / 60; h++) {
+  const startHour = Math.ceil(fromHM / 60);
+  for (let h = startHour; h * 60 < toHM; h++) {
     hours.push(h);
   }
   return hours;
