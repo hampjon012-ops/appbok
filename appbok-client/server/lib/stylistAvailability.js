@@ -27,7 +27,19 @@ export const DEFAULT_LUNCH_WEEK = [
   { weekday: 6, enabled: false, from: '12:00', to: '13:00' },
 ];
 
-const SLOT_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17];
+/**
+ * Generera en array av timmar (som heltal) mellan from och to.
+ * from=09:00, to=17:00 → [9, 10, 11, 12, 13, 14, 15, 16]
+ * from=10:00, to=15:00 → [10, 11, 12, 13, 14]
+ */
+function generateSlotHours(fromHM, toHM) {
+  if (fromHM == null || toHM == null || toHM <= fromHM) return [];
+  const hours = [];
+  for (let h = fromHM / 60; h < toHM / 60; h++) {
+    hours.push(h);
+  }
+  return hours;
+}
 
 function pad2(n) {
   return String(n).padStart(2, '0');
@@ -106,8 +118,11 @@ export function slotsForWorkDay(dayRow, lunchRow, lunchEnabled) {
   const lunchToM =
     lunchEnabled && lunchRow?.enabled ? parseHM(lunchRow.to) : null;
 
+  // Generera slots dynamiskt från from till to (exklusive to-timmen)
+  const slotHours = generateSlotHours(fromM, toM);
+
   const out = [];
-  for (const h of SLOT_HOURS) {
+  for (const h of slotHours) {
     const startM = h * 60;
     if (startM < fromM || startM >= toM) continue;
     if (lunchFromM != null && lunchToM != null) {
