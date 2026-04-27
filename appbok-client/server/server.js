@@ -14,7 +14,7 @@ import statsRoutes from './routes/stats.js';
 import calendarRoutes from './routes/calendar.js';
 import salonsRoutes from './routes/salons.js';
 import superadminRoutes from './routes/superadmin.js';
-import stripeRoutes from './routes/stripe.js';
+import stripeRoutes, { handleStripeWebhook } from './routes/stripe.js';
 import gdprRoutes from './routes/gdpr.js';
 import cronRemindersRoutes from './routes/cronReminders.js';
 import cronExpireTrialsRoutes from './routes/cronExpireTrials.js';
@@ -72,6 +72,10 @@ const PORT = process.env.PORT || 3001;
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(cors({ origin: corsOrigin, credentials: true }));
+
+// Stripe webhook MUST come before express.json() — needs raw body for signature verification
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
+
 app.use(express.json());
 
 // ── API Routes ───────────────────────────────────────────────────────────────
@@ -207,7 +211,12 @@ if (!process.env.VERCEL) {
     console.log(`   DELETE /api/superadmin/salons/:id/permanent (superadmin, endast soft-deleted)`);
     console.log(`   GET  /api/stripe/connect (admin)`);
     console.log(`   GET  /api/stripe/callback (admin)`);
-    console.log(`   GET  /api/stripe/status (admin)\n`);
+    console.log(`   GET  /api/stripe/status (admin)`);
+    console.log(`   GET  /api/stripe/subscription/status (admin)`);
+    console.log(`   POST /api/stripe/subscription/setup (admin)`);
+    console.log(`   POST /api/stripe/subscription/cancel (admin)`);
+    console.log(`   POST /api/stripe/subscription/portal (admin)`);
+    console.log(`   POST /api/stripe/webhook\n`);
   });
 }
 

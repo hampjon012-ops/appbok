@@ -28,6 +28,7 @@ import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
 import SuperadminTab from './SuperadminTab.jsx';
 import SuperadminSettingsTab from '../components/SuperadminSettingsTab.jsx';
 import SalonAdminSettingsTab from '../components/SalonAdminSettingsTab.jsx';
+import SubscriptionTab from '../components/SubscriptionTab.jsx';
 import StaffEditSlideOver from '../components/StaffEditSlideOver.jsx';
 import ScheduleTab from '../components/ScheduleTab.jsx';
 import ServiceImportModal from '../components/ServiceImportModal.jsx';
@@ -552,6 +553,7 @@ export default function Admin() {
       { id: 'staff',     label: 'Personal',      Icon: SidebarStaffIcon,     roles: ['admin'] },
       { id: 'services',  label: 'Tjänster',      Icon: SidebarServicesIcon,  roles: ['admin'] },
       { id: 'schedule',  label: 'Schema',        Icon: SidebarScheduleIcon,  roles: ['admin', 'staff'] },
+      { id: 'subscription', label: 'Prenumeration', Icon: Wallet,             roles: ['admin'] },
       { id: 'gdpr',      label: 'GDPR',          Icon: Shield,               roles: ['admin'] },
       { id: 'settings',  label: 'Inställningar', Icon: SidebarSettingsIcon,  roles: ['admin', 'staff'] },
     ].filter((t) => t.roles.includes(user?.role || 'admin'));
@@ -735,6 +737,7 @@ export default function Admin() {
         )}
         {activeTab === 'superadmin' && <SuperadminTab />}
         {activeTab === 'billing'    && <BillingTab user={user} />}
+        {activeTab === 'subscription' && <SubscriptionTab />}
         {activeTab === 'gdpr'       && <GdprTab user={user} />}
       </main>
       </div>
