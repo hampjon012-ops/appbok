@@ -31,12 +31,23 @@ export async function maybeExpireTrialSalonIfNeeded(salon) {
 export async function loadSalonMaybeExpire(salonId) {
   const { data, error } = await supabase
     .from('salons')
-    .select('id, status, trial_ends_at')
+    .select('id, status, trial_ends_at, contact')
     .eq('id', salonId)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  return maybeExpireTrialSalonIfNeeded(data);
+  const updated = await maybeExpireTrialSalonIfNeeded(data);
+  // maybeExpireTrialSalonIfNeeded returns data with contact only when it updated;
+  // when no update happened, data lacks contact → re-fetch once if missing
+  if (!updated.contact) {
+    const { data: refreshed } = await supabase
+      .from('salons')
+      .select('contact')
+      .eq('id', salonId)
+      .maybeSingle();
+    if (refreshed?.contact) updated.contact = refreshed.contact;
+  }
+  return updated;
 }
 
 export { PUBLIC_SALON_SELECT };
