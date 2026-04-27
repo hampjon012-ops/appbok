@@ -12,6 +12,25 @@ import {
 
 const router = Router();
 
+/** Express kan ge array vid duplicerade query-nycklar — då misslyckades `=== 'any'`. */
+function normalizeStylistIdParam(raw) {
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  if (v == null) return '';
+  return String(v).trim();
+}
+
+function isAnyStylistId(stylistIdNorm) {
+  return stylistIdNorm.toLowerCase() === 'any';
+}
+
+/** Samma kalenderdag som klientens localYmd / weekdayMonSun (inte UTC via toISOString). */
+function ymdFromLocalDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function dayOpenFromSchedule(workSchedule, dateStr, salonSchedule) {
   const wd = weekdayMonSun(dateStr);
   const week = effectiveWorkWeek(workSchedule, salonSchedule);
@@ -26,7 +45,8 @@ function dayOpenFromSchedule(workSchedule, dateStr, salonSchedule) {
  */
 router.get('/', async (req, res) => {
   const { salon_id, stylist_id, date } = req.query;
-  if (!salon_id || !stylist_id || !date) {
+  const stylistKey = normalizeStylistIdParam(stylist_id);
+  if (!salon_id || !stylistKey || !date) {
     return res.status(400).json({ error: 'salon_id, stylist_id och date krävs.' });
   }
   const dateStr = String(date).slice(0, 10);
@@ -54,7 +74,7 @@ router.get('/', async (req, res) => {
     // Salongens öppettider → används för stylists med mode='salon'
     const salonSchedule = salonWeekFromContact(salon.contact);
 
-    if (stylist_id === 'any') {
+    if (isAnyStylistId(stylistKey)) {
       // Samma som GET /api/staff (publik): staff + admin som kan ta bokningar
       const { data: staff, error } = await supabase
         .from('users')
@@ -78,7 +98,7 @@ router.get('/', async (req, res) => {
     const { data: u, error: uErr } = await supabase
       .from('users')
       .select('id, salon_id, work_schedule')
-      .eq('id', stylist_id)
+      .eq('id', stylistKey)
       .eq('salon_id', salon_id)
       .maybeSingle();
     if (uErr) throw uErr;
@@ -88,7 +108,7 @@ router.get('/', async (req, res) => {
 
     const slots = await computeSlotsForStylist({
       salonId: salon_id,
-      stylistId: stylist_id,
+      stylistId: stylistKey,
       dateStr,
       workSchedule: u.work_schedule,
       salonSchedule,
@@ -106,7 +126,8 @@ router.get('/', async (req, res) => {
  */
 router.get('/closed-dates', async (req, res) => {
   const { salon_id, stylist_id, from, days } = req.query;
-  if (!salon_id || !stylist_id || !from) {
+  const stylistKey = normalizeStylistIdParam(stylist_id);
+  if (!salon_id || !stylistKey || !from) {
     return res.status(400).json({ error: 'salon_id, stylist_id och from krävs.' });
   }
   const n = Math.min(parseInt(String(days || '21'), 10) || 21, 90);
@@ -133,27 +154,33 @@ router.get('/closed-dates', async (req, res) => {
     // Salongens öppettider → används för stylists med mode='salon'
     const salonSchedule = salonWeekFromContact(salon.contact);
 
+    let staffForAny = null;
+    if (isAnyStylistId(stylistKey)) {
+      const { data: staff, error: staffErr } = await supabase
+        .from('users')
+        .select('id, work_schedule')
+        .eq('salon_id', salon_id)
+        .in('role', ['staff', 'admin'])
+        .eq('active', true);
+      if (staffErr) throw staffErr;
+      staffForAny = staff || [];
+    }
+
     const closed = [];
     for (let i = 0; i < n; i++) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = ymdFromLocalDate(d);
 
-      if (stylist_id === 'any') {
-        const { data: staff } = await supabase
-          .from('users')
-          .select('id, work_schedule')
-          .eq('salon_id', salon_id)
-          .in('role', ['staff', 'admin'])
-          .eq('active', true);
-        if (!staff?.length) {
+      if (isAnyStylistId(stylistKey)) {
+        if (!staffForAny.length) {
           closed.push(dateStr);
           continue;
         }
         const slots = await computeSlotsForAnyStylist({
           salonId: salon_id,
           dateStr,
-          staffList: staff,
+          staffList: staffForAny,
           salonSchedule,
         });
         if (slots.length === 0) closed.push(dateStr);
@@ -163,7 +190,7 @@ router.get('/closed-dates', async (req, res) => {
       const { data: u } = await supabase
         .from('users')
         .select('work_schedule')
-        .eq('id', stylist_id)
+        .eq('id', stylistKey)
         .eq('salon_id', salon_id)
         .maybeSingle();
       if (!u) {
@@ -177,7 +204,7 @@ router.get('/closed-dates', async (req, res) => {
       }
       const slots = await computeSlotsForStylist({
         salonId: salon_id,
-        stylistId: stylist_id,
+        stylistId: stylistKey,
         dateStr,
         workSchedule: u.work_schedule,
         salonSchedule,

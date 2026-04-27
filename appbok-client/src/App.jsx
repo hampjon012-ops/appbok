@@ -884,9 +884,13 @@ function BookingSection({
     }
     setClosedDateSet(new Set());
     const from = localYmd(new Date());
-    fetch(
-      `/api/booking-availability/closed-dates?salon_id=${config.salonId}&stylist_id=${selectedStylist.id}&from=${from}&days=30`,
-    )
+    const closedQ = new URLSearchParams({
+      salon_id: String(config.salonId),
+      stylist_id: String(selectedStylist.id),
+      from,
+      days: '30',
+    });
+    fetch(`/api/booking-availability/closed-dates?${closedQ.toString()}`)
       .then((r) => r.json())
       .then((d) => setClosedDateSet(new Set(d.closedDates || [])))
       .catch(() => setClosedDateSet(new Set()));
