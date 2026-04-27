@@ -1362,7 +1362,7 @@ function BookingSection({
       <div className="booking-modal-header">
         <div className="booking-modal-header-text">
           <h3 className="booking-modal-title">Boka tid</h3>
-          {selectedStylist ? (
+          {selectedStylist && selectedStylist.id !== 'any' ? (
             <p className="booking-modal-stylist-hint">
               Bokar med {selectedStylist.name}
             </p>
@@ -1503,7 +1503,7 @@ function BookingSection({
                 <button
                   type="button"
                   className="category-selection-btn stylist-row-btn min-w-0 w-full cursor-pointer text-left transition-all duration-75 active:scale-[0.99] active:bg-gray-50"
-                  onClick={() => handleSelectStylist(null)}
+                  onClick={() => handleSelectStylist({ id: 'any', name: 'Valfri stylist' })}
                 >
                   <div className="stylist-row-left">
                     <div className="stylist-avatar-sm">
