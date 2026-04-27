@@ -55,11 +55,12 @@ router.get('/', async (req, res) => {
     const salonSchedule = salonWeekFromContact(salon.contact);
 
     if (stylist_id === 'any') {
+      // Samma som GET /api/staff (publik): staff + admin som kan ta bokningar
       const { data: staff, error } = await supabase
         .from('users')
         .select('id, work_schedule')
         .eq('salon_id', salon_id)
-        .eq('role', 'staff')
+        .in('role', ['staff', 'admin'])
         .eq('active', true);
       if (error) throw error;
       if (!staff?.length) {
@@ -143,7 +144,7 @@ router.get('/closed-dates', async (req, res) => {
           .from('users')
           .select('id, work_schedule')
           .eq('salon_id', salon_id)
-          .eq('role', 'staff')
+          .in('role', ['staff', 'admin'])
           .eq('active', true);
         if (!staff?.length) {
           closed.push(dateStr);

@@ -51,7 +51,13 @@ function localYmd(d) {
   return `${y}-${m}-${day}`;
 }
 
-const ALL_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
+function compareSlotTimes(a, b) {
+  const pa = String(a).split(':').map((n) => parseInt(n, 10));
+  const pb = String(b).split(':').map((n) => parseInt(n, 10));
+  const am = (pa[0] || 0) * 60 + (pa[1] || 0);
+  const bm = (pb[0] || 0) * 60 + (pb[1] || 0);
+  return am - bm;
+}
 
 // ─── Helper: format date to Swedish ──────────────────────────────────────────
 function fmtDateLong(d) {
@@ -747,7 +753,8 @@ function BookingSection({
   const [notesExpanded, setNotesExpanded] = useState(false);
   const [loading, setLoading]             = useState(false);
   const [apiError, setApiError]           = useState('');
-  const [busySlots, setBusySlots]         = useState(new Set());
+  /** Endast tider som API returnerar (inga utgråade ”upptagen”-rutor) */
+  const [availableSlots, setAvailableSlots] = useState([]);
   const [busyLoading, setBusyLoading]     = useState(false);
   const [closedDateSet, setClosedDateSet] = useState(new Set());
   const allowPayOnSite = config?.allowPayOnSite !== false;
@@ -792,7 +799,7 @@ function BookingSection({
       setStylist(null);
       setDate(null);
       setTime(null);
-      setBusySlots(new Set());
+      setAvailableSlots([]);
       setStylistPreChosenFromHome(false);
       setForm({ name: '', phone: '', email: '' });
       setNotes('');
@@ -830,7 +837,7 @@ function BookingSection({
       setStylistPreChosenFromHome(false);
       setDate(null);
       setTime(null);
-      setBusySlots(new Set());
+      setAvailableSlots([]);
       setStep('stylist');
     }
     onPrefillApplied?.();
@@ -849,7 +856,7 @@ function BookingSection({
       setStylistPreChosenFromHome(true);
       setDate(null);
       setTime(null);
-      setBusySlots(new Set());
+      setAvailableSlots([]);
     }
     onStylistPrefillApplied?.();
   }, [isModalOpen, prefillStylistFromHome, stylists, isLoadingStylists, onStylistPrefillApplied]);
@@ -889,22 +896,26 @@ function BookingSection({
   useEffect(() => {
     if (!selectedDate || !selectedStylist || !config?.salonId) return;
     setBusyLoading(true);
-    setBusySlots(new Set());
+    setAvailableSlots([]);
     const dateStr = localYmd(selectedDate);
     const stylistId = selectedStylist.id;
-
-    fetch(
-      `/api/booking-availability?salon_id=${config.salonId}&stylist_id=${stylistId}&date=${dateStr}`,
-    )
+    const q = new URLSearchParams({
+      salon_id: String(config.salonId),
+      stylist_id: String(stylistId),
+      date: dateStr,
+    });
+    fetch(`/api/booking-availability?${q.toString()}`)
       .then((r) => r.json())
       .then((data) => {
-        const avail = new Set(data.slots || []);
-        const blocked = new Set(ALL_SLOTS.filter((slot) => !avail.has(slot)));
-        setBusySlots(blocked);
+        const raw = Array.isArray(data.slots) ? data.slots : [];
+        const slots = [...new Set(raw.map((s) => String(s).slice(0, 5)))].sort(compareSlotTimes);
+        setAvailableSlots(slots);
+        setTime((prev) => (prev && slots.includes(prev) ? prev : null));
         setBusyLoading(false);
       })
       .catch(() => {
-        setBusySlots(new Set(ALL_SLOTS));
+        setAvailableSlots([]);
+        setTime(null);
         setBusyLoading(false);
       });
   }, [selectedDate, selectedStylist, config?.salonId]);
@@ -945,7 +956,7 @@ function BookingSection({
     });
     setDate(null);
     setTime(null);
-    setBusySlots(new Set());
+    setAvailableSlots([]);
   };
 
   const applyPopularCombo = useCallback(
@@ -964,7 +975,7 @@ function BookingSection({
       });
       setDate(null);
       setTime(null);
-      setBusySlots(new Set());
+      setAvailableSlots([]);
       setStep(selectedStylistRef.current ? 'time' : 'stylist');
     },
     [categories],
@@ -979,7 +990,7 @@ function BookingSection({
 
       setDate(null);
       setTime(null);
-      setBusySlots(new Set());
+      setAvailableSlots([]);
 
       if (isFirst) {
         if (!selectedStylistRef.current) {
@@ -1007,7 +1018,7 @@ function BookingSection({
     setStylistPreChosenFromHome(false);
     setDate(null);
     setTime(null);
-    setBusySlots(new Set());
+    setAvailableSlots([]);
     setStep('time');
   };
   const handleContinueTime   = ()  => setStep('details');
@@ -1513,25 +1524,22 @@ function BookingSection({
                   <p className="timeslots-label">{fmtDateLong(selectedDate)}</p>
                   {busyLoading ? (
                     <p className="timeslots-loading">Kontrollerar tillgänglighet...</p>
+                  ) : availableSlots.length === 0 ? (
+                    <p className="timeslots-empty text-sm text-gray-600 mt-4">Inga lediga tider denna dag.</p>
                   ) : (
                     <div className="timeslots-grid grid grid-cols-3 gap-3 mt-6">
-                      {ALL_SLOTS.map(slot => {
-                        const booked = busySlots.has(slot);
-                        return (
-                          <button
-                            key={slot}
-                            type="button"
-                            disabled={booked}
-                            className={`timeslot ${
-                              booked ? 'booked' : 'py-3 border border-gray-200 rounded-md text-center text-sm font-medium text-gray-900 hover:border-black active:scale-[0.95] transition-all cursor-pointer'
-                            } ${selectedTime === slot ? 'selected' : ''}`}
-                            onClick={() => !booked && setTime(slot)}
-                          >
-                            {slot}
-                            {booked && <span className="slot-booked-label">Upptagen</span>}
-                          </button>
-                        );
-                      })}
+                      {availableSlots.map((slot) => (
+                        <button
+                          key={slot}
+                          type="button"
+                          className={`timeslot py-3 border border-gray-200 rounded-md text-center text-sm font-medium text-gray-900 hover:border-black active:scale-[0.95] transition-all cursor-pointer ${
+                            selectedTime === slot ? 'selected' : ''
+                          }`}
+                          onClick={() => setTime(slot)}
+                        >
+                          {slot}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
