@@ -53,6 +53,8 @@ router.get('/', async (req, res) => {
 
     // Salongens öppettider → används för stylists med mode='salon'
     const salonSchedule = salonWeekFromContact(salon.contact);
+    console.log('[debug] salon contact:', JSON.stringify(salon.contact));
+    console.log('[debug] salonSchedule:', JSON.stringify(salonSchedule));
 
     if (stylist_id === 'any') {
       const { data: staff, error } = await supabase
@@ -131,6 +133,8 @@ router.get('/closed-dates', async (req, res) => {
 
     // Salongens öppettider → används för stylists med mode='salon'
     const salonSchedule = salonWeekFromContact(salon.contact);
+    console.log('[debug] salon contact:', JSON.stringify(salon.contact));
+    console.log('[debug] salonSchedule:', JSON.stringify(salonSchedule));
 
     const closed = [];
     for (let i = 0; i < n; i++) {
