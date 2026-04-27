@@ -6,7 +6,7 @@ import { createCalendarEvent, deleteCalendarEvent } from '../lib/google.js';
 import { publicAppOrigin } from '../lib/publicAppOrigin.js';
 import { sendBookingConfirmationEmail, sendCancellationEmail, sendCancellationNotificationEmail, sendStylistNotificationEmail } from '../lib/email.js';
 import { sendBookingSMS, sendCancellationSMS, sendRebookConfirmationSMS } from '../lib/sms.js';
-import { computeSlotsForStylist } from '../lib/stylistAvailability.js';
+import { computeSlotsForStylist, salonWeekFromContact } from '../lib/stylistAvailability.js';
 import { loadSalonMaybeExpire } from '../lib/expireTrialSalon.js';
 import { salonAcceptsPublicBookings, SALON_PREVIEW_FORBIDDEN_MESSAGE } from '../lib/salonPublicBookingGate.js';
 
@@ -213,11 +213,13 @@ router.post('/rebook', async (req, res) => {
       return res.status(400).json({ error: 'Stylist hittades inte i salongen.' });
     }
 
+    const salonSchedule = salonWeekFromContact(salonRow?.contact);
     const slots = await computeSlotsForStylist({
       salonId: booking.salon_id,
       stylistId: new_stylist_id,
       dateStr,
       workSchedule: newStylist.work_schedule,
+      salonSchedule,
     });
     const slotOk = slots.some((s) => String(s).slice(0, 5) === timeStr);
     if (!slotOk) {

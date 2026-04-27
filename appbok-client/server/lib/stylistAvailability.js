@@ -107,6 +107,54 @@ export function mergeWeekFromSchedule(ws, salonSchedule) {
   return salonSchedule || DEFAULT_SALON_WEEK;
 }
 
+/**
+ * Klipper stylistvecka mot salongens öppettider: om salongen är stängd en dag
+ * kan ingen boka den dagen även om stylist har egen tidsplan med dagen öppen.
+ */
+export function intersectWeekWithSalonHours(stylistWeek, salonSchedule) {
+  if (!Array.isArray(salonSchedule) || salonSchedule.length !== 7) return stylistWeek;
+  if (!Array.isArray(stylistWeek) || !stylistWeek.length) return stylistWeek;
+
+  const result = [];
+  for (let wd = 0; wd < 7; wd++) {
+    const salonRow = dayConfigForWeekday(salonSchedule, wd);
+    const stylistRow = dayConfigForWeekday(stylistWeek, wd);
+
+    if (!salonRow.enabled || !stylistRow.enabled) {
+      result.push({ weekday: wd, enabled: false, from: stylistRow.from, to: stylistRow.to });
+      continue;
+    }
+
+    const sf = parseHM(salonRow.from);
+    const st = parseHM(salonRow.to);
+    const tf = parseHM(stylistRow.from);
+    const tt = parseHM(stylistRow.to);
+    if (sf == null || st == null || tf == null || tt == null) {
+      result.push({ weekday: wd, enabled: true, from: stylistRow.from, to: stylistRow.to });
+      continue;
+    }
+
+    const fromM = Math.max(sf, tf);
+    const toM = Math.min(st, tt);
+    if (toM <= fromM) {
+      result.push({ weekday: wd, enabled: false, from: stylistRow.from, to: stylistRow.to });
+    } else {
+      result.push({
+        weekday: wd,
+        enabled: true,
+        from: `${pad2(Math.floor(fromM / 60))}:${pad2(fromM % 60)}`,
+        to: `${pad2(Math.floor(toM / 60))}:${pad2(toM % 60)}`,
+      });
+    }
+  }
+  return result;
+}
+
+/** Vecka som används för slot-beräkning: merge(work) + klipp mot salong. */
+export function effectiveWorkWeek(workSchedule, salonSchedule) {
+  return intersectWeekWithSalonHours(mergeWeekFromSchedule(workSchedule, salonSchedule), salonSchedule);
+}
+
 function mergeLunchFromSchedule(ws) {
   if (!ws || typeof ws !== 'object') {
     return { enabled: true, days: DEFAULT_LUNCH_WEEK };
@@ -238,7 +286,7 @@ export async function computeSlotsForStylist({
   }
 
   const wd = weekdayMonSun(dateStr);
-  const week = mergeWeekFromSchedule(workSchedule, salonSchedule);
+  const week = effectiveWorkWeek(workSchedule, salonSchedule);
   const lunchPack = mergeLunchFromSchedule(workSchedule);
   const dayRow = dayConfigForWeekday(week, wd);
   const lunchRow = dayConfigForWeekday(lunchPack.days, wd);
@@ -282,12 +330,14 @@ export async function isDateFullyClosedForStylist({
   stylistId,
   dateStr,
   workSchedule,
+  salonSchedule,
 }) {
   const slots = await computeSlotsForStylist({
     salonId,
     stylistId,
     dateStr,
     workSchedule,
+    salonSchedule,
   });
   return slots.length === 0;
 }

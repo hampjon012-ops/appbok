@@ -10,7 +10,8 @@ import {
   createCalendarEvent,
   deleteCalendarEvent,
 } from '../lib/google.js';
-import { computeSlotsForStylist } from '../lib/stylistAvailability.js';
+import { loadSalonMaybeExpire } from '../lib/expireTrialSalon.js';
+import { computeSlotsForStylist, salonWeekFromContact } from '../lib/stylistAvailability.js';
 
 const router = Router();
 
@@ -123,6 +124,9 @@ router.get('/available', async (req, res) => {
     if (uErr) throw uErr;
     if (!u) return res.status(404).json({ error: 'Stylist hittades inte.' });
 
+    const salon = await loadSalonMaybeExpire(u.salon_id);
+    const salonSchedule = salonWeekFromContact(salon?.contact);
+
     const start = new Date(`${fromStr}T12:00:00`);
     const dates = [];
     for (let i = 0; i < n; i++) {
@@ -137,6 +141,7 @@ router.get('/available', async (req, res) => {
         stylistId: stylist_id,
         dateStr,
         workSchedule: u.work_schedule,
+        salonSchedule,
       });
       dates.push({ date: dateStr, slots });
     }
