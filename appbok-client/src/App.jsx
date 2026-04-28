@@ -199,8 +199,10 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel, termsAccepte
         <PaymentElement
           options={{
             layout: {
-              type: 'tabs',
-              defaultCollapsed: false,
+              type: 'accordion',
+              defaultCollapsed: true,
+              radios: false,
+              spacedAccordionItems: false,
             },
           }}
           onChange={(event) => {
@@ -1127,39 +1129,54 @@ function BookingSection({
           fontSizeBase: '15px',
           fontWeightMedium: '650',
           spacingUnit: '4px',
-          borderRadius: '14px',
+          borderRadius: '16px',
         },
         rules: {
           '.AccordionItem': {
-            border: '1px solid #e8eaee',
+            border: '1px solid #ece7e0',
             backgroundColor: '#ffffff',
-            borderRadius: '14px',
-            marginBottom: '10px',
+            borderRadius: '16px',
+            marginBottom: '8px',
+            boxShadow: '0 8px 18px rgba(17, 24, 39, 0.035)',
             transition: 'all 0.2s ease',
           },
           '.AccordionItem--selected': {
-            borderColor: '#111827',
+            borderColor: '#8b6f5a',
             borderWidth: '1px',
             backgroundColor: '#ffffff',
-            boxShadow: '0 12px 24px rgba(17, 24, 39, 0.08)',
+            boxShadow: '0 12px 26px rgba(139, 111, 90, 0.13)',
+          },
+          '.AccordionItem:hover': {
+            borderColor: '#d7cabf',
+          },
+          '.AccordionItemLabel': {
+            fontSize: '14px',
+            fontWeight: '650',
+            color: '#2f3745',
+          },
+          '.AccordionItem--selected .AccordionItemLabel': {
+            color: '#6f4e37',
           },
           '.Block': {
             border: 'none',
             backgroundColor: 'transparent',
             boxShadow: 'none',
-            padding: '0',
+            padding: '2px 0 0',
           },
           '.Message': {
             border: 'none',
-            backgroundColor: 'transparent',
+            backgroundColor: '#fbfaf8',
             boxShadow: 'none',
             color: '#6b7280',
             fontSize: '12px',
-            marginTop: '6px',
+            borderRadius: '12px',
+            marginTop: '8px',
+            padding: '10px 12px',
           },
           '.RedirectText': {
             color: '#6b7280',
             fontSize: '12px',
+            lineHeight: '1.45',
           },
           '.TabList': {
             gap: '8px',
@@ -1179,7 +1196,7 @@ function BookingSection({
             boxShadow: '0 12px 24px rgba(17, 24, 39, 0.09)',
           },
           '.TabLabel': {
-            fontSize: '0px',
+            fontSize: '13px',
             fontWeight: '650',
           },
           '.TabIcon': {
