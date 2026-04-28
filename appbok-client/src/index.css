@@ -1590,11 +1590,11 @@ a.insta-item-link:focus-visible {
 
 /* ── E. STRIPE AREA ───────────────────────────────────────────── */
 .checkout-stripe-area {
-  padding: 1rem;
-  background: #fff;
+  padding: 0.85rem;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfbfa 100%);
   border: 1px solid rgba(17, 24, 39, 0.06);
-  border-radius: 16px;
-  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.035);
+  border-radius: 18px;
+  box-shadow: 0 14px 32px rgba(17, 24, 39, 0.045);
 }
 .checkout-stripe-message {
   font-size: 0.82rem;
@@ -2197,6 +2197,21 @@ a.insta-item-link:focus-visible {
 }
 
 /* ── Ren kassa-flow ──────────────────────────────────────────────── */
+.swish-payment-clean {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.stripe-payment-shell {
+  border-radius: 16px;
+  background: #fff;
+}
+
+.stripe-payment-shell iframe {
+  display: block;
+}
+
 .swish-payment-clean .StripeElement {
   padding: 0;
   border: none;
@@ -2210,9 +2225,9 @@ a.insta-item-link:focus-visible {
   gap: 0.7rem;
   cursor: pointer;
   font-family: inherit;
-  padding: 0.5rem 0;
+  padding: 0.15rem 0 0.75rem;
   border-bottom: 1px solid #f3f4f6;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
 }
 .swish-payment-clean .checkout-terms-input {
   width: 17px;

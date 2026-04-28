@@ -195,14 +195,21 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel, termsAccepte
 
   return (
     <div className="swish-payment-clean">
-      <PaymentElement
-        options={{ layout: 'accordion' }}
-        onChange={(event) => {
-          setPaymentComplete(Boolean(event.complete));
-          if (event.error?.message) onError?.(event.error.message);
-          else onError?.('');
-        }}
-      />
+      <div className="stripe-payment-shell">
+        <PaymentElement
+          options={{
+            layout: {
+              type: 'tabs',
+              defaultCollapsed: false,
+            },
+          }}
+          onChange={(event) => {
+            setPaymentComplete(Boolean(event.complete));
+            if (event.error?.message) onError?.(event.error.message);
+            else onError?.('');
+          }}
+        />
+      </div>
       <label className="checkout-terms-row">
         <input
           type="checkbox"
@@ -1110,22 +1117,31 @@ function BookingSection({
         theme: 'flat',
         variables: {
           fontFamily: 'inherit',
-          colorBackground: 'transparent',
-          colorBorder: 'transparent',
-          borderRadius: '0px',
+          colorPrimary: '#111827',
+          colorText: '#111827',
+          colorTextSecondary: '#6b7280',
+          colorDanger: '#b91c1c',
+          colorBackground: '#ffffff',
+          colorBorder: '#e8eaee',
+          colorIcon: '#6b7280',
+          fontSizeBase: '15px',
+          fontWeightMedium: '650',
+          spacingUnit: '4px',
+          borderRadius: '14px',
         },
         rules: {
           '.AccordionItem': {
-            border: '1px solid #f3f4f6',
+            border: '1px solid #e8eaee',
             backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            marginBottom: '12px',
+            borderRadius: '14px',
+            marginBottom: '10px',
             transition: 'all 0.2s ease',
           },
           '.AccordionItem--selected': {
             borderColor: '#111827',
-            borderWidth: '1.5px',
-            backgroundColor: '#f9fafb',
+            borderWidth: '1px',
+            backgroundColor: '#ffffff',
+            boxShadow: '0 12px 24px rgba(17, 24, 39, 0.08)',
           },
           '.Block': {
             border: 'none',
@@ -1137,21 +1153,63 @@ function BookingSection({
             border: 'none',
             backgroundColor: 'transparent',
             boxShadow: 'none',
+            color: '#6b7280',
+            fontSize: '12px',
+            marginTop: '6px',
+          },
+          '.RedirectText': {
+            color: '#6b7280',
+            fontSize: '12px',
+          },
+          '.TabList': {
+            gap: '8px',
           },
           '.Tab': {
-            border: '1px solid #f3f4f6',
-            borderRadius: '8px',
+            border: '1px solid #e8eaee',
+            borderRadius: '14px',
             backgroundColor: '#ffffff',
+            boxShadow: 'none',
+            minHeight: '52px',
+            padding: '10px 12px',
           },
           '.Tab--selected': {
             borderColor: '#111827',
-            borderWidth: '1.5px',
-            backgroundColor: '#f9fafb',
+            borderWidth: '1px',
+            backgroundColor: '#ffffff',
+            boxShadow: '0 12px 24px rgba(17, 24, 39, 0.09)',
+          },
+          '.TabLabel': {
+            fontSize: '0px',
+            fontWeight: '650',
+          },
+          '.TabIcon': {
+            marginRight: '0px',
+            width: 'auto',
+            maxHeight: '18px',
           },
           '.Input': {
             border: '1px solid #e5e7eb',
-            borderRadius: '8px',
+            borderRadius: '12px',
             backgroundColor: '#ffffff',
+            padding: '12px',
+          },
+          '.Input:focus': {
+            borderColor: '#111827',
+            boxShadow: '0 0 0 3px rgba(17, 24, 39, 0.08)',
+          },
+          '.Label': {
+            fontSize: '12px',
+            color: '#4b5563',
+            fontWeight: '600',
+          },
+          '.PickerItem': {
+            border: '1px solid #e8eaee',
+            borderRadius: '14px',
+            backgroundColor: '#ffffff',
+          },
+          '.PickerItem--selected': {
+            borderColor: '#111827',
+            boxShadow: '0 12px 24px rgba(17, 24, 39, 0.08)',
           },
         },
       },
