@@ -1328,15 +1328,20 @@ a.insta-item-link:focus-visible {
 .checkout-final {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
 }
 .checkout-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.85rem 1.25rem 0.75rem;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(17, 24, 39, 0.06);
   background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.04);
 }
 .checkout-back {
   display: flex;
@@ -1344,8 +1349,8 @@ a.insta-item-link:focus-visible {
   justify-content: center;
   width: 36px;
   height: 36px;
-  border: none;
-  background: transparent;
+  border: 1px solid transparent;
+  background: #fff;
   border-radius: 50%;
   cursor: pointer;
   color: #374151;
@@ -1353,6 +1358,7 @@ a.insta-item-link:focus-visible {
   transition: background 0.15s;
   flex-shrink: 0;
 }
+.checkout-back:hover { background: #f9fafb; border-color: #eef0f3; }
 .checkout-back:active { background: #f3f4f6; }
 .checkout-header-title {
   font-size: 1rem;
@@ -1368,35 +1374,41 @@ a.insta-item-link:focus-visible {
 
 /* ── B. RECEIPT / SAMMANFATTNING ──────────────────────────────── */
 .checkout-receipt {
-  background: #f8f9fa;
-  border-radius: 14px;
-  padding: 1rem 1.15rem;
-  margin: 0.85rem 1rem 0.6rem;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfbfa 100%);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  border-radius: 18px;
+  padding: 1.05rem 1.15rem;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.5rem;
+  box-shadow: 0 18px 38px rgba(17, 24, 39, 0.055);
 }
 .checkout-receipt-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   font-size: 0.875rem;
-  min-height: 28px;
-  gap: 0.75rem;
+  min-height: 30px;
+  gap: 1rem;
 }
 .checkout-receipt-left {
   color: #6b7280;
-  flex-shrink: 0;
-  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
 }
 .checkout-receipt-right {
   font-weight: 500;
   color: #111827;
+  text-align: right;
+  max-width: 15rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 .checkout-receipt-divider {
   height: 1px;
-  background: #e5e7eb;
-  margin: 0.2rem 0;
+  background: linear-gradient(90deg, transparent, #e5e7eb 12%, #e5e7eb 88%, transparent);
+  margin: 0.35rem 0 0.25rem;
 }
 .checkout-receipt-total .checkout-receipt-left,
 .checkout-receipt-total .checkout-receipt-right {
@@ -1407,7 +1419,7 @@ a.insta-item-link:focus-visible {
 .checkout-receipt-duration {
   font-size: 0.75rem;
   color: #9ca3af;
-  margin: 0;
+  margin: -0.2rem 0 0;
 }
 
 /* ── C. TILLVAL (note + SMS) ────────────────────────────────── */
@@ -1415,31 +1427,34 @@ a.insta-item-link:focus-visible {
   display: flex;
   flex-direction: column;
   background: #fff;
-  border-top: 1px solid #f3f4f6;
-  border-bottom: 1px solid #f3f4f6;
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.035);
 }
 .checkout-note-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0.8rem 1.25rem;
+  padding: 0.9rem 1rem;
   border: none;
   background: #fff;
   cursor: pointer;
   font-family: inherit;
   color: #374151;
   font-size: 0.875rem;
-  min-height: 44px;
+  min-height: 48px;
   text-align: left;
   transition: background 0.15s;
 }
+.checkout-note-toggle:hover { background: #fcfcfb; }
 .checkout-note-toggle:active { background: #f9fafb; }
 .checkout-note-toggle span { color: #374151; }
 .checkout-note-area {
   display: flex;
   flex-direction: column;
-  padding: 0.75rem 1.25rem 0.6rem;
+  padding: 0.9rem 1rem 0.75rem;
   background: #fff;
   animation: bookingNotesReveal 0.28s ease forwards;
 }
@@ -1453,14 +1468,14 @@ a.insta-item-link:focus-visible {
 .checkout-note-textarea {
   width: 100%;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 0.7rem 0.85rem;
   font-family: inherit;
   font-size: 0.875rem;
   color: #111827;
   resize: none;
   outline: none;
-  background: #fafafa;
+  background: #fbfbfa;
   box-sizing: border-box;
   line-height: 1.5;
 }
@@ -1488,11 +1503,11 @@ a.insta-item-link:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.8rem 1.25rem;
+  padding: 0.9rem 1rem;
   cursor: pointer;
   font-family: inherit;
   border-top: 1px solid #f3f4f6;
-  min-height: 44px;
+  min-height: 48px;
 }
 .checkout-sms-input {
   width: 18px;
@@ -1500,6 +1515,7 @@ a.insta-item-link:focus-visible {
   min-width: 18px;
   accent-color: var(--accent-color, #6f4e37);
   cursor: pointer;
+  border-radius: 4px;
 }
 .checkout-sms-text {
   font-size: 0.875rem;
@@ -1510,31 +1526,37 @@ a.insta-item-link:focus-visible {
 .checkout-payment-section {
   display: flex;
   flex-direction: column;
-  background: #fff;
-  border-top: 1px solid #f3f4f6;
-  border-bottom: 1px solid #f3f4f6;
-  margin-top: 0.5rem;
+  gap: 0.55rem;
+  background: transparent;
+  border: none;
+  margin-top: 0;
 }
 .checkout-radio-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0.9rem 1.25rem;
-  border: none;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(17, 24, 39, 0.07);
   background: #fff;
   cursor: pointer;
   text-align: left;
   font-family: inherit;
   color: #374151;
   transition: background 0.15s;
-  min-height: 52px;
-  border-bottom: 1px solid #f3f4f6;
+  min-height: 56px;
+  border-radius: 16px;
   gap: 0.75rem;
+  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.035);
 }
-.checkout-radio-row:last-child { border-bottom: none; }
+.checkout-radio-row:last-child { border-bottom: 1px solid rgba(17, 24, 39, 0.07); }
+.checkout-radio-row:hover { background: #fcfcfb; border-color: rgba(17, 24, 39, 0.11); }
 .checkout-radio-row:active { background: #f9fafb; }
-.checkout-radio-row--active { color: var(--accent-color, #6f4e37); }
+.checkout-radio-row--active {
+  color: var(--accent-color, #6f4e37);
+  border-color: color-mix(in srgb, var(--accent-color, #6f4e37) 42%, #ffffff);
+  background: color-mix(in srgb, var(--accent-color, #6f4e37) 7%, #ffffff);
+}
 .checkout-radio-left {
   display: flex;
   align-items: center;
@@ -1542,14 +1564,14 @@ a.insta-item-link:focus-visible {
   flex: 1;
 }
 .checkout-pay-icon {
-  color: #9ca3af;
+  color: #8b95a1;
   flex-shrink: 0;
   transition: color 0.15s;
 }
 .checkout-radio-row--active .checkout-pay-icon { color: var(--accent-color, #6f4e37); }
 .checkout-pay-label {
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 650;
   color: #374151;
   transition: color 0.15s;
 }
@@ -1558,16 +1580,21 @@ a.insta-item-link:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.85rem 1.25rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(17, 24, 39, 0.07);
+  border-radius: 16px;
+  background: #fff;
   color: #9ca3af;
   font-size: 0.875rem;
 }
 
 /* ── E. STRIPE AREA ───────────────────────────────────────────── */
 .checkout-stripe-area {
-  padding: 0.85rem 1.25rem;
+  padding: 1rem;
   background: #fff;
-  border-top: 1px solid #f3f4f6;
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.035);
 }
 .checkout-stripe-message {
   font-size: 0.82rem;
@@ -1589,8 +1616,11 @@ a.insta-item-link:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 0.85rem 1.25rem 1.75rem;
+  padding: 1rem;
   background: #fff;
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  border-radius: 16px;
+  box-shadow: 0 14px 32px rgba(17, 24, 39, 0.045);
 }
 .checkout-cta-section .checkout-terms-row {
   display: flex;
@@ -1621,12 +1651,12 @@ a.insta-item-link:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 0.85rem 1.25rem 1.75rem;
+  padding: 1rem;
   background: #fff;
 }
 .checkout-cta-btn {
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 1rem 1.5rem;
   font-family: inherit;
   font-size: 1rem;
@@ -1639,6 +1669,7 @@ a.insta-item-link:focus-visible {
   justify-content: center;
   min-height: 52px;
   margin-top: 0.5rem;
+  box-shadow: 0 16px 28px rgba(17, 24, 39, 0.18);
 }
 .checkout-cta-btn--active {
   background: #111827;
@@ -1650,6 +1681,55 @@ a.insta-item-link:focus-visible {
   background: #d1d5db;
   color: #9ca3af;
   cursor: not-allowed;
+  box-shadow: none;
+}
+
+@media (min-width: 768px) {
+  .checkout-final {
+    gap: 0.9rem;
+    padding-bottom: 1rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .booking-modal-body {
+    padding: 0.85rem 1rem 6rem;
+  }
+
+  .checkout-final {
+    max-width: none;
+    gap: 0.65rem;
+  }
+
+  .checkout-header,
+  .checkout-options,
+  .checkout-radio-row,
+  .checkout-stripe-area,
+  .checkout-cta-section {
+    border-radius: 14px;
+  }
+
+  .checkout-receipt {
+    border-radius: 16px;
+    padding: 0.95rem 1rem;
+  }
+
+  .checkout-receipt-row {
+    grid-template-columns: minmax(0, 1fr) minmax(6rem, auto);
+    gap: 0.75rem;
+  }
+
+  .checkout-receipt-right {
+    max-width: 10.5rem;
+  }
+}
+
+@supports (padding: max(0px)) {
+  @media (max-width: 520px) {
+    .checkout-cta-section {
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+  }
 }
 
 /* Legacy styles */

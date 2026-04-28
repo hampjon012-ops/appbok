@@ -1714,39 +1714,39 @@ function BookingSection({
                 {selectedServices.map((svc) => (
                   <div key={svc.id} className="checkout-receipt-row">
                     <span className="checkout-receipt-left">{svc.name}</span>
-                    <span className="checkout-receipt-right shrink-0 whitespace-nowrap text-right font-medium">
+                    <span className="checkout-receipt-right">
                       {fmtPrice(servicePriceÖre(svc))}
                     </span>
                   </div>
                 ))}
                 <div className="checkout-receipt-row">
                   <span className="checkout-receipt-left">Stylist</span>
-                  <span className="checkout-receipt-right shrink-0 whitespace-nowrap text-right font-medium">
+                  <span className="checkout-receipt-right">
                     {selectedStylist?.name}
                   </span>
                 </div>
                 <div className="checkout-receipt-row">
                   <span className="checkout-receipt-left">Datum</span>
-                  <span className="checkout-receipt-right shrink-0 whitespace-nowrap text-right font-medium">
+                  <span className="checkout-receipt-right">
                     {selectedDate ? fmtDateLong(selectedDate) : '—'}
                   </span>
                 </div>
                 <div className="checkout-receipt-row">
                   <span className="checkout-receipt-left">Tid</span>
-                  <span className="checkout-receipt-right shrink-0 whitespace-nowrap text-right font-medium">
+                  <span className="checkout-receipt-right">
                     {selectedTime}
                   </span>
                 </div>
                 <div className="checkout-receipt-row">
                   <span className="checkout-receipt-left">Kund</span>
-                  <span className="checkout-receipt-right shrink-0 whitespace-nowrap text-right font-medium">
+                  <span className="checkout-receipt-right">
                     {form.name}
                   </span>
                 </div>
                 <div className="checkout-receipt-divider" />
                 <div className="checkout-receipt-row checkout-receipt-total">
                   <span className="checkout-receipt-left">Totalt</span>
-                  <span className="checkout-receipt-right shrink-0 whitespace-nowrap text-right font-medium">
+                  <span className="checkout-receipt-right">
                     {selectedServices.length ? fmtPrice(totalPriceÖre) : '—'}
                   </span>
                 </div>
