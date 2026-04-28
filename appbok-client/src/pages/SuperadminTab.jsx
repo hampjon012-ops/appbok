@@ -432,8 +432,82 @@ function superadminPlanLabel(plan) {
   const p = String(plan ?? '').toLowerCase().trim();
   if (p === 'demo') return 'Demo';
   if (p === 'trial') return 'Trial (14 dagar)';
-  if (p === 'live') return 'Live (2000kr/mån)';
+  if (p === 'live') return 'Live';
   return plan ? String(plan) : '—';
+}
+
+function monthlyPriceKrInputValue(amount) {
+  const ore = Number(amount);
+  if (!Number.isFinite(ore)) return '2000';
+  return String(Math.round(ore / 100));
+}
+
+function SuperadminMonthlyPriceCell({ salon, onSaved }) {
+  const [value, setValue] = useState(monthlyPriceKrInputValue(salon.monthly_price_amount));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setValue(monthlyPriceKrInputValue(salon.monthly_price_amount));
+    setError('');
+  }, [salon.id, salon.monthly_price_amount]);
+
+  const save = async () => {
+    const kr = Number(String(value).replace(',', '.'));
+    if (!Number.isFinite(kr) || kr < 0) {
+      setError('Ogiltigt pris');
+      return;
+    }
+    const amount = Math.round(kr * 100);
+    const currentAmount = Math.round(Number(salon.monthly_price_amount) || 200000);
+    if (amount === currentAmount) return;
+
+    setSaving(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/superadmin/salons/${salon.id}/billing`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ monthly_price_amount: amount }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof d.error === 'string' ? d.error : 'Kunde inte spara pris.');
+      onSaved?.();
+    } catch (e) {
+      setError(e.message || 'Fel');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '130px' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <input
+          className="admin-input"
+          type="number"
+          min="0"
+          step="1"
+          value={value}
+          disabled={saving}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+            if (e.key === 'Escape') {
+              setValue(monthlyPriceKrInputValue(salon.monthly_price_amount));
+              e.currentTarget.blur();
+            }
+          }}
+          aria-label={`Månadspris för ${salon.name}`}
+          style={{ width: '86px', padding: '0.45rem 0.55rem' }}
+        />
+        <span style={{ color: '#6b7280', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>kr/mån</span>
+      </label>
+      {saving ? <span style={{ color: '#6b7280', fontSize: '0.72rem' }}>Sparar...</span> : null}
+      {error ? <span className="superadmin-error" style={{ margin: 0, fontSize: '0.72rem' }}>{error}</span> : null}
+    </div>
+  );
 }
 
 /** Salongstatus i superadmin-lista: DEMO / TRIAL + dagar / LIVE (+ rå läge för övrigt) */
@@ -745,6 +819,7 @@ export default function SuperadminTab() {
                 <th>Namn</th>
                 <th>Subdomän</th>
                 <th>Plan</th>
+                <th>Pris</th>
                 <th>Status</th>
                 <th>Trial-slut</th>
                 <th>Åtgärder</th>
@@ -763,6 +838,9 @@ export default function SuperadminTab() {
                       <EditIcon onClick={() => setQuickEditSalon(s)} title="Redigera namn och subdomän" />
                     </td>
                     <td className="sa-td-plan">{superadminPlanLabel(s.plan)}</td>
+                    <td>
+                      <SuperadminMonthlyPriceCell salon={s} onSaved={loadSalons} />
+                    </td>
                     <td>
                       <SuperadminSalonStatusCell salon={s} />
                     </td>
@@ -801,7 +879,7 @@ export default function SuperadminTab() {
                   </tr>
                   {expandedSalonId === s.id ? (
                     <tr className="superadmin-staff-expansion-row">
-                      <td colSpan={5} style={{ background: '#fafaf9', padding: '1rem 1.25rem', borderTop: '1px solid #e7e5e4' }}>
+                      <td colSpan={7} style={{ background: '#fafaf9', padding: '1rem 1.25rem', borderTop: '1px solid #e7e5e4' }}>
                         <SalonStaffPanel salon={s} />
                       </td>
                     </tr>
@@ -1089,4 +1167,3 @@ function CreateSalonPage({ onBack, onDone }) {
     </div>
   );
 }
-

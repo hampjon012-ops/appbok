@@ -5,6 +5,7 @@ import { requireAuth, requireAdmin } from '../lib/auth.js';
 import { salonAcceptsPublicBookings, SALON_PREVIEW_FORBIDDEN_MESSAGE } from '../lib/salonPublicBookingGate.js';
 
 const router = Router();
+const DEFAULT_MONTHLY_PRICE_AMOUNT = 200000;
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -49,6 +50,42 @@ function webOrigin() {
 
 function getSupabaseAdmin() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function normalizeMonthlyPriceAmount(value) {
+  const amount = Math.round(Number(value));
+  return Number.isFinite(amount) && amount >= 0 ? amount : DEFAULT_MONTHLY_PRICE_AMOUNT;
+}
+
+function isColumnMissingError(err) {
+  const m = String(err?.message || err?.details || '');
+  return (
+    err?.code === '42703' ||
+    m.includes('does not exist') ||
+    m.includes('schema cache') ||
+    /column.*salons|salons.*column/i.test(m)
+  );
+}
+
+async function fetchSalonBillingRow(supabase, salonId) {
+  const withPrice = await supabase
+    .from('salons')
+    .select('id, name, stripe_customer_id, stripe_subscription_id, subscription_status, monthly_price_amount')
+    .eq('id', salonId)
+    .single();
+
+  if (!withPrice.error || !isColumnMissingError(withPrice.error)) return withPrice;
+
+  const fallback = await supabase
+    .from('salons')
+    .select('id, name, stripe_customer_id, stripe_subscription_id, subscription_status')
+    .eq('id', salonId)
+    .single();
+
+  if (fallback.data) {
+    fallback.data.monthly_price_amount = DEFAULT_MONTHLY_PRICE_AMOUNT;
+  }
+  return fallback;
 }
 
 // GET /api/stripe/connect — start Stripe Connect OAuth
@@ -295,11 +332,7 @@ router.get('/subscription/status', requireAuth, requireAdmin, async (req, res) =
     if (!stripe) return res.json({ active: false, subscriptionStatus: 'none' });
 
     const supabase = getSupabaseAdmin();
-    const { data: salon, error } = await supabase
-      .from('salons')
-      .select('stripe_customer_id, stripe_subscription_id, subscription_status')
-      .eq('id', req.user.salonId)
-      .single();
+    const { data: salon, error } = await fetchSalonBillingRow(supabase, req.user.salonId);
 
     if (error) throw error;
 
@@ -310,6 +343,7 @@ router.get('/subscription/status', requireAuth, requireAdmin, async (req, res) =
         card: null,
         currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
+        monthlyPriceAmount: normalizeMonthlyPriceAmount(salon?.monthly_price_amount),
       });
     }
 
@@ -335,6 +369,9 @@ router.get('/subscription/status', requireAuth, requireAdmin, async (req, res) =
       currentPeriodEnd: new Date(sub.current_period_end * 1000).toISOString(),
       cancelAtPeriodEnd: sub.cancel_at_period_end,
       currentPeriodStart: new Date(sub.current_period_start * 1000).toISOString(),
+      monthlyPriceAmount: normalizeMonthlyPriceAmount(
+        sub.items?.data?.[0]?.price?.unit_amount ?? salon.monthly_price_amount,
+      ),
     });
   } catch (err) {
     console.error('[stripe/subscription/status]', err);
@@ -347,20 +384,15 @@ router.post('/subscription/setup', requireAuth, requireAdmin, async (req, res) =
   const stripe = getStripe();
   if (!stripe) return res.status(503).json({ error: 'Stripe ej konfigurerat.' });
 
-  const priceId = process.env.STRIPE_SUBSCRIPTION_PRICE_ID?.trim();
-  if (!priceId) {
-    return res.status(503).json({ error: 'STRIPE_SUBSCRIPTION_PRICE_ID saknas i .env.' });
-  }
-
   try {
     const supabase = getSupabaseAdmin();
-    const { data: salon, error: salonErr } = await supabase
-      .from('salons')
-      .select('id, name, stripe_customer_id')
-      .eq('id', req.user.salonId)
-      .single();
+    const { data: salon, error: salonErr } = await fetchSalonBillingRow(supabase, req.user.salonId);
 
     if (salonErr) throw salonErr;
+    const monthlyPriceAmount = normalizeMonthlyPriceAmount(salon.monthly_price_amount);
+    if (monthlyPriceAmount < 100) {
+      return res.status(400).json({ error: 'Månadspriset måste vara minst 1 kr för Stripe-prenumeration.' });
+    }
 
     // Create or reuse Stripe Customer
     let customerId = salon.stripe_customer_id;
@@ -381,10 +413,26 @@ router.post('/subscription/setup', requireAuth, requireAdmin, async (req, res) =
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [
+        {
+          price_data: {
+            currency: 'sek',
+            recurring: { interval: 'month' },
+            unit_amount: monthlyPriceAmount,
+            product_data: {
+              name: 'Appbok Standard',
+              description: `${salon.name || 'Salong'} · månadsabonnemang`,
+            },
+          },
+          quantity: 1,
+        },
+      ],
       success_url: `${origin}/admin?subscription=success`,
       cancel_url: `${origin}/admin?subscription=canceled`,
-      metadata: { salonId: salon.id },
+      metadata: { salonId: salon.id, monthlyPriceAmount: String(monthlyPriceAmount) },
+      subscription_data: {
+        metadata: { salonId: salon.id, monthlyPriceAmount: String(monthlyPriceAmount) },
+      },
     });
 
     return res.json({ url: session.url });

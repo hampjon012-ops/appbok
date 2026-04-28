@@ -2,7 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { CreditCard, ExternalLink, AlertTriangle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { adminApiHeaders as authHeaders } from '../lib/adminApiHeaders.js';
 
-const MONTHLY_PRICE = '2 000';
+const DEFAULT_MONTHLY_PRICE_AMOUNT = 200000;
+
+function formatMonthlyPrice(amount) {
+  const ore = Number.isFinite(Number(amount)) ? Number(amount) : DEFAULT_MONTHLY_PRICE_AMOUNT;
+  return (ore / 100).toLocaleString('sv-SE', { maximumFractionDigits: 0 });
+}
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -206,7 +211,7 @@ export default function SubscriptionTab() {
           </div>
           <div className="subscription-plan-row">
             <span className="subscription-plan-label">Pris</span>
-            <span className="subscription-plan-value">{MONTHLY_PRICE} kr/mån</span>
+            <span className="subscription-plan-value">{formatMonthlyPrice(subData?.monthlyPriceAmount)} kr/mån</span>
           </div>
           {hasSubscription && subData.currentPeriodStart && (
             <div className="subscription-plan-row">

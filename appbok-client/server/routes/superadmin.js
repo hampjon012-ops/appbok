@@ -9,6 +9,7 @@ import { requireAuth, requireSuperAdmin } from '../lib/auth.js';
 
 const router = Router();
 const SYSTEM_SALON_ID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+const DEFAULT_MONTHLY_PRICE_AMOUNT = 200000;
 
 router.use(requireAuth, requireSuperAdmin);
 
@@ -107,6 +108,9 @@ function enrichSalonRow(row) {
     subdomain: row.subdomain ?? row.slug ?? '',
     plan: row.plan ?? 'trial',
     status: row.status ?? 'active',
+    monthly_price_amount: Number.isFinite(Number(row.monthly_price_amount))
+      ? Number(row.monthly_price_amount)
+      : DEFAULT_MONTHLY_PRICE_AMOUNT,
   };
 }
 
@@ -129,7 +133,7 @@ router.get('/salons', async (req, res) => {
   try {
     let q = supabase
       .from('salons')
-      .select('id, name, slug, subdomain, plan, status, created_at, deleted_at, trial_ends_at')
+      .select('id, name, slug, subdomain, plan, status, monthly_price_amount, created_at, deleted_at, trial_ends_at')
       .order('created_at', { ascending: false });
 
     if (scope === 'inactive') {
@@ -824,11 +828,11 @@ router.put('/salons/:id/details', async (req, res) => {
   }
 });
 
-// PUT /api/superadmin/salons/:id/billing — plan + status
+// PUT /api/superadmin/salons/:id/billing — plan + status + monthly price
 router.put('/salons/:id/billing', async (req, res) => {
-  const { plan, status } = req.body;
-  const validPlans = ['demo', 'trial', 'grund', 'pro', 'inactive'];
-  const validStatuses = ['active', 'inactive', 'suspended'];
+  const { plan, status, monthly_price_amount } = req.body;
+  const validPlans = ['demo', 'trial', 'live', 'grund', 'pro', 'starter', 'enterprise', 'inactive'];
+  const validStatuses = ['active', 'trial', 'trialing', 'live', 'inactive', 'suspended', 'past_due', 'canceled'];
 
   try {
     const salon = await salonEditable(req.params.id);
@@ -837,9 +841,16 @@ router.put('/salons/:id/billing', async (req, res) => {
     const updates = {};
     if (plan !== undefined && validPlans.includes(plan)) updates.plan = plan;
     if (status !== undefined && validStatuses.includes(status)) updates.status = status;
+    if (monthly_price_amount !== undefined) {
+      const amount = Math.round(Number(monthly_price_amount));
+      if (!Number.isFinite(amount) || amount < 0) {
+        return res.status(400).json({ error: 'Ange ett giltigt månadspris.' });
+      }
+      updates.monthly_price_amount = amount;
+    }
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: 'Ange plan och/eller status.' });
+      return res.status(400).json({ error: 'Ange plan, status och/eller månadspris.' });
     }
 
     const { data, error } = await supabase
@@ -854,7 +865,8 @@ router.put('/salons/:id/billing', async (req, res) => {
         ...salon,
         plan: updates.plan ?? salon.plan ?? 'trial',
         status: updates.status ?? salon.status ?? 'active',
-        billingNote: 'Värden visas här; kör migration 004 för att spara plan/status i databasen.',
+        monthly_price_amount: updates.monthly_price_amount ?? salon.monthly_price_amount ?? DEFAULT_MONTHLY_PRICE_AMOUNT,
+        billingNote: 'Värden visas här; kör senaste migrationen för att spara billing i databasen.',
       };
       ensureSalonThemeAccent(billingFallback);
       return res.json(enrichSalonRow(billingFallback));

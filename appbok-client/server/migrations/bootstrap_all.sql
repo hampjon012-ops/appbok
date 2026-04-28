@@ -197,6 +197,7 @@ ALTER TABLE salons ADD COLUMN IF NOT EXISTS subdomain TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS salons_subdomain_unique ON salons (subdomain) WHERE subdomain IS NOT NULL AND subdomain <> '';
 ALTER TABLE salons ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'demo';
 ALTER TABLE salons ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS monthly_price_amount INT NOT NULL DEFAULT 200000;
 
 UPDATE salons SET subdomain = slug WHERE subdomain IS NULL OR subdomain = '';
 
@@ -223,6 +224,7 @@ ON CONFLICT (slug) DO NOTHING;
 ALTER TABLE salons ADD COLUMN IF NOT EXISTS subdomain TEXT;
 ALTER TABLE salons ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'demo';
 ALTER TABLE salons ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS monthly_price_amount INT NOT NULL DEFAULT 200000;
 
 -- Fyll i subdomain från slug för befintliga salonger
 UPDATE salons SET subdomain = slug WHERE subdomain IS NULL OR subdomain = '';
