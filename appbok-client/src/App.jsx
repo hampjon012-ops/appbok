@@ -197,14 +197,7 @@ function SwishPaymentForm({ onConfirm, onError, disabled, payLabel, termsAccepte
     <div className="swish-payment-clean">
       <div className="stripe-payment-shell">
         <PaymentElement
-          options={{
-            layout: {
-              type: 'accordion',
-              defaultCollapsed: true,
-              radios: false,
-              spacedAccordionItems: false,
-            },
-          }}
+          options={{ layout: 'accordion' }}
           onChange={(event) => {
             setPaymentComplete(Boolean(event.complete));
             if (event.error?.message) onError?.(event.error.message);
@@ -1146,17 +1139,6 @@ function BookingSection({
             backgroundColor: '#ffffff',
             boxShadow: '0 12px 26px rgba(139, 111, 90, 0.13)',
           },
-          '.AccordionItem:hover': {
-            borderColor: '#d7cabf',
-          },
-          '.AccordionItemLabel': {
-            fontSize: '14px',
-            fontWeight: '650',
-            color: '#2f3745',
-          },
-          '.AccordionItem--selected .AccordionItemLabel': {
-            color: '#6f4e37',
-          },
           '.Block': {
             border: 'none',
             backgroundColor: 'transparent',
@@ -1172,11 +1154,6 @@ function BookingSection({
             borderRadius: '12px',
             marginTop: '8px',
             padding: '10px 12px',
-          },
-          '.RedirectText': {
-            color: '#6b7280',
-            fontSize: '12px',
-            lineHeight: '1.45',
           },
           '.TabList': {
             gap: '8px',
@@ -1195,15 +1172,6 @@ function BookingSection({
             backgroundColor: '#ffffff',
             boxShadow: '0 12px 24px rgba(17, 24, 39, 0.09)',
           },
-          '.TabLabel': {
-            fontSize: '13px',
-            fontWeight: '650',
-          },
-          '.TabIcon': {
-            marginRight: '0px',
-            width: 'auto',
-            maxHeight: '18px',
-          },
           '.Input': {
             border: '1px solid #e5e7eb',
             borderRadius: '12px',
@@ -1218,15 +1186,6 @@ function BookingSection({
             fontSize: '12px',
             color: '#4b5563',
             fontWeight: '600',
-          },
-          '.PickerItem': {
-            border: '1px solid #e8eaee',
-            borderRadius: '14px',
-            backgroundColor: '#ffffff',
-          },
-          '.PickerItem--selected': {
-            borderColor: '#111827',
-            boxShadow: '0 12px 24px rgba(17, 24, 39, 0.08)',
           },
         },
       },
