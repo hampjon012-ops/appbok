@@ -2686,6 +2686,21 @@ function bookingCalendarMinutesFromStart(time) {
   return (h - 8) * 60 + m;
 }
 
+function bookingCalendarCategoryVariant(booking) {
+  const label = [
+    bookingServiceCellLabel(booking),
+    booking?.services?.category_name,
+    booking?.services?.category,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  if (/(lunch|möte|mote|block|paus|rast)/i.test(label)) return 'blocked';
+  if (/(färg|farg|color|balayage|ombre|sling|toning|blek|botten|kemi)/i.test(label)) return 'color';
+  if (/(klipp|cut|frisyr|trim|skägg|skagg)/i.test(label)) return 'cut';
+  return 'styling';
+}
+
 function BookingsCalendarView({
   bookings,
   staff,
@@ -2704,6 +2719,11 @@ function BookingsCalendarView({
       }
     }
     return slots;
+  }, []);
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
   }, []);
   const columns = staff.length > 0 ? staff : [{ id: 'any', name: 'Valfri' }];
   const bookingsByStylist = useMemo(() => {
@@ -2726,6 +2746,9 @@ function BookingsCalendarView({
       year: 'numeric',
     }).format(new Date(year, month - 1, day));
   })();
+  const nowMinutesFromStart = (now.getHours() - 8) * 60 + now.getMinutes();
+  const showNowLine = selectedDate === localIsoDate(now) && nowMinutesFromStart >= 0 && nowMinutesFromStart <= 600;
+  const nowLineTop = (nowMinutesFromStart / 30) * 44;
 
   return (
     <div className="admin-card bookings-calendar-card">
@@ -2782,21 +2805,29 @@ function BookingsCalendarView({
                         stylist_id: stylist.id === 'any' ? 'any' : stylist.id,
                       })}
                       aria-label={`Ny bokning ${slot} hos ${stylist.name}`}
+                      title={`Boka ${slot} hos ${stylist.name}`}
                     />
                   ))}
+                  {showNowLine ? (
+                    <div className="bookings-calendar-now-line" style={{ top: nowLineTop }} aria-hidden />
+                  ) : null}
                   {columnBookings.map((booking) => {
                     const minutesFromStart = bookingCalendarMinutesFromStart(booking.booking_time);
                     if (minutesFromStart == null) return null;
                     const duration = bookingCalendarDurationMinutes(booking);
                     const top = Math.max(0, (minutesFromStart / 30) * 44);
                     const height = Math.max(38, (duration / 30) * 44 - 6);
+                    const variant = bookingCalendarCategoryVariant(booking);
                     return (
                       <button
                         key={booking.id}
                         type="button"
-                        className={`bookings-calendar-event bookings-calendar-event--${booking.status || 'confirmed'}`}
+                        className={`bookings-calendar-event bookings-calendar-event--${variant} bookings-calendar-event--${booking.status || 'confirmed'}`}
                         style={{ top, height }}
-                        onClick={() => onOpenDetail(booking)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onOpenDetail(booking);
+                        }}
                       >
                         <span className="bookings-calendar-event-name">{booking.customer_name || 'Kund'}</span>
                         <span className="bookings-calendar-event-meta">
@@ -2862,9 +2893,10 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
   }, [detailBooking]);
 
   const handleCancel = async (id) => {
-    if (!confirm('Vill du avboka denna bokning?')) return;
+    if (!confirm('Vill du avboka denna bokning?')) return false;
     await fetch(`/api/bookings/${id}/cancel`, { method: 'PATCH', headers: authHeaders() });
-    loadBookings(search, dateFilter);
+    loadBookings(search, viewMode === 'calendar' ? calendarDate : dateFilter);
+    return true;
   };
 
   const handleCreated = () => {
@@ -2882,6 +2914,16 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
     () => bookings.filter((booking) => booking.booking_date === calendarDate),
     [bookings, calendarDate],
   );
+
+  const handleEditDetailBooking = () => {
+    if (!detailBooking) return;
+    openNewBooking({
+      booking_date: detailBooking.booking_date || calendarDate,
+      booking_time: bookingListTimeLabel(detailBooking.booking_time),
+      stylist_id: detailBooking.stylist?.id || detailBooking.stylist_id || 'any',
+    });
+    setDetailBooking(null);
+  };
 
   return (
     <div className="admin-section">
@@ -3111,6 +3153,10 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
                 <dd>{detailBooking.stylist?.name || 'Valfri'}</dd>
               </div>
               <div>
+                <dt>Pris</dt>
+                <dd>{fmtKr(bookingServicesTotalÖre(detailBooking))}</dd>
+              </div>
+              <div>
                 <dt>Status</dt>
                 <dd>
                   <span className={`status-badge status-${detailBooking.status}`}>
@@ -3141,6 +3187,27 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
                 </dd>
               </div>
             </dl>
+          </div>
+          <div className="bookings-detail-sheet-footer">
+            <button
+              type="button"
+              className="bookings-detail-action-btn bookings-detail-action-btn--secondary"
+              onClick={handleEditDetailBooking}
+            >
+              Ändra
+            </button>
+            {(detailBooking.status === 'confirmed' || detailBooking.status === 'rebooked') ? (
+              <button
+                type="button"
+                className="bookings-detail-action-btn bookings-detail-action-btn--danger"
+                onClick={async () => {
+                  const cancelled = await handleCancel(detailBooking.id);
+                  if (cancelled) setDetailBooking(null);
+                }}
+              >
+                Avboka
+              </button>
+            ) : null}
           </div>
         </aside>
       ) : null}
