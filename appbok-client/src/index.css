@@ -9193,6 +9193,7 @@ textarea.admin-input {
 .booking-modal-sheet {
   width: 100%;
   max-width: 42rem;
+  height: 90vh;
   background: #F5F4F0;
   border-top-left-radius: 40px;
   border-top-right-radius: 40px;
@@ -9259,10 +9260,11 @@ textarea.admin-input {
 
 .booking-modal-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding: 1rem 1.5rem 6rem;
+  padding: 1rem 1.5rem 2rem;
   scrollbar-width: none;
 }
 
