@@ -3283,6 +3283,39 @@ body:has(.admin-layout) {
   border-right: 1px solid rgba(255,255,255,0.06);
 }
 
+.sa-mobile-topbar,
+.sa-mobile-drawer-overlay {
+  display: none;
+}
+
+.sa-mobile-brand-img {
+  height: 1.55rem;
+  width: auto;
+  display: block;
+}
+
+.sa-mobile-menu-btn,
+.sa-mobile-drawer-close {
+  appearance: none;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  border-radius: 10px;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sa-mobile-menu-btn:hover,
+.sa-mobile-drawer-close:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.2);
+}
+
 .sa-sidebar-scroll {
   flex: 1;
   min-height: 0;
@@ -4041,6 +4074,13 @@ body:has(.admin-layout) {
   animation: sa-sheet-in 0.22s cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
+@media (max-width: 639px) {
+  .sa-sheet {
+    width: 100vw;
+    max-width: none;
+  }
+}
+
 @keyframes sa-sheet-in {
   from { transform: translateX(24px); opacity: 0.8; }
   to { transform: translateX(0); opacity: 1; }
@@ -4634,6 +4674,22 @@ body:has(.admin-layout) {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
   margin-bottom: 2rem;
+}
+
+.dashboard-kpi-grid {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 .stat-card {
   background: white;
@@ -6465,12 +6521,60 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
     height: auto;
     padding: 1.5rem 1rem;
   }
-  .sa-sidebar {
+  .sa-mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    min-height: 4rem;
+    padding: 0.75rem 1rem;
+    background: #1c1c1c;
+    color: #fff;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .sa-sidebar--desktop {
+    display: none;
+  }
+  .sa-mobile-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    display: block;
+    background: rgba(15, 23, 42, 0.34);
+    backdrop-filter: blur(2px);
+  }
+  .sa-mobile-drawer {
+    position: relative;
+    width: min(84vw, 18rem);
+    height: 100vh;
+    min-height: 0;
+    background: #1c1c1c;
+    box-shadow: 24px 0 55px rgba(15, 23, 42, 0.22);
+    animation: sa-mobile-drawer-in 0.2s cubic-bezier(0.2, 0.9, 0.2, 1);
+  }
+  .sa-mobile-drawer .sa-sidebar {
     width: 100%;
+    height: 100%;
+  }
+  .sa-mobile-drawer-close {
+    position: absolute;
+    top: 0.95rem;
+    right: 0.85rem;
+    z-index: 2;
+    width: 2.15rem;
+    height: 2.15rem;
   }
   .stats-cards {
     grid-template-columns: repeat(2, 1fr);
   }
+  .dashboard-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes sa-mobile-drawer-in {
+  from { transform: translateX(-18px); opacity: 0.82; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 /* ── Google Calendar Status ──────────────────────────────────────────────── */
@@ -7520,10 +7624,16 @@ textarea.admin-input {
   margin-bottom: 1rem;
 }
 .superadmin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   margin-top: 0.5rem;
   border-radius: 12px;
   box-shadow: none;
   border-color: #f3f4f6;
+}
+.superadmin-table {
+  min-width: 800px;
 }
 .superadmin-table tbody tr:nth-child(even) {
   background: #fff;
@@ -8287,8 +8397,15 @@ textarea.admin-input {
 }
 
 .superadmin-billing-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: none;
   border-color: #f3f4f6;
+}
+
+.superadmin-billing-table {
+  min-width: 800px;
 }
 
 .superadmin-billing-table th {

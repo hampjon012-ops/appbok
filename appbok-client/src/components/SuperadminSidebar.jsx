@@ -55,9 +55,9 @@ const MENU_ITEMS = [
   { id: 'settings',    label: 'Inställningar', Icon: CogIcon           },
 ];
 
-export default function SuperadminSidebar({ activeTab, onTabChange, user, onLogout }) {
+export default function SuperadminSidebar({ activeTab, onTabChange, user, onLogout, className = '' }) {
   return (
-    <aside className="sa-sidebar">
+    <aside className={`sa-sidebar${className ? ` ${className}` : ''}`}>
       <div className="sa-sidebar-scroll">
         <div className="sa-sidebar-header sa-sidebar-header--logo">
           <img

@@ -27,6 +27,7 @@ import {
   Shield,
   Download,
   ChevronDown,
+  Menu,
   ListChecks,
   Copy,
   ExternalLink,
@@ -645,6 +646,7 @@ export default function Admin() {
   const saTabs = ['dashboard', 'superadmin', 'billing', 'settings'];
 
   const [newBookingOpen, setNewBookingOpen] = useState(false);
+  const [superadminMobileMenuOpen, setSuperadminMobileMenuOpen] = useState(false);
   const canOpenBookingsModal = useMemo(() => tabs.some((t) => t.id === 'bookings'), [tabs]);
 
   const showScheduleReminder =
@@ -656,6 +658,11 @@ export default function Admin() {
   useEffect(() => {
     if (activeTab !== 'bookings') setNewBookingOpen(false);
   }, [activeTab]);
+
+  const handleSuperadminTabChange = useCallback((tab) => {
+    setActiveTab(tab);
+    setSuperadminMobileMenuOpen(false);
+  }, []);
 
   useEffect(() => {
     if (isSuperAdmin) {
@@ -679,12 +686,63 @@ export default function Admin() {
       <div className="admin-layout">
         {/* Sidebar — always superadmin variant */}
       {isSuperAdmin ? (
-        <SuperadminSidebar
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          user={user}
-          onLogout={handleLogout}
-        />
+        <>
+          <header className="sa-mobile-topbar">
+            <button
+              type="button"
+              className="sa-mobile-menu-btn"
+              onClick={() => setSuperadminMobileMenuOpen(true)}
+              aria-label="Öppna meny"
+            >
+              <Menu size={20} strokeWidth={2} />
+            </button>
+            <img
+              src="/sidebar-logo.png"
+              alt="Appbok"
+              className="sa-mobile-brand-img"
+              decoding="async"
+            />
+            <SidebarRoleBadge role={user?.role} />
+          </header>
+          <SuperadminSidebar
+            className="sa-sidebar--desktop"
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            user={user}
+            onLogout={handleLogout}
+          />
+          {superadminMobileMenuOpen ? (
+            <div
+              className="sa-mobile-drawer-overlay"
+              role="presentation"
+              onMouseDown={() => setSuperadminMobileMenuOpen(false)}
+            >
+              <div
+                className="sa-mobile-drawer"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Superadmin meny"
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="sa-mobile-drawer-close"
+                  onClick={() => setSuperadminMobileMenuOpen(false)}
+                  aria-label="Stäng meny"
+                >
+                  <X size={18} strokeWidth={2} />
+                </button>
+                <SuperadminSidebar
+                  className="sa-sidebar--drawer"
+                  activeTab={activeTab}
+                  onTabChange={handleSuperadminTabChange}
+                  user={user}
+                  onLogout={handleLogout}
+                />
+              </div>
+            </div>
+          ) : null}
+        </>
       ) : (
         <aside className="admin-sidebar">
           <div className="admin-sidebar-scroll">
