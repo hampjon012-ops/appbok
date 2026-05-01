@@ -224,6 +224,34 @@ function isSameStockholmMonth(value, monthPrefix) {
   return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Stockholm' }).startsWith(monthPrefix);
 }
 
+function dashboardSalonStatusLabel(salon) {
+  const status = normalizeDashboardStatus(salon?.status);
+  const plan = normalizeDashboardStatus(salon?.plan);
+  if (status === 'live') return 'Live';
+  if (status === 'demo' || plan === 'demo') return 'Demo';
+  if (status === 'trial' || status === 'trialing' || plan === 'trial') return 'Trial';
+  if (status === 'deleted' || status === 'canceled' || status === 'cancelled') return 'Avslutad';
+  return salon?.status || salon?.plan || 'Okänd';
+}
+
+function dashboardDateMeta(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const day = d.toLocaleDateString('en-CA', { timeZone: 'Europe/Stockholm' });
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Stockholm' });
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = yesterdayDate.toLocaleDateString('en-CA', { timeZone: 'Europe/Stockholm' });
+  if (day === today) return 'Idag';
+  if (day === yesterday) return 'Igår';
+  return d.toLocaleDateString('sv-SE', {
+    day: 'numeric',
+    month: 'short',
+    year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
+  });
+}
+
 function DashboardChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   const row = payload[0];
@@ -862,6 +890,41 @@ function DashboardTab({
       churnRate: churnBase > 0 ? (churnedThisMonth.length / churnBase) * 100 : 0,
     };
   }, [platformChurnedSalons, platformSalons]);
+  const platformRecentSalonRows = useMemo(
+    () =>
+      [...platformSalons]
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+        .slice(0, 4)
+        .map((salon) => ({
+          id: salon.id,
+          name: salon.name || 'Namnlös salong',
+          status: dashboardSalonStatusLabel(salon),
+        })),
+    [platformSalons]
+  );
+  const platformSubscriptionEvents = useMemo(() => {
+    const started = platformSalons.map((salon) => {
+      const statusLabel = dashboardSalonStatusLabel(salon);
+      const event = statusLabel === 'Live' ? 'är Live' : `startade ${statusLabel}`;
+      return {
+        id: `started-${salon.id}`,
+        salon: salon.name || 'Namnlös salong',
+        event,
+        meta: dashboardDateMeta(salon.created_at),
+        at: salon.created_at || '',
+      };
+    });
+    const churned = platformChurnedSalons.map((salon) => ({
+      id: `churned-${salon.id}`,
+      salon: salon.name || 'Namnlös salong',
+      event: 'avslutade prenumerationen',
+      meta: dashboardDateMeta(salon.deleted_at),
+      at: salon.deleted_at || salon.created_at || '',
+    }));
+    return [...started, ...churned]
+      .sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0))
+      .slice(0, 6);
+  }, [platformChurnedSalons, platformSalons]);
 
   useEffect(() => {
     if (!isDateMenuOpen && !isNotificationOpen) return undefined;
@@ -1132,20 +1195,6 @@ function DashboardTab({
       setTrialBusy(false);
     }
   };
-
-  const platformRecentSalonRows = [
-    { name: 'Signes Salong', status: 'Demo' },
-    { name: 'Colorisma', status: 'Live' },
-    { name: 'Studio Norra', status: 'Live' },
-    { name: 'Klipp & Form', status: 'Demo' },
-  ];
-
-  const platformSubscriptionEvents = [
-    { salon: 'Colorisma', event: 'betalade 2 000 kr', meta: 'Idag' },
-    { salon: 'Signes Salong', event: 'startade Demo', meta: 'Igår' },
-    { salon: 'Studio Norra', event: 'uppgraderade till Live', meta: 'Denna vecka' },
-    { salon: 'Klipp & Form', event: 'avslutade prenumerationen', meta: 'Denna månad' },
-  ];
 
   return (
     <div className="admin-section dashboard-section">
@@ -1889,22 +1938,31 @@ function DashboardTab({
           <h3>{isPlatformDashboard ? 'Nyligen anslutna salonger' : 'Toppstylister (Månad)'}</h3>
           <div className="dashboard-chart-wrap">
             {isPlatformDashboard ? (
-              <div className="dashboard-salon-list">
-                {platformRecentSalonRows.map((salon) => (
-                  <div key={`${salon.name}-${salon.status}`} className="dashboard-salon-row">
-                    <span className="dashboard-salon-avatar" aria-hidden>
-                      {salon.name.slice(0, 1)}
-                    </span>
-                    <div className="dashboard-salon-info">
-                      <span className="dashboard-salon-name">{salon.name}</span>
-                      <span className={`dashboard-status-badge dashboard-status-badge--${salon.status === 'Live' ? 'confirmed' : 'muted'}`}>
-                        <span className="dashboard-status-dot" aria-hidden />
-                        <span className="dashboard-status-label">{salon.status}</span>
+              platformRecentSalonRows.length > 0 ? (
+                <div className="dashboard-salon-list">
+                  {platformRecentSalonRows.map((salon) => (
+                    <div key={salon.id || `${salon.name}-${salon.status}`} className="dashboard-salon-row">
+                      <span className="dashboard-salon-avatar" aria-hidden>
+                        {salon.name.slice(0, 1)}
                       </span>
+                      <div className="dashboard-salon-info">
+                        <span className="dashboard-salon-name">{salon.name}</span>
+                        <span className={`dashboard-status-badge dashboard-status-badge--${salon.status === 'Live' ? 'confirmed' : 'muted'}`}>
+                          <span className="dashboard-status-dot" aria-hidden />
+                          <span className="dashboard-status-label">{salon.status}</span>
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="admin-empty dashboard-chart-empty" style={{ flexDirection: 'column', gap: '0.65rem' }}>
+                  <Users size={48} strokeWidth={1.5} color="#e5e7eb" aria-hidden />
+                  <p style={{ margin: 0, fontSize: '0.86rem', color: '#6b7280', textAlign: 'center' }}>
+                    Inga salonger att visa ännu.
+                  </p>
+                </div>
+              )
             ) : topStylists.length > 0 ? (
               <ResponsiveContainer width="100%" height={260} minWidth={240} minHeight={220}>
                 <BarChart
@@ -1957,17 +2015,23 @@ function DashboardTab({
       {isPlatformDashboard ? (
         <div className="admin-card dashboard-upcoming-card">
           <h3 className="dashboard-upcoming-title">Senaste prenumerationshändelser</h3>
-          <div className="dashboard-subscription-events">
-            {platformSubscriptionEvents.map((item) => (
-              <div key={`${item.salon}-${item.event}`} className="dashboard-subscription-event-row">
-                <div>
-                  <span className="dashboard-subscription-event-salon">{item.salon}</span>
-                  <span className="dashboard-subscription-event-text"> {item.event}</span>
+          {platformSubscriptionEvents.length > 0 ? (
+            <div className="dashboard-subscription-events">
+              {platformSubscriptionEvents.map((item) => (
+                <div key={item.id || `${item.salon}-${item.event}`} className="dashboard-subscription-event-row">
+                  <div>
+                    <span className="dashboard-subscription-event-salon">{item.salon}</span>
+                    <span className="dashboard-subscription-event-text"> {item.event}</span>
+                  </div>
+                  <span className="dashboard-subscription-event-meta">{item.meta}</span>
                 </div>
-                <span className="dashboard-subscription-event-meta">{item.meta}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="admin-empty" style={{ minHeight: '120px', marginTop: '1rem' }}>
+              Inga prenumerationshändelser att visa ännu.
+            </div>
+          )}
         </div>
       ) : stats.upcomingBookings?.length > 0 ? (
         <div className="admin-card dashboard-upcoming-card">
