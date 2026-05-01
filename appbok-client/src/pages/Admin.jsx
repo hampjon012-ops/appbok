@@ -647,6 +647,7 @@ export default function Admin() {
 
   const [newBookingOpen, setNewBookingOpen] = useState(false);
   const [superadminMobileMenuOpen, setSuperadminMobileMenuOpen] = useState(false);
+  const [adminMobileMenuOpen, setAdminMobileMenuOpen] = useState(false);
   const canOpenBookingsModal = useMemo(() => tabs.some((t) => t.id === 'bookings'), [tabs]);
 
   const showScheduleReminder =
@@ -664,6 +665,11 @@ export default function Admin() {
     setSuperadminMobileMenuOpen(false);
   }, []);
 
+  const handleAdminTabChange = useCallback((tab) => {
+    setActiveTab(tab);
+    setAdminMobileMenuOpen(false);
+  }, []);
+
   useEffect(() => {
     if (isSuperAdmin) {
       setActiveTab((cur) => (saTabs.includes(cur) ? cur : 'dashboard'));
@@ -673,6 +679,71 @@ export default function Admin() {
   }, [isSuperAdmin, isStaffImpersonation, user?.role, tabs]);
 
   if (!token) return null;
+
+  const renderAdminSidebar = (className = '', onNavigate = setActiveTab) => (
+    <aside className={`admin-sidebar${className ? ` ${className}` : ''}`}>
+      <div className="admin-sidebar-scroll">
+        <div className="admin-sidebar-header admin-sidebar-header--logo">
+          <img
+            src="/sidebar-logo.png"
+            alt="Appbok"
+            className="sidebar-brand-img"
+            decoding="async"
+          />
+        </div>
+        <nav className="admin-nav">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={`admin-nav-btn ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => onNavigate(tab.id)}
+            >
+              <span className="admin-nav-icon">
+                <tab.Icon />
+              </span>
+              <span className="admin-nav-btn-label">
+                {tab.label}
+                {tab.id === 'schedule' && showScheduleReminder ? (
+                  <span
+                    className="admin-nav-schedule-warning"
+                    title="Ställ in arbetsschema så kunder kan boka."
+                    aria-label="Påminnelse: ställ in schema"
+                  >
+                    <AlertTriangle
+                      size={15}
+                      strokeWidth={2.25}
+                      className="admin-nav-schedule-warning-icon"
+                      aria-hidden
+                    />
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          ))}
+        </nav>
+      </div>
+      <div className="admin-sidebar-footer">
+        <div className="admin-user-info">
+          <div className="admin-user-name-row">
+            <span className="admin-user-name">
+              {isStaffImpersonation && user?.impersonatedName ? user.impersonatedName : user?.name}
+            </span>
+            <SidebarRoleBadge role={user?.role} />
+          </div>
+          <span className="admin-user-email">
+            {isStaffImpersonation && user?.impersonatedEmail
+              ? user.impersonatedEmail
+              : user?.email}
+          </span>
+        </div>
+        <button type="button" className="admin-logout-btn" onClick={handleLogout}>
+          <SidebarLogoutIcon />
+          <span>Logga ut</span>
+        </button>
+      </div>
+    </aside>
+  );
 
   return (
     <div className="admin-page-root">
@@ -744,68 +815,51 @@ export default function Admin() {
           ) : null}
         </>
       ) : (
-        <aside className="admin-sidebar">
-          <div className="admin-sidebar-scroll">
-            <div className="admin-sidebar-header admin-sidebar-header--logo">
-              <img
-                src="/sidebar-logo.png"
-                alt="Appbok"
-                className="sidebar-brand-img"
-                decoding="async"
-              />
-            </div>
-            <nav className="admin-nav">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={`admin-nav-btn ${activeTab === tab.id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  <span className="admin-nav-icon">
-                    <tab.Icon />
-                  </span>
-                  <span className="admin-nav-btn-label">
-                    {tab.label}
-                    {tab.id === 'schedule' && showScheduleReminder ? (
-                      <span
-                        className="admin-nav-schedule-warning"
-                        title="Ställ in arbetsschema så kunder kan boka."
-                        aria-label="Påminnelse: ställ in schema"
-                      >
-                        <AlertTriangle
-                          size={15}
-                          strokeWidth={2.25}
-                          className="admin-nav-schedule-warning-icon"
-                          aria-hidden
-                        />
-                      </span>
-                    ) : null}
-                  </span>
-                </button>
-              ))}
-            </nav>
-          </div>
-          <div className="admin-sidebar-footer">
-            <div className="admin-user-info">
-              <div className="admin-user-name-row">
-                <span className="admin-user-name">
-                  {isStaffImpersonation && user?.impersonatedName ? user.impersonatedName : user?.name}
-                </span>
-                <SidebarRoleBadge role={user?.role} />
-              </div>
-              <span className="admin-user-email">
-                {isStaffImpersonation && user?.impersonatedEmail
-                  ? user.impersonatedEmail
-                  : user?.email}
-              </span>
-            </div>
-            <button type="button" className="admin-logout-btn" onClick={handleLogout}>
-              <SidebarLogoutIcon />
-              <span>Logga ut</span>
+        <>
+          <header className="admin-mobile-topbar">
+            <button
+              type="button"
+              className="admin-mobile-menu-btn"
+              onClick={() => setAdminMobileMenuOpen(true)}
+              aria-label="Öppna meny"
+            >
+              <Menu size={20} strokeWidth={2} />
             </button>
-          </div>
-        </aside>
+            <img
+              src="/sidebar-logo.png"
+              alt="Appbok"
+              className="admin-mobile-brand-img"
+              decoding="async"
+            />
+            <SidebarRoleBadge role={user?.role} />
+          </header>
+          {renderAdminSidebar('admin-sidebar--desktop')}
+          {adminMobileMenuOpen ? (
+            <div
+              className="admin-mobile-drawer-overlay"
+              role="presentation"
+              onMouseDown={() => setAdminMobileMenuOpen(false)}
+            >
+              <div
+                className="admin-mobile-drawer"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Adminmeny"
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="admin-mobile-drawer-close"
+                  onClick={() => setAdminMobileMenuOpen(false)}
+                  aria-label="Stäng meny"
+                >
+                  <X size={18} strokeWidth={2} />
+                </button>
+                {renderAdminSidebar('admin-sidebar--drawer', handleAdminTabChange)}
+              </div>
+            </div>
+          ) : null}
+        </>
       )}
 
       {/* Main */}
@@ -1987,7 +2041,7 @@ function DashboardTab({
                 : 'Omsättning'}
           </h3>
           <div className="dashboard-chart-wrap">
-            <ResponsiveContainer width="100%" height={260} minWidth={240} minHeight={220}>
+            <ResponsiveContainer width="100%" height={300} minWidth={240} minHeight={300}>
               <BarChart data={revenueChartData} margin={{ top: 10, right: 8, left: 4, bottom: 4 }} barCategoryGap={isPlatformDashboard ? "48%" : "12%"}>
                 <CartesianGrid
                   strokeDasharray="3 3"
