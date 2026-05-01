@@ -893,8 +893,11 @@ a.insta-item-link:focus-visible {
     padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
     padding-left: max(1rem, env(safe-area-inset-left, 0px));
     padding-right: max(1rem, env(safe-area-inset-right, 0px));
-    background: #fff;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid rgba(229, 231, 235, 0.6);
+    box-shadow: none;
     display: flex;
     justify-content: center;
     align-items: center;
