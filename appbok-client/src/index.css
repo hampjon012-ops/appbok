@@ -1691,7 +1691,7 @@ a.insta-item-link:focus-visible {
 
 @media (max-width: 520px) {
   .booking-modal-body {
-    padding: 0.85rem 1rem 6rem;
+    padding: 0.85rem 1rem 1.25rem;
   }
 
   .checkout-final {
@@ -9187,6 +9187,8 @@ textarea.admin-input {
   display: flex;
   justify-content: center;
   align-items: flex-end;
+  box-sizing: border-box;
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
   animation: fadeIn 0.3s ease;
 }
 
@@ -9194,10 +9196,11 @@ textarea.admin-input {
   width: 100%;
   max-width: 42rem;
   height: 90vh;
+  height: 90dvh;
   background: #F5F4F0;
   border-top-left-radius: 40px;
   border-top-right-radius: 40px;
-  max-height: 90vh;
+  max-height: calc(100dvh - max(0.75rem, env(safe-area-inset-top, 0px)));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -9266,6 +9269,11 @@ textarea.admin-input {
   -webkit-overflow-scrolling: touch;
   padding: 1rem 1.5rem 2rem;
   scrollbar-width: none;
+}
+
+.booking-modal-inner,
+.booking-modal-body .booking-container {
+  min-height: 0;
 }
 
 .booking-modal-body::-webkit-scrollbar {
