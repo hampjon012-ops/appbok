@@ -2376,7 +2376,7 @@ function NewBookingModal({ onClose, onCreated }) {
     if (s === 1) return form.service_id;
     if (s === 2) return form.stylist_id;
     if (s === 3) return form.booking_date && form.booking_time;
-    if (s === 4) return form.customer_name.trim() && (form.customer_email.trim() || form.customer_phone.trim());
+    if (s === 4) return form.customer_name.trim();
     return false;
   };
 
@@ -2500,11 +2500,15 @@ function NewBookingModal({ onClose, onCreated }) {
                 <input value={form.customer_name} onChange={e => setForm(f => ({ ...f, customer_name: e.target.value }))} placeholder="För- och efternamn" />
               </div>
               <div className="form-group">
-                <label>E-post</label>
+                <label>
+                  E-post <span className="booking-optional-label">(frivilligt)</span>
+                </label>
                 <input type="email" value={form.customer_email} onChange={e => setForm(f => ({ ...f, customer_email: e.target.value }))} onBlur={handleCustomerBlur} placeholder="epost@exempel.se" />
               </div>
               <div className="form-group">
-                <label>Telefon</label>
+                <label>
+                  Telefon <span className="booking-optional-label">(frivilligt)</span>
+                </label>
                 <input value={form.customer_phone} onChange={e => setForm(f => ({ ...f, customer_phone: e.target.value }))} onBlur={handleCustomerBlur} placeholder="070-000 00 00" />
               </div>
             </div>

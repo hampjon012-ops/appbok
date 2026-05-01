@@ -7444,6 +7444,12 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
   text-align: center;
 }
 
+.booking-optional-label {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 .booking-choice-list {
   display: flex;
   flex-direction: column;
