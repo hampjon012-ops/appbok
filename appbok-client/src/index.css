@@ -7783,6 +7783,31 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
   animation: fadeUp 0.25s ease forwards;
 }
 
+.booking-prefilled-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-bottom: 1rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.booking-prefilled-slot span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #3b82f6;
+}
+
+.booking-prefilled-slot strong {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .booking-service-search-wrap {
   position: sticky;
   top: -1.5rem;

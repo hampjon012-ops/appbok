@@ -2266,6 +2266,7 @@ function NewBookingModal({ onClose, onCreated, initialValues = null }) {
   const [busySlots, setBusySlots] = useState(new Set());
   const [busyLoading, setBusyLoading] = useState(false);
   const [serviceSearch, setServiceSearch] = useState('');
+  const hasCalendarSlot = Boolean(initialValues?.booking_date && initialValues?.booking_time);
 
   const ALL_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 
@@ -2324,6 +2325,7 @@ function NewBookingModal({ onClose, onCreated, initialValues = null }) {
   };
 
   const selectedService = services.find(s => s.id === form.service_id);
+  const selectedStylist = stylists.find(s => s.id === form.stylist_id);
   const filteredServices = useMemo(() => {
     const query = serviceSearch.trim().toLowerCase();
     if (!query) return services;
@@ -2380,6 +2382,9 @@ function NewBookingModal({ onClose, onCreated, initialValues = null }) {
     if (s === 4) return form.customer_name.trim();
     return false;
   };
+  const goNext = () => setStep((current) => (hasCalendarSlot && current === 2 ? 4 : current + 1));
+  const goBack = () => setStep((current) => (hasCalendarSlot && current === 4 ? 2 : current - 1));
+  const stepDots = hasCalendarSlot ? [1, 2, 4] : [1, 2, 3, 4];
 
   return createPortal(
     <div className="booking-slideover-backdrop" onMouseDown={onClose}>
@@ -2387,7 +2392,7 @@ function NewBookingModal({ onClose, onCreated, initialValues = null }) {
         <div className="booking-modal-header">
           <h3>Ny bokning</h3>
           <div className="booking-modal-stepper">
-            {[1,2,3,4].map(s => (
+            {stepDots.map(s => (
               <div key={s} className={`booking-step-dot ${step === s ? 'active' : step > s ? 'done' : ''}`} />
             ))}
           </div>
@@ -2396,6 +2401,15 @@ function NewBookingModal({ onClose, onCreated, initialValues = null }) {
 
         <div className="booking-modal-body">
           {error && <p className="api-error">{error}</p>}
+          {hasCalendarSlot ? (
+            <div className="booking-prefilled-slot">
+              <span>Vald tid</span>
+              <strong>
+                {bookingListDateLabel(form.booking_date)} kl. {bookingListTimeLabel(form.booking_time)}
+                {selectedStylist ? ` · ${selectedStylist.name}` : form.stylist_id === 'any' ? ' · Valfri stylist' : ''}
+              </strong>
+            </div>
+          ) : null}
 
           {/* Steg 1: Välj tjänst */}
           {step === 1 && (
@@ -2518,11 +2532,11 @@ function NewBookingModal({ onClose, onCreated, initialValues = null }) {
 
         <div className="booking-modal-footer">
           {step > 1 && (
-            <button className="btn-sm btn-ghost" onClick={() => setStep(s => s - 1)}>← Tillbaka</button>
+            <button className="btn-sm btn-ghost" onClick={goBack}>← Tillbaka</button>
           )}
           <div style={{ flex: 1 }} />
           {step < 4 ? (
-            <button className="btn-admin-primary" disabled={!canProceed(step)} onClick={() => setStep(s => s + 1)}>
+            <button className="btn-admin-primary" disabled={!canProceed(step)} onClick={goNext}>
               Fortsätt →
             </button>
           ) : (
