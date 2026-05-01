@@ -10,6 +10,10 @@ import {
   BarChart3,
   Wallet,
   Users,
+  Store,
+  UserPlus,
+  CreditCard,
+  TrendingDown,
   Sparkles,
   User,
   Pencil,
@@ -209,6 +213,17 @@ function upcomingBookingStatusMeta(status) {
   return { label: String(s), variant: 'muted' };
 }
 
+function normalizeDashboardStatus(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isSameStockholmMonth(value, monthPrefix) {
+  if (!value) return false;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+  return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Stockholm' }).startsWith(monthPrefix);
+}
+
 function DashboardChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   const row = payload[0];
@@ -263,6 +278,23 @@ function buildDashboardRevenueChartData(apiMonthly) {
       monthLabel,
       revenue: map.get(month) ?? 0,
     };
+  });
+}
+
+function buildPlatformMrrChartData(salons) {
+  const ymd = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Stockholm' });
+  const year = ymd.slice(0, 4);
+  return DASHBOARD_MONTH_LABELS_SV.map((monthLabel, i) => {
+    const month = `${year}-${String(i + 1).padStart(2, '0')}`;
+    const monthEnd = new Date(Number(year), i + 1, 0, 23, 59, 59, 999);
+    const revenue = (salons || []).reduce((sum, salon) => {
+      const status = normalizeDashboardStatus(salon.status);
+      if (status !== 'live') return sum;
+      const createdAt = salon.created_at ? new Date(salon.created_at) : null;
+      if (createdAt && !Number.isNaN(createdAt.getTime()) && createdAt > monthEnd) return sum;
+      return sum + (Number(salon.monthly_price_amount) || 0);
+    }, 0);
+    return { month, monthLabel, revenue };
   });
 }
 
@@ -763,6 +795,8 @@ function DashboardTab({
   const [stats, setStats] = useState(null);
   const [monthlyStats, setMonthlyStats] = useState([]);
   const [topStylists, setTopStylists] = useState([]);
+  const [platformSalons, setPlatformSalons] = useState([]);
+  const [platformChurnedSalons, setPlatformChurnedSalons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statsError, setStatsError] = useState('');
   const [lifecycleSalon, setLifecycleSalon] = useState(null);
@@ -776,6 +810,7 @@ function DashboardTab({
   const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [unreadNotificationsCount] = useState(0);
+  const isPlatformDashboard = getAuth().user?.role === 'superadmin';
 
   const [servicePreview, setServicePreview] = useState({
     loading: true,
@@ -795,8 +830,38 @@ function DashboardTab({
     [selectedPeriod]
   );
 
-  const revenueChartData = useMemo(() => buildDashboardRevenueChartData(monthlyStats), [monthlyStats]);
+  const allPlatformSalons = useMemo(
+    () => [...platformSalons, ...platformChurnedSalons],
+    [platformSalons, platformChurnedSalons],
+  );
+  const revenueChartData = useMemo(
+    () =>
+      isPlatformDashboard
+        ? buildPlatformMrrChartData(allPlatformSalons)
+        : buildDashboardRevenueChartData(monthlyStats),
+    [allPlatformSalons, isPlatformDashboard, monthlyStats]
+  );
   const revenueChartYear = revenueChartData[0]?.month?.slice(0, 4) || '';
+  const platformMetrics = useMemo(() => {
+    const currentMonth = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Stockholm' }).slice(0, 7);
+    const liveSalons = platformSalons.filter((salon) => normalizeDashboardStatus(salon.status) === 'live');
+    const newSalonsThisMonth = platformSalons.filter((salon) => {
+      const status = normalizeDashboardStatus(salon.status);
+      const plan = normalizeDashboardStatus(salon.plan);
+      return isSameStockholmMonth(salon.created_at, currentMonth) && (status === 'live' || status === 'demo' || plan === 'demo');
+    });
+    const churnedThisMonth = platformChurnedSalons.filter((salon) => {
+      const status = normalizeDashboardStatus(salon.status);
+      return (status === 'deleted' || status === 'canceled' || status === 'cancelled') && isSameStockholmMonth(salon.deleted_at, currentMonth);
+    });
+    const churnBase = liveSalons.length + churnedThisMonth.length;
+    return {
+      activeLive: liveSalons.length,
+      newThisMonth: newSalonsThisMonth.length,
+      mrr: liveSalons.reduce((sum, salon) => sum + (Number(salon.monthly_price_amount) || 0), 0),
+      churnRate: churnBase > 0 ? (churnedThisMonth.length / churnBase) * 100 : 0,
+    };
+  }, [platformChurnedSalons, platformSalons]);
 
   useEffect(() => {
     if (!isDateMenuOpen && !isNotificationOpen) return undefined;
@@ -843,15 +908,22 @@ function DashboardTab({
       if (!r.ok) throw new Error(j.error || `Fel ${r.status}`);
       return j;
     };
-    Promise.all([
+    const requests = [
       fetch('/api/stats/overview', { headers: authHeaders() }).then(parse),
       fetch('/api/stats/monthly', { headers: authHeaders() }).then(parse),
       fetch('/api/stats/top-stylists', { headers: authHeaders() }).then(parse),
-    ])
-    .then(([overview, monthly, stylists]) => {
+    ];
+    if (isPlatformDashboard) {
+      requests.push(fetch('/api/superadmin/salons?scope=active', { headers: authHeaders() }).then(parse));
+      requests.push(fetch('/api/superadmin/salons?scope=inactive', { headers: authHeaders() }).then(parse));
+    }
+    Promise.all(requests)
+    .then(([overview, monthly, stylists, activeSalons = [], inactiveSalons = []]) => {
       setStats(overview);
       setMonthlyStats(Array.isArray(monthly) ? monthly : []);
       setTopStylists(Array.isArray(stylists) ? stylists : []);
+      setPlatformSalons(Array.isArray(activeSalons) ? activeSalons : []);
+      setPlatformChurnedSalons(Array.isArray(inactiveSalons) ? inactiveSalons : []);
       setStatsError('');
       setLoading(false);
     })
@@ -860,9 +932,14 @@ function DashboardTab({
       setStatsError(e?.message || 'Kunde inte hämta statistik.');
       setLoading(false);
     });
-  }, []);
+  }, [isPlatformDashboard]);
 
   const loadOnboardingDashboardData = useCallback(() => {
+    if (isPlatformDashboard) {
+      setServicePreview({ loading: false, categories: [], error: '' });
+      setScheduleConfigured(false);
+      return;
+    }
     const sid = getSalonIdForPublicApi();
     if (!sid) {
       setServicePreview({ loading: false, categories: [], error: '' });
@@ -890,7 +967,7 @@ function DashboardTab({
         setServicePreview({ loading: false, categories: [], error: 'Kunde inte ladda tjänster och schema.' });
         setScheduleConfigured(false);
       });
-  }, []);
+  }, [isPlatformDashboard]);
 
   useEffect(() => {
     loadOnboardingDashboardData();
@@ -1055,6 +1132,20 @@ function DashboardTab({
       setTrialBusy(false);
     }
   };
+
+  const platformRecentSalonRows = [
+    { name: 'Signes Salong', status: 'Demo' },
+    { name: 'Colorisma', status: 'Live' },
+    { name: 'Studio Norra', status: 'Live' },
+    { name: 'Klipp & Form', status: 'Demo' },
+  ];
+
+  const platformSubscriptionEvents = [
+    { salon: 'Colorisma', event: 'betalade 2 000 kr', meta: 'Idag' },
+    { salon: 'Signes Salong', event: 'startade Demo', meta: 'Igår' },
+    { salon: 'Studio Norra', event: 'uppgraderade till Live', meta: 'Denna vecka' },
+    { salon: 'Klipp & Form', event: 'avslutade prenumerationen', meta: 'Denna månad' },
+  ];
 
   return (
     <div className="admin-section dashboard-section">
@@ -1587,30 +1678,32 @@ function DashboardTab({
               </ul>
             ) : null}
           </div>
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '6px',
-              backgroundColor: '#fff',
-              padding: '7px 12px',
-              fontSize: '0.8125rem',
-              fontWeight: 500,
-              color: '#374151',
-              border: '1px solid #D1D5DB',
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-              marginRight: '0.75rem',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F9FAFB')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
-          >
-            <Copy size={14} strokeWidth={2} style={{ marginRight: '6px' }} />
-            Kopiera länk
-          </button>
+          {!isPlatformDashboard ? (
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '6px',
+                backgroundColor: '#fff',
+                padding: '7px 12px',
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                color: '#374151',
+                border: '1px solid #D1D5DB',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                marginRight: '0.75rem',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F9FAFB')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
+            >
+              <Copy size={14} strokeWidth={2} style={{ marginRight: '6px' }} />
+              Kopiera länk
+            </button>
+          ) : null}
           {showNewBookingButton ? (
             <button type="button" className="dashboard-new-booking-btn" onClick={onNewBooking}>
               + Ny bokning
@@ -1621,44 +1714,44 @@ function DashboardTab({
 
       <div className="stats-cards dashboard-kpi-grid">
         <div className="stat-card dashboard-kpi-card">
-          <span className="stat-icon stat-icon--blue">
-            <CalendarCheck size={22} strokeWidth={1.8} />
+          <span className="stat-icon">
+            {isPlatformDashboard ? <Store size={22} strokeWidth={1.8} /> : <CalendarCheck size={22} strokeWidth={1.8} />}
           </span>
           <div className="stat-info">
-            <span className="stat-value">{stats.todayBookings}</span>
-            <span className="stat-label">Bokningar idag</span>
+            <span className="stat-value">{isPlatformDashboard ? platformMetrics.activeLive : stats.todayBookings}</span>
+            <span className="stat-label">{isPlatformDashboard ? 'Aktiva Salonger' : 'Bokningar idag'}</span>
           </div>
         </div>
         <div className="stat-card dashboard-kpi-card">
-          <span className="stat-icon stat-icon--purple">
-            <BarChart3 size={22} strokeWidth={1.8} />
+          <span className="stat-icon">
+            {isPlatformDashboard ? <UserPlus size={22} strokeWidth={1.8} /> : <BarChart3 size={22} strokeWidth={1.8} />}
           </span>
           <div className="stat-info">
-            <span className="stat-value">{stats.monthBookings}</span>
-            <span className="stat-label">Denna månad</span>
+            <span className="stat-value">{isPlatformDashboard ? platformMetrics.newThisMonth : stats.monthBookings}</span>
+            <span className="stat-label">{isPlatformDashboard ? 'Nyregistrerade (Månad)' : 'Denna månad'}</span>
           </div>
         </div>
         <div className="stat-card dashboard-kpi-card">
-          <span className="stat-icon stat-icon--green">
-            <Wallet size={22} strokeWidth={1.8} />
+          <span className="stat-icon">
+            {isPlatformDashboard ? <CreditCard size={22} strokeWidth={1.8} /> : <Wallet size={22} strokeWidth={1.8} />}
           </span>
           <div className="stat-info">
-            <span className="stat-value">{fmtKr(stats.monthRevenue)}</span>
-            <span className="stat-label">Omsättning (månad)</span>
+            <span className="stat-value">{fmtKr(isPlatformDashboard ? platformMetrics.mrr : stats.monthRevenue)}</span>
+            <span className="stat-label">{isPlatformDashboard ? 'MRR (Månatlig Intäkt)' : 'Omsättning (månad)'}</span>
           </div>
         </div>
         <div className="stat-card dashboard-kpi-card">
-          <span className="stat-icon stat-icon--amber">
-            <Users size={22} strokeWidth={1.8} />
+          <span className="stat-icon">
+            {isPlatformDashboard ? <TrendingDown size={22} strokeWidth={1.8} /> : <Users size={22} strokeWidth={1.8} />}
           </span>
           <div className="stat-info">
-            <span className="stat-value">{stats.staffCount}</span>
-            <span className="stat-label">Aktiv personal</span>
+            <span className="stat-value">{isPlatformDashboard ? `${platformMetrics.churnRate.toFixed(1)}%` : stats.staffCount}</span>
+            <span className="stat-label">{isPlatformDashboard ? 'Churn Rate' : 'Aktiv personal'}</span>
           </div>
         </div>
       </div>
 
-      {servicePreview.error ? (
+      {!isPlatformDashboard && servicePreview.error ? (
         <p className="dashboard-services-preview-error" style={{ margin: '0.75rem 0 0', fontSize: '0.85rem', color: '#b45309' }}>
           {servicePreview.error}
         </p>
@@ -1751,10 +1844,18 @@ function DashboardTab({
       {/* ── Charts ───────────────────────────────────────────── */}
       <div className="charts-grid">
         <div className="admin-card chart-card dashboard-chart-card">
-          <h3>{revenueChartYear ? `Omsättning (${revenueChartYear})` : 'Omsättning'}</h3>
+          <h3>
+            {isPlatformDashboard
+              ? revenueChartYear
+                ? `MRR Tillväxt (${revenueChartYear})`
+                : 'MRR Tillväxt'
+              : revenueChartYear
+                ? `Omsättning (${revenueChartYear})`
+                : 'Omsättning'}
+          </h3>
           <div className="dashboard-chart-wrap">
             <ResponsiveContainer width="100%" height={260} minWidth={240} minHeight={220}>
-              <BarChart data={revenueChartData} margin={{ top: 10, right: 8, left: 4, bottom: 4 }} barCategoryGap="12%">
+              <BarChart data={revenueChartData} margin={{ top: 10, right: 8, left: 4, bottom: 4 }} barCategoryGap={isPlatformDashboard ? "34%" : "12%"}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   vertical={false}
@@ -1778,16 +1879,33 @@ function DashboardTab({
                   cursor={{ fill: 'rgba(23, 23, 23, 0.06)' }}
                   content={<DashboardChartTooltip />}
                 />
-                <Bar dataKey="revenue" fill="#171717" radius={[4, 4, 0, 0]} barSize={40} />
+                <Bar dataKey="revenue" fill="#171717" radius={[5, 5, 0, 0]} barSize={isPlatformDashboard ? 32 : 40} maxBarSize={40} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="admin-card chart-card dashboard-chart-card">
-          <h3>Toppstylister (Månad)</h3>
+          <h3>{isPlatformDashboard ? 'Nyligen anslutna salonger' : 'Toppstylister (Månad)'}</h3>
           <div className="dashboard-chart-wrap">
-            {topStylists.length > 0 ? (
+            {isPlatformDashboard ? (
+              <div className="dashboard-salon-list">
+                {platformRecentSalonRows.map((salon) => (
+                  <div key={`${salon.name}-${salon.status}`} className="dashboard-salon-row">
+                    <span className="dashboard-salon-avatar" aria-hidden>
+                      {salon.name.slice(0, 1)}
+                    </span>
+                    <div className="dashboard-salon-info">
+                      <span className="dashboard-salon-name">{salon.name}</span>
+                      <span className={`dashboard-status-badge dashboard-status-badge--${salon.status === 'Live' ? 'confirmed' : 'muted'}`}>
+                        <span className="dashboard-status-dot" aria-hidden />
+                        <span className="dashboard-status-label">{salon.status}</span>
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : topStylists.length > 0 ? (
               <ResponsiveContainer width="100%" height={260} minWidth={240} minHeight={220}>
                 <BarChart
                   data={topStylists}
@@ -1836,7 +1954,22 @@ function DashboardTab({
         </div>
       </div>
 
-      {stats.upcomingBookings?.length > 0 ? (
+      {isPlatformDashboard ? (
+        <div className="admin-card dashboard-upcoming-card">
+          <h3 className="dashboard-upcoming-title">Senaste prenumerationshändelser</h3>
+          <div className="dashboard-subscription-events">
+            {platformSubscriptionEvents.map((item) => (
+              <div key={`${item.salon}-${item.event}`} className="dashboard-subscription-event-row">
+                <div>
+                  <span className="dashboard-subscription-event-salon">{item.salon}</span>
+                  <span className="dashboard-subscription-event-text"> {item.event}</span>
+                </div>
+                <span className="dashboard-subscription-event-meta">{item.meta}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : stats.upcomingBookings?.length > 0 ? (
         <div className="admin-card dashboard-upcoming-card">
           <h3 className="dashboard-upcoming-title">Kommande bokningar</h3>
           <div className="booking-list dashboard-upcoming-list">
