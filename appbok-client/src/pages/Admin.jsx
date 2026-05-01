@@ -2245,16 +2245,16 @@ function DashboardTab({
 
 // ─── Bookings Tab ────────────────────────────────────────────────────────────
 // ─── New Booking Modal (multi-step) ───────────────────────────────────────────
-function NewBookingModal({ onClose, onCreated }) {
+function NewBookingModal({ onClose, onCreated, initialValues = null }) {
   const salonId = getSalonIdForPublicApi();
   const [step, setStep] = useState(1);
   const [services, setServices] = useState([]);
   const [stylists, setStylists] = useState([]);
   const [form, setForm] = useState({
     service_id: '',
-    stylist_id: 'any',
-    booking_date: '',
-    booking_time: '',
+    stylist_id: initialValues?.stylist_id || 'any',
+    booking_date: initialValues?.booking_date || '',
+    booking_time: initialValues?.booking_time || '',
     customer_name: '',
     customer_email: '',
     customer_phone: '',
@@ -2660,13 +2660,172 @@ function BookingNoteTooltip({ text, children }) {
   );
 }
 
+function localIsoDate(date) {
+  const d = new Date(date);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+}
+
+function addDaysToIsoDate(isoDate, days) {
+  const [year, month, day] = String(isoDate).split('-').map(Number);
+  const d = new Date(year, (month || 1) - 1, day || 1);
+  d.setDate(d.getDate() + days);
+  return localIsoDate(d);
+}
+
+function bookingCalendarDurationMinutes(booking) {
+  const lines = bookingServicesList(booking);
+  const lineDuration = lines?.find((line) => Number(line.duration_minutes) > 0)?.duration_minutes;
+  return Number(booking?.duration_minutes || booking?.services?.duration_minutes || lineDuration || 60);
+}
+
+function bookingCalendarMinutesFromStart(time) {
+  const label = bookingListTimeLabel(time);
+  const [h, m] = label.split(':').map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  return (h - 8) * 60 + m;
+}
+
+function BookingsCalendarView({
+  bookings,
+  staff,
+  selectedDate,
+  onDateChange,
+  onOpenBooking,
+  onOpenDetail,
+  loading,
+}) {
+  const daySlots = useMemo(() => {
+    const slots = [];
+    for (let hour = 8; hour <= 18; hour += 1) {
+      for (const minute of [0, 30]) {
+        if (hour === 18 && minute > 0) continue;
+        slots.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+      }
+    }
+    return slots;
+  }, []);
+  const columns = staff.length > 0 ? staff : [{ id: 'any', name: 'Valfri' }];
+  const bookingsByStylist = useMemo(() => {
+    const map = new Map();
+    columns.forEach((stylist) => map.set(String(stylist.id), []));
+    bookings.forEach((booking) => {
+      const key = booking.stylist?.id ? String(booking.stylist.id) : 'any';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(booking);
+    });
+    return map;
+  }, [bookings, columns]);
+  const prettyDate = (() => {
+    const [year, month, day] = String(selectedDate).split('-').map(Number);
+    if (!year || !month || !day) return selectedDate;
+    return new Intl.DateTimeFormat('sv-SE', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(year, month - 1, day));
+  })();
+
+  return (
+    <div className="admin-card bookings-calendar-card">
+      <div className="bookings-calendar-toolbar">
+        <div>
+          <h3 className="bookings-calendar-title">Kalendervy</h3>
+          <p className="bookings-calendar-date-label">{prettyDate}</p>
+        </div>
+        <div className="bookings-calendar-nav" aria-label="Byt dag">
+          <button type="button" onClick={() => onDateChange(addDaysToIsoDate(selectedDate, -1))} aria-label="Föregående dag">
+            &lt;
+          </button>
+          <button type="button" onClick={() => onDateChange(localIsoDate(new Date()))}>
+            Idag
+          </button>
+          <button type="button" onClick={() => onDateChange(addDaysToIsoDate(selectedDate, 1))} aria-label="Nästa dag">
+            &gt;
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="admin-loading">Laddar kalender...</div>
+      ) : (
+        <div className="bookings-calendar-scroll">
+          <div className="bookings-calendar-grid" style={{ '--calendar-staff-count': columns.length }}>
+            <div className="bookings-calendar-corner" />
+            {columns.map((stylist) => (
+              <div key={stylist.id} className="bookings-calendar-stylist-head">
+                {stylist.name}
+              </div>
+            ))}
+
+            <div className="bookings-calendar-time-rail">
+              {daySlots.map((slot) => (
+                <div key={slot} className="bookings-calendar-time-label">
+                  {slot}
+                </div>
+              ))}
+            </div>
+
+            {columns.map((stylist) => {
+              const columnBookings = bookingsByStylist.get(String(stylist.id)) || [];
+              return (
+                <div key={stylist.id} className="bookings-calendar-column">
+                  {daySlots.map((slot) => (
+                    <button
+                      key={`${stylist.id}-${slot}`}
+                      type="button"
+                      className="bookings-calendar-slot"
+                      onClick={() => onOpenBooking({
+                        booking_date: selectedDate,
+                        booking_time: slot,
+                        stylist_id: stylist.id === 'any' ? 'any' : stylist.id,
+                      })}
+                      aria-label={`Ny bokning ${slot} hos ${stylist.name}`}
+                    />
+                  ))}
+                  {columnBookings.map((booking) => {
+                    const minutesFromStart = bookingCalendarMinutesFromStart(booking.booking_time);
+                    if (minutesFromStart == null) return null;
+                    const duration = bookingCalendarDurationMinutes(booking);
+                    const top = Math.max(0, (minutesFromStart / 30) * 44);
+                    const height = Math.max(38, (duration / 30) * 44 - 6);
+                    return (
+                      <button
+                        key={booking.id}
+                        type="button"
+                        className={`bookings-calendar-event bookings-calendar-event--${booking.status || 'confirmed'}`}
+                        style={{ top, height }}
+                        onClick={() => onOpenDetail(booking)}
+                      >
+                        <span className="bookings-calendar-event-name">{booking.customer_name || 'Kund'}</span>
+                        <span className="bookings-calendar-event-meta">
+                          {bookingListTimeLabel(booking.booking_time)} · {bookingServiceCellLabel(booking)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── BookingsTab ────────────────────────────────────────────────────────────
 function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
   const [bookings, setBookings] = useState([]);
+  const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [detailBooking, setDetailBooking] = useState(null);
+  const [viewMode, setViewMode] = useState('calendar');
+  const [calendarDate, setCalendarDate] = useState(() => localIsoDate(new Date()));
+  const [newBookingInitialValues, setNewBookingInitialValues] = useState(null);
 
   const loadBookings = useCallback((searchTerm, dateFrom) => {
     setLoading(true);
@@ -2681,9 +2840,17 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => loadBookings(search, dateFilter), 280);
+    const dateForView = viewMode === 'calendar' ? calendarDate : dateFilter;
+    const timer = setTimeout(() => loadBookings(search, dateForView), 280);
     return () => clearTimeout(timer);
-  }, [search, dateFilter, loadBookings]);
+  }, [search, dateFilter, calendarDate, viewMode, loadBookings]);
+
+  useEffect(() => {
+    fetch('/api/staff/list', { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((data) => setStaff(Array.isArray(data) ? data.filter((s) => s.id !== 'any') : []))
+      .catch(() => setStaff([]));
+  }, []);
 
   useEffect(() => {
     if (!detailBooking) return;
@@ -2702,18 +2869,52 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
 
   const handleCreated = () => {
     setNewBookingOpen(false);
-    loadBookings(search, dateFilter);
+    setNewBookingInitialValues(null);
+    loadBookings(search, viewMode === 'calendar' ? calendarDate : dateFilter);
   };
+
+  const openNewBooking = (initialValues = null) => {
+    setNewBookingInitialValues(initialValues);
+    setNewBookingOpen(true);
+  };
+
+  const calendarBookings = useMemo(
+    () => bookings.filter((booking) => booking.booking_date === calendarDate),
+    [bookings, calendarDate],
+  );
 
   return (
     <div className="admin-section">
       <div className="admin-section-header">
         <h2 className="admin-section-title">Bokningar</h2>
-        <button type="button" className="btn-admin-primary" onClick={() => setNewBookingOpen(true)}>
-          + Ny bokning
-        </button>
+        <div className="bookings-header-actions">
+          <div className="bookings-view-toggle" role="tablist" aria-label="Välj bokningsvy">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'calendar'}
+              className={`bookings-view-toggle-btn${viewMode === 'calendar' ? ' active' : ''}`}
+              onClick={() => setViewMode('calendar')}
+            >
+              Kalendervy
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'list'}
+              className={`bookings-view-toggle-btn${viewMode === 'list' ? ' active' : ''}`}
+              onClick={() => setViewMode('list')}
+            >
+              Listvy
+            </button>
+          </div>
+          <button type="button" className="btn-admin-primary" onClick={() => openNewBooking()}>
+            + Ny bokning
+          </button>
+        </div>
       </div>
 
+      {viewMode === 'list' ? (
       <div className="admin-card" style={{ marginBottom: '1rem' }}>
         <div className="bookings-filter-row">
           <input
@@ -2735,8 +2936,19 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
           )}
         </div>
       </div>
+      ) : null}
 
-      {loading ? (
+      {viewMode === 'calendar' ? (
+        <BookingsCalendarView
+          bookings={calendarBookings}
+          staff={staff}
+          selectedDate={calendarDate}
+          onDateChange={setCalendarDate}
+          onOpenBooking={(initialValues) => openNewBooking(initialValues)}
+          onOpenDetail={setDetailBooking}
+          loading={loading}
+        />
+      ) : loading ? (
         <div className="admin-loading">Laddar bokningar...</div>
       ) : bookings.length === 0 ? (
         <div className="admin-empty">Inga bokningar hittades.</div>
@@ -2825,8 +3037,12 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
 
       {newBookingOpen && (
         <NewBookingModal
-          onClose={() => setNewBookingOpen(false)}
+          onClose={() => {
+            setNewBookingOpen(false);
+            setNewBookingInitialValues(null);
+          }}
           onCreated={handleCreated}
+          initialValues={newBookingInitialValues}
         />
       )}
 
