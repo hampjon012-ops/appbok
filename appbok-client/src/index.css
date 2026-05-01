@@ -4354,11 +4354,11 @@ body:has(.admin-layout) {
 }
 
 .sa-card {
-  background: white;
+  background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 1.75rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .sa-card--full {
@@ -4366,11 +4366,27 @@ body:has(.admin-layout) {
 }
 
 .sa-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
   font-size: 1rem;
   font-weight: 600;
   color: #111827;
   margin: 0 0 1.4rem;
   letter-spacing: -0.2px;
+}
+
+.sa-card-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  color: #6b7280;
+  flex-shrink: 0;
 }
 
 .sa-card-desc {
@@ -4412,8 +4428,9 @@ body:has(.admin-layout) {
 }
 
 .sa-hint {
-  font-size: 0.75rem;
-  color: #9ca3af;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: #6b7280;
   margin: 0;
 }
 
@@ -4453,24 +4470,42 @@ body:has(.admin-layout) {
 }
 
 .sa-input--pw {
-  padding-right: 2.6rem;
+  padding-right: 5.25rem;
 }
 
-.sa-pw-toggle {
+.sa-pw-actions {
   position: absolute;
-  right: 0.75rem;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.sa-pw-action-btn {
+  width: 1.85rem;
+  height: 1.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
+  border-radius: 7px;
   cursor: pointer;
   color: #9ca3af;
-  display: flex;
-  align-items: center;
   padding: 0;
-  transition: color 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 
-.sa-pw-toggle:hover {
+.sa-pw-action-btn:hover:not(:disabled) {
   color: #6b7280;
+  background: #f9fafb;
+}
+
+.sa-pw-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 
 .sa-btn {

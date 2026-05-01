@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 function EyeIcon({ off }) {
   return off ? (
@@ -40,10 +41,53 @@ function LockIcon() {
   );
 }
 
-function Card({ title, children, className = '' }) {
+function CopyIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+  );
+}
+
+function GlobeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M2 12h20"/>
+      <path d="M12 2a15.3 15.3 0 0 1 0 20"/>
+      <path d="M12 2a15.3 15.3 0 0 0 0 20"/>
+    </svg>
+  );
+}
+
+function CreditCardIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="20" height="14" rx="2"/>
+      <path d="M2 10h20"/>
+    </svg>
+  );
+}
+
+function Card({ title, icon, children, className = '' }) {
   return (
     <div className={`sa-card ${className}`}>
-      {title && <h2 className="sa-card-title">{title}</h2>}
+      {title && (
+        <h2 className="sa-card-title">
+          {icon ? <span className="sa-card-title-icon">{icon}</span> : null}
+          <span>{title}</span>
+        </h2>
+      )}
       {children}
     </div>
   );
@@ -76,7 +120,7 @@ function Input({ id, type = 'text', placeholder, value, onChange, disabled, clas
   );
 }
 
-function PasswordInput({ id, placeholder, value, onChange, disabled, onToggle, visible }) {
+function PasswordInput({ id, placeholder, value, onChange, disabled, onToggle, onCopy, visible }) {
   return (
     <div className="sa-password-wrap">
       <input
@@ -88,16 +132,28 @@ function PasswordInput({ id, placeholder, value, onChange, disabled, onToggle, v
         disabled={disabled}
         className={`sa-input sa-input--pw ${disabled ? 'sa-input--disabled' : ''}`}
       />
-      <button
-        type="button"
-        className="sa-pw-toggle"
-        onClick={onToggle}
-        disabled={disabled}
-        tabIndex={-1}
-        aria-label={visible ? 'Dölj' : 'Visa'}
-      >
-        <EyeIcon off={visible} />
-      </button>
+      <div className="sa-pw-actions">
+        <button
+          type="button"
+          className="sa-pw-action-btn"
+          onClick={onToggle}
+          disabled={disabled}
+          tabIndex={-1}
+          aria-label={visible ? 'Dölj' : 'Visa'}
+        >
+          <EyeIcon off={visible} />
+        </button>
+        <button
+          type="button"
+          className="sa-pw-action-btn"
+          onClick={onCopy}
+          disabled={disabled || !value}
+          tabIndex={-1}
+          aria-label="Kopiera nyckel"
+        >
+          <CopyIcon />
+        </button>
+      </div>
     </div>
   );
 }
@@ -176,6 +232,16 @@ export default function SuperadminSettingsTab({ user }) {
     setStripeLoading(false);
   }
 
+  async function copyKey(value) {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success('Nyckel kopierad!');
+    } catch {
+      toast.error('Kunde inte kopiera nyckeln.');
+    }
+  }
+
   return (
     <div className="sa-settings-root">
       <div className="sa-settings-header">
@@ -186,7 +252,7 @@ export default function SuperadminSettingsTab({ user }) {
       <div className="sa-settings-grid">
 
         {/* ── Card 1: Profil ──────────────────────────────────────────── */}
-        <Card title="Konto &amp; Säkerhet">
+        <Card title="Konto & Säkerhet" icon={<UserIcon />}>
           <form onSubmit={handleProfile} className="sa-card-form">
             <Field label="E-postadress" id="profile-email" hint="Mejladressen som används för att logga in.">
               <Input
@@ -214,7 +280,7 @@ export default function SuperadminSettingsTab({ user }) {
         </Card>
 
         {/* ── Card 2: Plattform ─────────────────────────────────────── */}
-        <Card title="Globala Appbok-inställningar">
+        <Card title="Globala Appbok-inställningar" icon={<GlobeIcon />}>
           <form onSubmit={handlePlatform} className="sa-card-form">
             <Field label="Företagsnamn" id="platform-name">
               <Input
@@ -241,7 +307,7 @@ export default function SuperadminSettingsTab({ user }) {
         </Card>
 
         {/* ── Card 3: Integrationer & API ──────────────────────────── */}
-        <Card title="Betalningsleverantör (Stripe)" className="sa-card--full">
+        <Card title="Betalningsleverantör (Stripe)" icon={<CreditCardIcon />} className="sa-card--full">
           <form onSubmit={handleStripe} className="sa-card-form">
             <p className="sa-card-desc">
               API-nycklar för att hantera plattformens prenumerationsintäkter via Stripe.
@@ -256,6 +322,7 @@ export default function SuperadminSettingsTab({ user }) {
                   onChange={e => setStripeKey(e.target.value)}
                   visible={showKey}
                   onToggle={() => setShowKey(v => !v)}
+                  onCopy={() => copyKey(stripeKey)}
                 />
               </Field>
               <Field label="Stripe Webhook Secret" id="stripe-webhook" hint="För att verifiera inkommande Stripe-webhooks.">
@@ -266,6 +333,7 @@ export default function SuperadminSettingsTab({ user }) {
                   onChange={e => setStripeWebhook(e.target.value)}
                   visible={showWebhook}
                   onToggle={() => setShowWebhook(v => !v)}
+                  onCopy={() => copyKey(stripeWebhook)}
                 />
               </Field>
             </div>
