@@ -5650,6 +5650,28 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
   border-bottom: 1px solid #f3f4f6;
 }
 
+.bookings-date-navigator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.bookings-calendar-toolbar .bookings-date-navigator {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.bookings-list-filter-card {
+  margin-bottom: 1rem;
+}
+
+.bookings-filter-row .bookings-date-navigator {
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 280px;
+}
+
 .bookings-calendar-title {
   margin: 0;
   font-size: 1rem;
@@ -5662,7 +5684,6 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  margin: 0.35rem 0 0 -0.45rem;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -5936,6 +5957,17 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
   .bookings-calendar-toolbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .bookings-date-navigator,
+  .bookings-filter-row .bookings-date-navigator {
+    width: 100%;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .bookings-filter-row {
+    align-items: stretch;
   }
 }
 

@@ -2716,6 +2716,61 @@ function bookingCalendarCategoryVariant(booking) {
   return 'styling';
 }
 
+function DateNavigator({ selectedDate, onDateChange, title = null }) {
+  const datePickerRef = useRef(null);
+  const prettyDate = (() => {
+    const [year, month, day] = String(selectedDate).split('-').map(Number);
+    if (!year || !month || !day) return selectedDate;
+    return new Intl.DateTimeFormat('sv-SE', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(year, month - 1, day));
+  })();
+  const openDatePicker = () => {
+    const picker = datePickerRef.current;
+    if (!picker) return;
+    if (typeof picker.showPicker === 'function') {
+      picker.showPicker();
+    } else {
+      picker.focus();
+      picker.click();
+    }
+  };
+
+  return (
+    <div className="bookings-date-navigator">
+      {title ? <h3 className="bookings-calendar-title">{title}</h3> : null}
+      <button type="button" className="bookings-calendar-date-trigger" onClick={openDatePicker}>
+        <CalendarDays size={15} strokeWidth={2} aria-hidden />
+        <span>{prettyDate}</span>
+      </button>
+      <input
+        ref={datePickerRef}
+        type="date"
+        className="bookings-calendar-date-input"
+        value={selectedDate}
+        onChange={(event) => {
+          if (event.target.value) onDateChange(event.target.value);
+        }}
+        aria-label="Välj datum"
+      />
+      <div className="bookings-calendar-nav" aria-label="Byt dag">
+        <button type="button" onClick={() => onDateChange(addDaysToIsoDate(selectedDate, -1))} aria-label="Föregående dag">
+          &lt;
+        </button>
+        <button type="button" onClick={() => onDateChange(localIsoDate(new Date()))}>
+          Idag
+        </button>
+        <button type="button" onClick={() => onDateChange(addDaysToIsoDate(selectedDate, 1))} aria-label="Nästa dag">
+          &gt;
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function BookingsCalendarView({
   bookings,
   staff,
@@ -2736,7 +2791,6 @@ function BookingsCalendarView({
     return slots;
   }, []);
   const [now, setNow] = useState(() => new Date());
-  const datePickerRef = useRef(null);
   const swipeStartRef = useRef(null);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
@@ -2770,29 +2824,9 @@ function BookingsCalendarView({
     });
     return map;
   }, [bookings, columns]);
-  const prettyDate = (() => {
-    const [year, month, day] = String(selectedDate).split('-').map(Number);
-    if (!year || !month || !day) return selectedDate;
-    return new Intl.DateTimeFormat('sv-SE', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }).format(new Date(year, month - 1, day));
-  })();
   const nowMinutesFromStart = (now.getHours() - 8) * 60 + now.getMinutes();
   const showNowLine = selectedDate === localIsoDate(now) && nowMinutesFromStart >= 0 && nowMinutesFromStart <= 600;
   const nowLineTop = (nowMinutesFromStart / 30) * 44;
-  const openDatePicker = () => {
-    const picker = datePickerRef.current;
-    if (!picker) return;
-    if (typeof picker.showPicker === 'function') {
-      picker.showPicker();
-    } else {
-      picker.focus();
-      picker.click();
-    }
-  };
   const handleTouchStart = (event) => {
     const touch = event.touches?.[0];
     if (!touch) return;
@@ -2812,34 +2846,7 @@ function BookingsCalendarView({
   return (
     <div className="admin-card bookings-calendar-card">
       <div className="bookings-calendar-toolbar">
-        <div>
-          <h3 className="bookings-calendar-title">Kalendervy</h3>
-          <button type="button" className="bookings-calendar-date-trigger" onClick={openDatePicker}>
-            <CalendarDays size={15} strokeWidth={2} aria-hidden />
-            <span>{prettyDate}</span>
-          </button>
-          <input
-            ref={datePickerRef}
-            type="date"
-            className="bookings-calendar-date-input"
-            value={selectedDate}
-            onChange={(event) => {
-              if (event.target.value) onDateChange(event.target.value);
-            }}
-            aria-label="Välj datum"
-          />
-        </div>
-        <div className="bookings-calendar-nav" aria-label="Byt dag">
-          <button type="button" onClick={() => onDateChange(addDaysToIsoDate(selectedDate, -1))} aria-label="Föregående dag">
-            &lt;
-          </button>
-          <button type="button" onClick={() => onDateChange(localIsoDate(new Date()))}>
-            Idag
-          </button>
-          <button type="button" onClick={() => onDateChange(addDaysToIsoDate(selectedDate, 1))} aria-label="Nästa dag">
-            &gt;
-          </button>
-        </div>
+        <DateNavigator selectedDate={selectedDate} onDateChange={onDateChange} title="Kalendervy" />
       </div>
 
       {loading ? (
@@ -2928,10 +2935,9 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
   const [detailBooking, setDetailBooking] = useState(null);
   const [viewMode, setViewMode] = useState('calendar');
-  const [calendarDate, setCalendarDate] = useState(() => localIsoDate(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => localIsoDate(new Date()));
   const [newBookingInitialValues, setNewBookingInitialValues] = useState(null);
 
   const loadBookings = useCallback((searchTerm, dateFrom) => {
@@ -2947,10 +2953,9 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
   }, []);
 
   useEffect(() => {
-    const dateForView = viewMode === 'calendar' ? calendarDate : dateFilter;
-    const timer = setTimeout(() => loadBookings(search, dateForView), 280);
+    const timer = setTimeout(() => loadBookings(search, selectedDate), 280);
     return () => clearTimeout(timer);
-  }, [search, dateFilter, calendarDate, viewMode, loadBookings]);
+  }, [search, selectedDate, loadBookings]);
 
   useEffect(() => {
     fetch('/api/staff/list', { headers: authHeaders() })
@@ -2971,14 +2976,14 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
   const handleCancel = async (id) => {
     if (!confirm('Vill du avboka denna bokning?')) return false;
     await fetch(`/api/bookings/${id}/cancel`, { method: 'PATCH', headers: authHeaders() });
-    loadBookings(search, viewMode === 'calendar' ? calendarDate : dateFilter);
+    loadBookings(search, selectedDate);
     return true;
   };
 
   const handleCreated = () => {
     setNewBookingOpen(false);
     setNewBookingInitialValues(null);
-    loadBookings(search, viewMode === 'calendar' ? calendarDate : dateFilter);
+    loadBookings(search, selectedDate);
   };
 
   const openNewBooking = (initialValues = null) => {
@@ -2987,14 +2992,14 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
   };
 
   const calendarBookings = useMemo(
-    () => bookings.filter((booking) => booking.booking_date === calendarDate),
-    [bookings, calendarDate],
+    () => bookings.filter((booking) => booking.booking_date === selectedDate),
+    [bookings, selectedDate],
   );
 
   const handleEditDetailBooking = () => {
     if (!detailBooking) return;
     openNewBooking({
-      booking_date: detailBooking.booking_date || calendarDate,
+      booking_date: detailBooking.booking_date || selectedDate,
       booking_time: bookingListTimeLabel(detailBooking.booking_time),
       stylist_id: detailBooking.stylist?.id || detailBooking.stylist_id || 'any',
     });
@@ -3033,7 +3038,7 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
       </div>
 
       {viewMode === 'list' ? (
-      <div className="admin-card" style={{ marginBottom: '1rem' }}>
+      <div className="admin-card bookings-list-filter-card">
         <div className="bookings-filter-row">
           <input
             className="invite-url-input"
@@ -3042,16 +3047,7 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
             onChange={e => setSearch(e.target.value)}
             placeholder="Sök bokning (kundnamn, telefon, e-post)..."
           />
-          <input
-            type="date"
-            className="admin-input"
-            style={{ flex: 1, maxWidth: '180px' }}
-            value={dateFilter}
-            onChange={e => setDateFilter(e.target.value)}
-          />
-          {dateFilter && (
-            <button className="btn-sm btn-ghost" onClick={() => setDateFilter('')}>Rensa datum</button>
-          )}
+          <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} />
         </div>
       </div>
       ) : null}
@@ -3060,8 +3056,8 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
         <BookingsCalendarView
           bookings={calendarBookings}
           staff={staff}
-          selectedDate={calendarDate}
-          onDateChange={setCalendarDate}
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
           onOpenBooking={(initialValues) => openNewBooking(initialValues)}
           onOpenDetail={setDetailBooking}
           loading={loading}
