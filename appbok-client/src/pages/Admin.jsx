@@ -14,6 +14,9 @@ import {
   UserPlus,
   CreditCard,
   TrendingDown,
+  CheckCircle,
+  Info,
+  AlertCircle,
   Sparkles,
   User,
   Pencil,
@@ -250,6 +253,25 @@ function dashboardDateMeta(value) {
     month: 'short',
     year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
   });
+}
+
+function dashboardSubscriptionEventMeta(kind) {
+  if (kind === 'positive') {
+    return {
+      className: 'dashboard-subscription-event-icon--positive',
+      Icon: CheckCircle,
+    };
+  }
+  if (kind === 'negative') {
+    return {
+      className: 'dashboard-subscription-event-icon--negative',
+      Icon: AlertCircle,
+    };
+  }
+  return {
+    className: 'dashboard-subscription-event-icon--neutral',
+    Icon: Info,
+  };
 }
 
 function DashboardChartTooltip({ active, payload, label }) {
@@ -906,10 +928,12 @@ function DashboardTab({
     const started = platformSalons.map((salon) => {
       const statusLabel = dashboardSalonStatusLabel(salon);
       const event = statusLabel === 'Live' ? 'är Live' : `startade ${statusLabel}`;
+      const kind = statusLabel === 'Live' ? 'positive' : 'neutral';
       return {
         id: `started-${salon.id}`,
         salon: salon.name || 'Namnlös salong',
         event,
+        kind,
         meta: dashboardDateMeta(salon.created_at),
         at: salon.created_at || '',
       };
@@ -918,6 +942,7 @@ function DashboardTab({
       id: `churned-${salon.id}`,
       salon: salon.name || 'Namnlös salong',
       event: 'avslutade prenumerationen',
+      kind: 'negative',
       meta: dashboardDateMeta(salon.deleted_at),
       at: salon.deleted_at || salon.created_at || '',
     }));
@@ -1904,7 +1929,7 @@ function DashboardTab({
           </h3>
           <div className="dashboard-chart-wrap">
             <ResponsiveContainer width="100%" height={260} minWidth={240} minHeight={220}>
-              <BarChart data={revenueChartData} margin={{ top: 10, right: 8, left: 4, bottom: 4 }} barCategoryGap={isPlatformDashboard ? "34%" : "12%"}>
+              <BarChart data={revenueChartData} margin={{ top: 10, right: 8, left: 4, bottom: 4 }} barCategoryGap={isPlatformDashboard ? "48%" : "12%"}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   vertical={false}
@@ -1928,7 +1953,7 @@ function DashboardTab({
                   cursor={{ fill: 'rgba(23, 23, 23, 0.06)' }}
                   content={<DashboardChartTooltip />}
                 />
-                <Bar dataKey="revenue" fill="#171717" radius={[5, 5, 0, 0]} barSize={isPlatformDashboard ? 32 : 40} maxBarSize={40} />
+                <Bar dataKey="revenue" fill={isPlatformDashboard ? '#1f2937' : '#171717'} radius={[6, 6, 0, 0]} barSize={isPlatformDashboard ? 22 : 40} maxBarSize={isPlatformDashboard ? 28 : 40} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -2019,9 +2044,20 @@ function DashboardTab({
             <div className="dashboard-subscription-events">
               {platformSubscriptionEvents.map((item) => (
                 <div key={item.id || `${item.salon}-${item.event}`} className="dashboard-subscription-event-row">
-                  <div>
-                    <span className="dashboard-subscription-event-salon">{item.salon}</span>
-                    <span className="dashboard-subscription-event-text"> {item.event}</span>
+                  <div className="dashboard-subscription-event-main">
+                    {(() => {
+                      const meta = dashboardSubscriptionEventMeta(item.kind);
+                      const EventIcon = meta.Icon;
+                      return (
+                        <span className={`dashboard-subscription-event-icon ${meta.className}`} aria-hidden>
+                          <EventIcon size={16} strokeWidth={2.2} />
+                        </span>
+                      );
+                    })()}
+                    <div className="dashboard-subscription-event-copy">
+                      <span className="dashboard-subscription-event-salon">{item.salon}</span>
+                      <span className="dashboard-subscription-event-text"> {item.event}</span>
+                    </div>
                   </div>
                   <span className="dashboard-subscription-event-meta">{item.meta}</span>
                 </div>
