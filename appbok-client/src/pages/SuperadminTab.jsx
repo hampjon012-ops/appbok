@@ -471,6 +471,9 @@ function SuperadminSalonEditSheet({ salon, onClose, onSaved }) {
             </section>
 
             {error ? <p className="sa-sheet-error">{error}</p> : null}
+            <button type="button" className="sa-sheet-danger-btn" onClick={inactivate} disabled={busy}>
+              Inaktivera salong
+            </button>
           </div>
 
           <footer className="sa-sheet-footer">
@@ -482,9 +485,6 @@ function SuperadminSalonEditSheet({ salon, onClose, onSaved }) {
                 {busy ? 'Sparar...' : 'Spara ändringar'}
               </button>
             </div>
-            <button type="button" className="sa-sheet-danger-btn" onClick={inactivate} disabled={busy}>
-              Inaktivera salong
-            </button>
           </footer>
         </form>
       </aside>

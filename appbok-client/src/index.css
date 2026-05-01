@@ -4028,12 +4028,16 @@ body:has(.admin-layout) {
 }
 
 .sa-sheet {
-  width: min(100vw, 520px);
+  position: fixed;
+  inset-block: 0;
+  right: 0;
+  width: 100%;
+  max-width: 28rem;
   height: 100%;
   display: flex;
   flex-direction: column;
   background: #fff;
-  box-shadow: -20px 0 45px rgba(15, 23, 42, 0.16);
+  box-shadow: -24px 0 55px rgba(15, 23, 42, 0.18);
   animation: sa-sheet-in 0.22s cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
@@ -4043,11 +4047,12 @@ body:has(.admin-layout) {
 }
 
 .sa-sheet-header {
+  flex-shrink: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.35rem 1.5rem 1rem;
+  padding: 1.5rem;
   border-bottom: 1px solid #f3f4f6;
 }
 
@@ -4099,12 +4104,12 @@ body:has(.admin-layout) {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 1.35rem 1.5rem 1.5rem;
+  padding: 1.5rem;
 }
 
 .sa-sheet-section {
-  padding-bottom: 1.35rem;
-  margin-bottom: 1.35rem;
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
   border-bottom: 1px solid #f3f4f6;
 }
 
@@ -4232,18 +4237,19 @@ body:has(.admin-layout) {
 }
 
 .sa-sheet-footer {
-  position: sticky;
-  bottom: 0;
-  padding: 1rem 1.5rem 1.2rem;
-  border-top: 1px solid #e5e7eb;
-  background: rgba(255, 255, 255, 0.96);
+  flex-shrink: 0;
+  padding: 1.5rem;
+  border-top: 1px solid #f3f4f6;
+  background: #f9fafb;
   backdrop-filter: blur(12px);
 }
 
 .sa-sheet-footer-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 0.65rem;
+  width: 100%;
 }
 
 .sa-sheet-secondary-btn,
@@ -4288,11 +4294,9 @@ body:has(.admin-layout) {
 }
 
 .sa-sheet-danger-btn {
-  width: 100%;
-  margin-top: 1rem;
-  padding: 0.85rem 0 0;
+  margin-top: 2rem;
+  padding: 0;
   border: 0;
-  border-top: 1px solid #f3f4f6;
   background: transparent;
   color: #b91c1c;
   font-family: var(--font-sans);
