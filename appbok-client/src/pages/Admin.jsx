@@ -2264,6 +2264,7 @@ function NewBookingModal({ onClose, onCreated }) {
   const [existingCustomer, setExistingCustomer] = useState(null);
   const [busySlots, setBusySlots] = useState(new Set());
   const [busyLoading, setBusyLoading] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState('');
 
   const ALL_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 
@@ -2322,6 +2323,22 @@ function NewBookingModal({ onClose, onCreated }) {
   };
 
   const selectedService = services.find(s => s.id === form.service_id);
+  const filteredServices = useMemo(() => {
+    const query = serviceSearch.trim().toLowerCase();
+    if (!query) return services;
+    return services.filter((service) => {
+      const haystack = [
+        service.name,
+        service.duration,
+        service.price_label,
+        service.price_amount ? `${service.price_amount / 100}` : '',
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [services, serviceSearch]);
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -2363,9 +2380,9 @@ function NewBookingModal({ onClose, onCreated }) {
     return false;
   };
 
-  return (
-    <div className="booking-slideover-backdrop">
-      <div className="booking-modal-card booking-slideover-panel">
+  return createPortal(
+    <div className="booking-slideover-backdrop" onMouseDown={onClose}>
+      <div className="booking-modal-card booking-slideover-panel" onMouseDown={(event) => event.stopPropagation()}>
         <div className="booking-modal-header">
           <h3>Ny bokning</h3>
           <div className="booking-modal-stepper">
@@ -2383,8 +2400,18 @@ function NewBookingModal({ onClose, onCreated }) {
           {step === 1 && (
             <div className="booking-step-content">
               <p className="booking-step-label">Vilken tjänst?</p>
+              <div className="booking-service-search-wrap">
+                <input
+                  type="search"
+                  className="booking-service-search"
+                  value={serviceSearch}
+                  onChange={(event) => setServiceSearch(event.target.value)}
+                  placeholder="Sök tjänst..."
+                  autoFocus
+                />
+              </div>
               <div className="booking-choice-list">
-                {services.map(s => (
+                {filteredServices.map(s => (
                   <button
                     key={s.id}
                     className={`booking-choice-btn ${form.service_id === s.id ? 'selected' : ''}`}
@@ -2394,6 +2421,9 @@ function NewBookingModal({ onClose, onCreated }) {
                     <span className="bcb-meta">{s.duration} · {(s.price_amount / 100).toLocaleString('sv-SE')} kr</span>
                   </button>
                 ))}
+                {filteredServices.length === 0 ? (
+                  <p className="booking-service-search-empty">Ingen tjänst matchar sökningen.</p>
+                ) : null}
               </div>
             </div>
           )}
@@ -2497,7 +2527,8 @@ function NewBookingModal({ onClose, onCreated }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

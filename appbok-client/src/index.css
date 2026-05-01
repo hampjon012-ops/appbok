@@ -7264,7 +7264,7 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
 .booking-slideover-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 10040;
   background: rgba(0, 0, 0, 0.5);
   animation: fadeIn 0.16s ease-out;
 }
@@ -7277,9 +7277,11 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
 
 .booking-slideover-panel {
   position: fixed;
-  inset-block: 0;
+  top: 0;
   right: 0;
-  z-index: 50;
+  bottom: 0;
+  left: auto;
+  z-index: 10050;
   width: 100%;
   max-width: 28rem;
   height: 100vh;
@@ -7400,6 +7402,46 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
 
 .booking-step-content {
   animation: fadeUp 0.25s ease forwards;
+}
+
+.booking-service-search-wrap {
+  position: sticky;
+  top: -1.5rem;
+  z-index: 1;
+  margin: 0 -0.15rem 1rem;
+  padding: 0.1rem 0.15rem 0.75rem;
+  background: #fff;
+}
+
+.booking-service-search {
+  width: 100%;
+  min-height: 2.75rem;
+  box-sizing: border-box;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+  color: #111827;
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  padding: 0.65rem 0.85rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.booking-service-search:focus {
+  background: #fff;
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
+}
+
+.booking-service-search-empty {
+  margin: 1rem 0 0;
+  padding: 1rem;
+  border: 1px dashed #e5e7eb;
+  border-radius: 12px;
+  color: #6b7280;
+  font-size: 0.88rem;
+  text-align: center;
 }
 
 .booking-choice-list {
