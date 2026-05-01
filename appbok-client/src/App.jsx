@@ -20,7 +20,7 @@ import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
 import { getValidOpeningHoursWeek } from './lib/publicOpeningHours.js';
 import PrivacyCheckbox from './components/PrivacyCheckbox.jsx';
 import CookieBanner from './components/CookieBanner.jsx';
-import { ChevronRight, ChevronLeft, CreditCard, Store, Lock, Plus, User, Users, X, CheckCircle2, Circle } from 'lucide-react';
+import { Bell, CalendarDays, ChevronRight, ChevronLeft, CreditCard, Clock3, MessageSquare, Store, Lock, Plus, User, Users, X, CheckCircle2, Circle } from 'lucide-react';
 
 function isPreviewEmbedClient() {
   if (typeof window === 'undefined') return false;
@@ -1747,48 +1747,48 @@ function BookingSection({
 
               {/* ── B. SAMMANFATTNING (Kvitto) ── */}
               <div className="checkout-receipt">
-                {selectedServices.map((svc) => (
-                  <div key={svc.id} className="checkout-receipt-row">
-                    <span className="checkout-receipt-left">{svc.name}</span>
-                    <span className="checkout-receipt-right">
-                      {fmtPrice(servicePriceÖre(svc))}
-                    </span>
+                <div className="checkout-receipt-hero">
+                  <div>
+                    <p className="checkout-eyebrow">Din bokning</p>
+                    <h4 className="checkout-total-title">
+                      {selectedServices.length ? fmtPrice(totalPriceÖre) : '—'}
+                    </h4>
                   </div>
-                ))}
-                <div className="checkout-receipt-row">
-                  <span className="checkout-receipt-left">Stylist</span>
-                  <span className="checkout-receipt-right">
-                    {selectedStylist?.name}
-                  </span>
+                  {selectedServices.length > 0 && (
+                    <span className="checkout-duration-pill">{fmtDurationTotal(totalDurationMin)}</span>
+                  )}
                 </div>
-                <div className="checkout-receipt-row">
-                  <span className="checkout-receipt-left">Datum</span>
-                  <span className="checkout-receipt-right">
-                    {selectedDate ? fmtDateLong(selectedDate) : '—'}
-                  </span>
+
+                <div className="checkout-service-stack">
+                  {selectedServices.map((svc) => (
+                    <div key={svc.id} className="checkout-service-chip">
+                      <span>{svc.name}</span>
+                      <strong>{fmtPrice(servicePriceÖre(svc))}</strong>
+                    </div>
+                  ))}
                 </div>
-                <div className="checkout-receipt-row">
-                  <span className="checkout-receipt-left">Tid</span>
-                  <span className="checkout-receipt-right">
-                    {selectedTime}
-                  </span>
+
+                <div className="checkout-summary-grid">
+                  <div className="checkout-summary-item">
+                    <CalendarDays size={16} strokeWidth={1.8} />
+                    <div>
+                      <span>Datum</span>
+                      <strong>{selectedDate ? fmtDateLong(selectedDate) : '—'}</strong>
+                    </div>
+                  </div>
+                  <div className="checkout-summary-item">
+                    <Clock3 size={16} strokeWidth={1.8} />
+                    <div>
+                      <span>Tid</span>
+                      <strong>{selectedTime}</strong>
+                    </div>
+                  </div>
                 </div>
-                <div className="checkout-receipt-row">
-                  <span className="checkout-receipt-left">Kund</span>
-                  <span className="checkout-receipt-right">
-                    {form.name}
-                  </span>
+
+                <div className="checkout-receipt-meta">
+                  <span>{selectedStylist?.name}</span>
+                  <span>{form.name}</span>
                 </div>
-                <div className="checkout-receipt-divider" />
-                <div className="checkout-receipt-row checkout-receipt-total">
-                  <span className="checkout-receipt-left">Totalt</span>
-                  <span className="checkout-receipt-right">
-                    {selectedServices.length ? fmtPrice(totalPriceÖre) : '—'}
-                  </span>
-                </div>
-                {selectedServices.length > 0 && (
-                  <p className="checkout-receipt-duration">{fmtDurationTotal(totalDurationMin)}</p>
-                )}
               </div>
 
               {/* ── C. TILLVAL (Meddelande + SMS) ── */}
@@ -1799,7 +1799,10 @@ function BookingSection({
                     className="checkout-note-toggle"
                     onClick={() => setNotesExpanded(true)}
                   >
-                    <span>+ Lägg till meddelande</span>
+                    <span className="checkout-option-left">
+                      <MessageSquare size={16} strokeWidth={1.8} />
+                      <span>Lägg till meddelande</span>
+                    </span>
                     <ChevronRight size={15} strokeWidth={2} />
                   </button>
                 ) : (
@@ -1827,7 +1830,10 @@ function BookingSection({
                     onChange={e => setMarketingConsent(e.target.checked)}
                     className="checkout-sms-input"
                   />
-                  <span className="checkout-sms-text">SMS-aviseringar</span>
+                  <span className="checkout-option-left">
+                    <Bell size={16} strokeWidth={1.8} />
+                    <span className="checkout-sms-text">SMS-aviseringar</span>
+                  </span>
                 </label>
               </div>
 
@@ -1841,8 +1847,13 @@ function BookingSection({
                       onClick={() => { setPaymentChoice('swish'); setApiError(''); }}
                     >
                       <span className="checkout-radio-left">
-                        <CreditCard size={18} strokeWidth={1.8} className="checkout-pay-icon" />
-                        <span className="checkout-pay-label">Onlinebetalning</span>
+                        <span className="checkout-pay-iconbox">
+                          <CreditCard size={18} strokeWidth={1.8} className="checkout-pay-icon" />
+                        </span>
+                        <span className="checkout-pay-copy">
+                          <span className="checkout-pay-label">Onlinebetalning</span>
+                          <span className="checkout-pay-subtitle">Kort, Klarna eller Swish</span>
+                        </span>
                       </span>
                       {paymentChoice === 'swish' ? (
                         <CheckCircle2 size={20} strokeWidth={1.5} className="text-gray-900 fill-gray-900" />
@@ -1856,8 +1867,13 @@ function BookingSection({
                       onClick={() => { setPaymentChoice('on_site'); setApiError(''); }}
                     >
                       <span className="checkout-radio-left">
-                        <Store size={18} strokeWidth={1.8} className="checkout-pay-icon" />
-                        <span className="checkout-pay-label">Betala på plats</span>
+                        <span className="checkout-pay-iconbox">
+                          <Store size={18} strokeWidth={1.8} className="checkout-pay-icon" />
+                        </span>
+                        <span className="checkout-pay-copy">
+                          <span className="checkout-pay-label">Betala på plats</span>
+                          <span className="checkout-pay-subtitle">Betala i salongen</span>
+                        </span>
                       </span>
                       {paymentChoice === 'on_site' ? (
                         <CheckCircle2 size={20} strokeWidth={1.5} className="text-gray-900 fill-gray-900" />
