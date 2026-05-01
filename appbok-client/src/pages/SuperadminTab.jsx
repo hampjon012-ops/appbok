@@ -25,17 +25,12 @@ const THEME_PRESETS_UI = [
 
 /** Samma demo som `public/config.json` (`salonSlug`) — inbäddad live-preview */
 const PREVIEW_BOOKING_SLUG = 'colorisma';
-const SUPERADMIN_PLAN_OPTIONS = [
-  { value: 'demo', label: 'Demo' },
-  { value: 'trial', label: 'Trial' },
-  { value: 'starter', label: 'Starter' },
-  { value: 'pro', label: 'Pro' },
-  { value: 'live', label: 'Live' },
-];
 const SUPERADMIN_STATUS_OPTIONS = [
-  { value: 'demo', label: 'DEMO' },
-  { value: 'live', label: 'LIVE' },
-  { value: 'inactive', label: 'INAKTIV' },
+  { value: 'demo', label: 'Demo' },
+  { value: 'trialing', label: 'Trialing' },
+  { value: 'active', label: 'Active' },
+  { value: 'past_due', label: 'Past Due' },
+  { value: 'canceled', label: 'Canceled' },
 ];
 
 function CreateSalonLandingPreview({ salonName, themePreset }) {
@@ -127,8 +122,10 @@ function trialDateInputValue(value) {
 
 function statusValueForEditor(salon) {
   const st = String(salon?.status || '').toLowerCase();
-  if (st === 'live') return 'live';
-  if (st === 'inactive' || st === 'suspended' || st === 'paused' || st === 'canceled') return 'inactive';
+  if (st === 'live' || st === 'active') return 'active';
+  if (st === 'trialing' || st === 'trial') return 'trialing';
+  if (st === 'past_due') return 'past_due';
+  if (st === 'canceled' || st === 'cancelled' || st === 'inactive' || st === 'suspended' || st === 'paused') return 'canceled';
   return 'demo';
 }
 
@@ -142,12 +139,20 @@ function addDaysInputDate(value, days) {
 function SuperadminSalonEditSheet({ salon, onClose, onSaved }) {
   const [name, setName] = useState(salon.name || '');
   const [subdomain, setSubdomain] = useState(salon.subdomain || salon.slug || '');
-  const [plan, setPlan] = useState(salon.plan || 'demo');
   const [price, setPrice] = useState(monthlyPriceKrInputValue(salon.monthly_price_amount));
   const [status, setStatus] = useState(statusValueForEditor(salon));
   const [trialEndsAt, setTrialEndsAt] = useState(trialDateInputValue(salon.trial_ends_at));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const statusDescriptions = {
+    Demo: 'Intern testsalong eller uppvisningskonto. Faktureras ej.',
+    Trialing: 'Kunden testar plattformen. Övergår normalt till Active när testperioden löper ut.',
+    Active: 'Aktiv och betalande kund.',
+    'Past Due': 'Kundens senaste betalning misslyckades (t.ex. utgånget kort). Kräver åtgärd.',
+    Canceled: 'Kunden har avslutat sin prenumeration. Kontot är inaktivt.',
+  };
+  const selectedStatusLabel = SUPERADMIN_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || '';
+  const statusHelpText = selectedStatusLabel ? statusDescriptions[selectedStatusLabel] : '';
 
   useEffect(() => {
     const onKey = (e) => {
@@ -189,12 +194,11 @@ function SuperadminSalonEditSheet({ salon, onClose, onSaved }) {
         throw new Error(typeof detailsData.error === 'string' ? detailsData.error : 'Kunde inte spara grunduppgifter.');
       }
 
-      const billingStatus = status === 'demo' ? 'active' : status;
+      const billingStatus = status;
       const billingRes = await fetch(`/api/superadmin/salons/${salon.id}/billing`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({
-          plan,
           status: billingStatus,
           monthly_price_amount: Math.round(amountKr * 100),
         }),
@@ -287,11 +291,7 @@ function SuperadminSalonEditSheet({ salon, onClose, onSaved }) {
               <h4 className="sa-sheet-section-title">Abonnemang</h4>
               <label className="sa-sheet-field">
                 <span>Plan</span>
-                <select className="sa-sheet-input" value={plan} onChange={(e) => setPlan(e.target.value)} disabled={busy}>
-                  {SUPERADMIN_PLAN_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+                <input className="sa-sheet-input" value="Standard" disabled readOnly />
               </label>
               <label className="sa-sheet-field">
                 <span>Pris</span>
@@ -315,6 +315,7 @@ function SuperadminSalonEditSheet({ salon, onClose, onSaved }) {
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
+                {statusHelpText ? <p className="sa-sheet-help-text">{statusHelpText}</p> : null}
               </label>
             </section>
 
@@ -391,8 +392,8 @@ function SuperadminSalonStatusCell({ salon }) {
   }
   if (st === 'active') {
     return (
-      <span className="sa-status sa-status--demo" style={{ textTransform: 'none' }} title="Före trial (visas som demo)">
-        DEMO
+      <span className="sa-status sa-status--live" style={{ textTransform: 'none' }} title="Active">
+        ACTIVE
       </span>
     );
   }

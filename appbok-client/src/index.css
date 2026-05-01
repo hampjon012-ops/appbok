@@ -4143,6 +4143,14 @@ body:has(.admin-layout) {
   margin-bottom: 0;
 }
 
+.sa-sheet-help-text {
+  margin: -0.1rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
 .sa-sheet-input {
   width: 100%;
   min-height: 2.65rem;
