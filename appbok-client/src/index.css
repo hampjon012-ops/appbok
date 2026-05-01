@@ -5650,6 +5650,13 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
   border-bottom: 1px solid #f3f4f6;
 }
 
+.bookings-global-toolbar {
+  margin-bottom: 1rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
 .bookings-date-navigator {
   display: flex;
   align-items: center;
@@ -5660,10 +5667,6 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
 .bookings-calendar-toolbar .bookings-date-navigator {
   justify-content: space-between;
   width: 100%;
-}
-
-.bookings-list-filter-card {
-  margin-bottom: 1rem;
 }
 
 .bookings-filter-row .bookings-date-navigator {

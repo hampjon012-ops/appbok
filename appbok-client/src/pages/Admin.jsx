@@ -2845,10 +2845,6 @@ function BookingsCalendarView({
 
   return (
     <div className="admin-card bookings-calendar-card">
-      <div className="bookings-calendar-toolbar">
-        <DateNavigator selectedDate={selectedDate} onDateChange={onDateChange} title="Kalendervy" />
-      </div>
-
       {loading ? (
         <div className="admin-loading">Laddar kalender...</div>
       ) : (
@@ -3037,8 +3033,7 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
         </div>
       </div>
 
-      {viewMode === 'list' ? (
-      <div className="admin-card bookings-list-filter-card">
+      <div className="admin-card bookings-global-toolbar">
         <div className="bookings-filter-row">
           <input
             className="invite-url-input"
@@ -3050,7 +3045,6 @@ function BookingsTab({ newBookingOpen, setNewBookingOpen }) {
           <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} />
         </div>
       </div>
-      ) : null}
 
       {viewMode === 'calendar' ? (
         <BookingsCalendarView
