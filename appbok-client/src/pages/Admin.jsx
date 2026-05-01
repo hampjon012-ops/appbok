@@ -2364,8 +2364,8 @@ function NewBookingModal({ onClose, onCreated }) {
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-card booking-modal-card">
+    <div className="booking-slideover-backdrop">
+      <div className="booking-modal-card booking-slideover-panel">
         <div className="booking-modal-header">
           <h3>Ny bokning</h3>
           <div className="booking-modal-stepper">

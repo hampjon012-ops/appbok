@@ -7261,10 +7261,45 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
 }
 
 /* ── Booking Modal ──────────────────────────────────────────────────────── */
+.booking-slideover-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.16s ease-out;
+}
+
 .booking-modal-card {
   max-width: 540px;
   padding: 0;
   overflow: hidden;
+}
+
+.booking-slideover-panel {
+  position: fixed;
+  inset-block: 0;
+  right: 0;
+  z-index: 50;
+  width: 100%;
+  max-width: 28rem;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 0;
+  box-shadow: -24px 0 55px rgba(15, 23, 42, 0.22);
+  animation: booking-slideover-in 0.22s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+@media (max-width: 639px) {
+  .booking-slideover-panel {
+    max-width: none;
+  }
+}
+
+@keyframes booking-slideover-in {
+  from { transform: translateX(24px); opacity: 0.82; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 .booking-modal-header {
@@ -7273,6 +7308,13 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
   gap: 1rem;
   padding: 1.2rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
+}
+
+.booking-slideover-panel .booking-modal-header {
+  flex-shrink: 0;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
 }
 
 .booking-modal-header h3 {
@@ -7323,12 +7365,28 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
   overflow-y: auto;
 }
 
+.booking-slideover-panel .booking-modal-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  padding: 1.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
 .booking-modal-footer {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border-color);
+}
+
+.booking-slideover-panel .booking-modal-footer {
+  flex-shrink: 0;
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
 }
 
 .booking-step-label {
