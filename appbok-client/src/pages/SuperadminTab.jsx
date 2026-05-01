@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import ActionsDropdown from '../components/ActionsDropdown.jsx';
 import AddSalonModal from '../components/AddSalonModal.jsx';
@@ -73,128 +73,6 @@ function slugify(s) {
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'demo';
-}
-
-function staffRoleLabel(role) {
-  if (role === 'admin') return 'Admin';
-  if (role === 'staff') return 'Personal';
-  return role || '—';
-}
-
-function fmtStaffCreated(iso) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' });
-  } catch {
-    return '—';
-  }
-}
-
-function SalonStaffPanel({ salon }) {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState('');
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setErr('');
-    fetch(`/api/superadmin/salons/${salon.id}/staff`, { headers: authHeaders() })
-      .then(async (r) => {
-        const d = await r.json().catch(() => ({}));
-        if (!r.ok) {
-          throw new Error(typeof d.error === 'string' ? d.error : 'Kunde inte hämta personal.');
-        }
-        return Array.isArray(d) ? d : [];
-      })
-      .then((data) => {
-        if (!cancelled) setRows(data);
-      })
-      .catch((e) => {
-        if (!cancelled) setErr(e.message || 'Fel');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [salon.id]);
-
-  const loginAs = (member) => {
-    localStorage.setItem(
-      'sb_superadmin_impersonate',
-      JSON.stringify({
-        id: member.id,
-        name: member.name,
-        email: member.email,
-        role: 'staff',
-        salonId: salon.id,
-        salonName: salon.name,
-        salonSlug: salon.slug || salon.subdomain,
-      }),
-    );
-    localStorage.setItem(
-      'sb_salon',
-      JSON.stringify({
-        id: salon.id,
-        name: salon.name,
-        slug: salon.slug || salon.subdomain,
-      }),
-    );
-    window.location.href = '/admin';
-  };
-
-  if (loading) return <p className="admin-hint">Laddar personal…</p>;
-  if (err) return <p className="superadmin-error">{err}</p>;
-  if (!rows.length) {
-    return (
-      <p className="admin-hint" style={{ margin: 0 }}>
-        Ingen personal ännu. Bjud in stylister via Inställningar → Personal.
-      </p>
-    );
-  }
-
-  return (
-    <div className="superadmin-salon-staff-panel">
-      <h4 className="admin-card-title" style={{ marginTop: 0, marginBottom: '0.75rem' }}>
-        Personal
-      </h4>
-      <div className="admin-table-wrap">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Namn</th>
-              <th>E-post</th>
-              <th>Roll</th>
-              <th>Skapad</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((m) => (
-              <tr key={m.id}>
-                <td>{m.name || '—'}</td>
-                <td>{m.email || '—'}</td>
-                <td>{staffRoleLabel(m.role)}</td>
-                <td>{fmtStaffCreated(m.created_at)}</td>
-                <td style={{ textAlign: 'right' }}>
-                  <button
-                    type="button"
-                    className="btn-sm btn-ghost"
-                    onClick={() => loginAs(m)}
-                    title="Logga in som denna användare"
-                  >
-                    Logga in som
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
 }
 
 function TrialEditor({ salon }) {
@@ -576,7 +454,6 @@ export default function SuperadminTab() {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editSalon, setEditSalon] = useState(null);
-  const [expandedSalonId, setExpandedSalonId] = useState(null);
   const [restoreBusyId, setRestoreBusyId] = useState(null);
   const [permanentModalSalon, setPermanentModalSalon] = useState(null);
   const [permanentNameConfirm, setPermanentNameConfirm] = useState('');
@@ -628,6 +505,28 @@ export default function SuperadminTab() {
       alert(e.message || 'Fel');
     } finally {
       setRestoreBusyId(null);
+    }
+  };
+
+  const handleInactivateSalon = async (salon) => {
+    const msg =
+      `Inaktivera salongen "${salon.name}"? Salongen flyttas till fliken Inaktiva (soft delete). ` +
+      'All data sparas och kan återställas från Inaktiva.';
+    if (!confirm(msg)) return;
+    try {
+      const res = await fetch(`/api/superadmin/salons/${salon.id}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          status: 'deleted',
+          deleted_at: new Date().toISOString(),
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof d.error === 'string' ? d.error : 'Kunde inte inaktivera salongen.');
+      loadSalons();
+    } catch (e) {
+      alert(e.message || 'Fel');
     }
   };
 
@@ -693,7 +592,6 @@ export default function SuperadminTab() {
           className={`superadmin-subtab ${salonScope === 'active' ? 'active' : ''}`}
           onClick={() => {
             setSalonScope('active');
-            setExpandedSalonId(null);
           }}
         >
           Aktiva
@@ -703,7 +601,6 @@ export default function SuperadminTab() {
           className={`superadmin-subtab ${salonScope === 'inactive' ? 'active' : ''}`}
           onClick={() => {
             setSalonScope('inactive');
-            setExpandedSalonId(null);
           }}
         >
           Inaktiva
@@ -804,52 +701,43 @@ export default function SuperadminTab() {
             </thead>
             <tbody>
               {filtered.map((s) => (
-                <Fragment key={s.id}>
-                  <tr className="superadmin-row-hover">
-                    <td className="sa-td-name">{s.name}</td>
-                    <td>
-                      <span className="sa-subdomain">{s.subdomain || s.slug || '—'}</span>
-                    </td>
-                    <td className="sa-td-plan">{superadminPlanLabel(s.plan)}</td>
-                    <td>
-                      <SuperadminMonthlyPriceCell salon={s} />
-                    </td>
-                    <td>
-                      <SuperadminSalonStatusCell salon={s} />
-                    </td>
-                    <td>
-                      <TrialEditor salon={s} />
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div className="sa-table-actions-cell">
-                        <ActionsDropdown
-                          salon={s}
-                          onEdit={() => setEditSalon(s)}
-                          onViewStaff={() => setExpandedSalonId((cur) => (cur === s.id ? null : s.id))}
-                          onImpersonate={() => {
-                            localStorage.setItem('sb_superadmin_impersonate', JSON.stringify(s));
-                            localStorage.setItem(
-                              'sb_salon',
-                              JSON.stringify({
-                                id: s.id,
-                                name: s.name,
-                                slug: s.slug || s.subdomain,
-                              }),
-                            );
-                            window.location.reload();
-                          }}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                  {expandedSalonId === s.id ? (
-                    <tr className="superadmin-staff-expansion-row">
-                      <td colSpan={7} style={{ background: '#fafaf9', padding: '1rem 1.25rem', borderTop: '1px solid #e7e5e4' }}>
-                        <SalonStaffPanel salon={s} />
-                      </td>
-                    </tr>
-                  ) : null}
-                </Fragment>
+                <tr key={s.id} className="superadmin-row-hover">
+                  <td className="sa-td-name">{s.name}</td>
+                  <td>
+                    <span className="sa-subdomain">{s.subdomain || s.slug || '—'}</span>
+                  </td>
+                  <td className="sa-td-plan">{superadminPlanLabel(s.plan)}</td>
+                  <td>
+                    <SuperadminMonthlyPriceCell salon={s} />
+                  </td>
+                  <td>
+                    <SuperadminSalonStatusCell salon={s} />
+                  </td>
+                  <td>
+                    <TrialEditor salon={s} />
+                  </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <div className="sa-table-actions-cell">
+                      <ActionsDropdown
+                        salon={s}
+                        onEdit={() => setEditSalon(s)}
+                        onInactivate={() => handleInactivateSalon(s)}
+                        onImpersonate={() => {
+                          localStorage.setItem('sb_superadmin_impersonate', JSON.stringify(s));
+                          localStorage.setItem(
+                            'sb_salon',
+                            JSON.stringify({
+                              id: s.id,
+                              name: s.name,
+                              slug: s.slug || s.subdomain,
+                            }),
+                          );
+                          window.location.reload();
+                        }}
+                      />
+                    </div>
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>

@@ -37,10 +37,30 @@ function CopyIcon() {
   );
 }
 
-export default function ActionsDropdown({ salon, onEdit, onImpersonate, onViewStaff }) {
+function ExternalLinkIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3h6v6" />
+      <path d="M10 14 21 3" />
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    </svg>
+  );
+}
+
+function BanIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="m4.9 4.9 14.2 14.2" />
+    </svg>
+  );
+}
+
+export default function ActionsDropdown({ salon, onEdit, onImpersonate, onInactivate }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const [copied, setCopied] = useState(false);
+  const [stripeBusy, setStripeBusy] = useState(false);
 
   // Close on outside click
   useEffect(() => {
@@ -58,6 +78,27 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onViewSt
     setCopied(true);
     setOpen(false);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleOpenStripe() {
+    setStripeBusy(true);
+    try {
+      const res = await fetch('/api/stripe/connect-dashboard', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('sb_token')}`,
+          'X-Impersonate-Salon-Id': salon.id,
+        },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Kunde inte öppna Stripe.');
+      if (data.url) window.open(data.url, '_blank', 'noopener,noreferrer');
+      setOpen(false);
+    } catch (e) {
+      alert(e.message || 'Kunde inte öppna Stripe.');
+    } finally {
+      setStripeBusy(false);
+    }
   }
 
   return (
@@ -96,18 +137,6 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onViewSt
             <span>Logga in som salong</span>
           </button>
 
-          {onViewStaff ? (
-            <button
-              type="button"
-              className="sa-actions-item"
-              role="menuitem"
-              onClick={() => { onViewStaff(); setOpen(false); }}
-            >
-              <UserIcon />
-              <span>Visa personal</span>
-            </button>
-          ) : null}
-
           <button
             type="button"
             className="sa-actions-item"
@@ -117,6 +146,31 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onViewSt
             <CopyIcon />
             <span>{copied ? 'Link kopierad!' : 'Kopiera demolänk'}</span>
           </button>
+
+          <button
+            type="button"
+            className="sa-actions-item"
+            role="menuitem"
+            onClick={handleOpenStripe}
+            disabled={stripeBusy}
+          >
+            <ExternalLinkIcon />
+            <span>{stripeBusy ? 'Öppnar Stripe…' : 'Öppna i Stripe'}</span>
+          </button>
+
+          <div className="sa-actions-divider" role="separator" />
+
+          {onInactivate ? (
+            <button
+              type="button"
+              className="sa-actions-item sa-actions-item--danger"
+              role="menuitem"
+              onClick={() => { onInactivate(); setOpen(false); }}
+            >
+              <BanIcon />
+              <span>Inaktivera salong</span>
+            </button>
+          ) : null}
         </div>
       )}
     </div>
