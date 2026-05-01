@@ -245,39 +245,36 @@ html.preview-embed-mode [role='button'] {
    ========================================= */
 .sticky-top-bar {
   position: fixed;
-  top: env(safe-area-inset-top, 0px);
+  top: 0;
   left: 0;
-  right: 0;
-  z-index: 100;
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-  padding-left: max(1rem, env(safe-area-inset-left, 0px));
-  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  width: 100%;
+  z-index: 50;
+  height: calc(4rem + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border-bottom: 1px solid transparent;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.4s ease;
   transform: translateY(-100%);
   opacity: 0;
 }
 
 .sticky-top-bar.visible {
-  background: rgba(245, 243, 239, 0.75); /* #F5F3EF / 75 */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   transform: translateY(0);
   opacity: 1;
 }
 
 .sticky-top-bar h3 {
   margin: 0;
-  font-family: var(--font-sans);
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--text-color);
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #111827;
+  line-height: 1;
+  text-align: center;
 }
 
 /* =========================================
@@ -886,22 +883,18 @@ a.insta-item-link:focus-visible {
     text-align: center;
   }
 
-  /* Full-width footer bar + pill CTA — translucent cream, extra air around button */
   .floating-action {
     position: fixed;
     left: 0;
-    right: 0;
     bottom: 0;
-    z-index: 90;
-    padding-top: 1.35rem;
-    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
-    padding-left: max(1.75rem, env(safe-area-inset-left, 0px));
-    padding-right: max(1.75rem, env(safe-area-inset-right, 0px));
-    background: rgba(250, 248, 245, 0.78);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-    box-shadow: 0 -6px 28px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    z-index: 50;
+    padding-top: 1.25rem;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+    background: #fff;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.08);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -914,19 +907,23 @@ a.insta-item-link:focus-visible {
     background: var(--accent-color);
     color: white;
     border: none;
-    padding: 1.05rem 1.5rem;
-    border-radius: 9999px;
+    padding: 1rem 1.5rem;
+    border-radius: 1rem;
     font-family: var(--font-sans);
-    font-weight: 600;
+    font-weight: 500;
     font-size: 1.125rem;
-    letter-spacing: 0.02em;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    letter-spacing: 0;
+    box-shadow: none;
     cursor: pointer;
-    transition: filter 0.2s ease;
+    transition: filter 0.2s ease, transform 0.16s ease;
   }
 
   .floating-action .btn-floating:hover {
     filter: brightness(0.9);
+  }
+
+  .floating-action .btn-floating:active {
+    transform: scale(0.98);
   }
 }
 
@@ -9600,15 +9597,15 @@ a.insta-handle-link:focus-visible {
 .btn-floating {
   background: var(--accent-color);
   color: #fff;
-  font-weight: 600;
-  border-radius: 50px;
+  font-weight: 500;
+  border-radius: 1rem;
   width: 100%;
   padding: 1rem;
-  font-size: 1.05rem;
-  letter-spacing: 0.01em;
+  font-size: 1.125rem;
+  letter-spacing: 0;
   cursor: pointer;
   border: none;
-  transition: filter 0.2s ease, opacity 0.2s ease;
+  transition: filter 0.2s ease, opacity 0.2s ease, transform 0.16s ease;
 }
 
 .btn-floating:disabled {
