@@ -2749,9 +2749,10 @@ function BookingsCalendarView({
     const map = new Map();
     columns.forEach((stylist) => map.set(String(stylist.id), []));
     bookings.forEach((booking) => {
-      const key = booking.stylist?.id ? String(booking.stylist.id) : 'any';
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(booking);
+      const key = booking.stylist?.id || booking.stylist_id ? String(booking.stylist?.id || booking.stylist_id) : 'any';
+      const targetKey = map.has(key) ? key : 'any';
+      if (!map.has(targetKey)) map.set(targetKey, []);
+      map.get(targetKey).push(booking);
     });
     return map;
   }, [bookings, columns]);

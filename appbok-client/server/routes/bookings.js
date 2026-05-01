@@ -22,8 +22,8 @@ router.get('/', requireAuth, async (req, res) => {
       .from('bookings')
       .select(`
         *,
-        services(name, price_label, duration),
-        stylist:users!bookings_stylist_id_fkey(name, title, photo_url)
+        services(name, price_label, price_amount, duration, duration_minutes),
+        stylist:users!bookings_stylist_id_fkey(id, name, title, photo_url)
       `)
       .eq('salon_id', req.user.salonId)
       .order('booking_date', { ascending: false })
