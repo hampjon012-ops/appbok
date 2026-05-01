@@ -4011,6 +4011,303 @@ body:has(.admin-layout) {
   align-items: center;
 }
 
+.sa-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(17, 24, 39, 0.28);
+  backdrop-filter: blur(2px);
+  animation: sa-sheet-overlay-in 0.16s ease-out;
+}
+
+@keyframes sa-sheet-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sa-sheet {
+  width: min(100vw, 520px);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  box-shadow: -20px 0 45px rgba(15, 23, 42, 0.16);
+  animation: sa-sheet-in 0.22s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+@keyframes sa-sheet-in {
+  from { transform: translateX(24px); opacity: 0.8; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.sa-sheet-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.35rem 1.5rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.sa-sheet-title {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.02em;
+}
+
+.sa-sheet-subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
+.sa-sheet-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border: 1px solid #f3f4f6;
+  border-radius: 10px;
+  background: #fff;
+  color: #6b7280;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.sa-sheet-close:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+  color: #111827;
+}
+
+.sa-sheet-form {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-sheet-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.35rem 1.5rem 1.5rem;
+}
+
+.sa-sheet-section {
+  padding-bottom: 1.35rem;
+  margin-bottom: 1.35rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.sa-sheet-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.sa-sheet-section-title {
+  margin: 0 0 0.9rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sa-sheet-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.sa-sheet-field:last-child {
+  margin-bottom: 0;
+}
+
+.sa-sheet-input {
+  width: 100%;
+  min-height: 2.65rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.6rem 0.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.sa-sheet-input:focus {
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+}
+
+.sa-sheet-input:disabled {
+  cursor: wait;
+  background: #f9fafb;
+  color: #9ca3af;
+}
+
+.sa-sheet-input-suffix-wrap {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sa-sheet-input-suffix-wrap:focus-within {
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+}
+
+.sa-sheet-input-suffix-wrap .sa-sheet-input {
+  min-height: 2.65rem;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.sa-sheet-input-suffix-wrap span {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.85rem;
+  border-left: 1px solid #f3f4f6;
+  background: #fafafa;
+  color: #6b7280;
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sa-sheet-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.sa-sheet-pill-btn {
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+  color: #374151;
+  padding: 0.32rem 0.7rem;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.sa-sheet-pill-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+.sa-sheet-error {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.sa-sheet-footer {
+  position: sticky;
+  bottom: 0;
+  padding: 1rem 1.5rem 1.2rem;
+  border-top: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+}
+
+.sa-sheet-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.sa-sheet-secondary-btn,
+.sa-sheet-primary-btn {
+  min-height: 2.55rem;
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.sa-sheet-secondary-btn {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+}
+
+.sa-sheet-secondary-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.sa-sheet-primary-btn {
+  border: 1px solid #111827;
+  background: #111827;
+  color: #fff;
+}
+
+.sa-sheet-primary-btn:hover:not(:disabled) {
+  background: #1f2937;
+}
+
+.sa-sheet-secondary-btn:disabled,
+.sa-sheet-primary-btn:disabled,
+.sa-sheet-danger-btn:disabled,
+.sa-sheet-pill-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.sa-sheet-danger-btn {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.85rem 0 0;
+  border: 0;
+  border-top: 1px solid #f3f4f6;
+  background: transparent;
+  color: #b91c1c;
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sa-sheet-danger-btn:hover:not(:disabled) {
+  color: #991b1b;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* ── Superadmin Settings ───────────────────────────────────────────────────── */
 .sa-settings-root {
   max-width: 860px;

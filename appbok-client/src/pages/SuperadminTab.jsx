@@ -24,6 +24,18 @@ const THEME_PRESETS_UI = [
 
 /** Samma demo som `public/config.json` (`salonSlug`) — inbäddad live-preview */
 const PREVIEW_BOOKING_SLUG = 'colorisma';
+const SUPERADMIN_PLAN_OPTIONS = [
+  { value: 'demo', label: 'Demo' },
+  { value: 'trial', label: 'Trial' },
+  { value: 'starter', label: 'Starter' },
+  { value: 'pro', label: 'Pro' },
+  { value: 'live', label: 'Live' },
+];
+const SUPERADMIN_STATUS_OPTIONS = [
+  { value: 'demo', label: 'DEMO' },
+  { value: 'live', label: 'LIVE' },
+  { value: 'inactive', label: 'INAKTIV' },
+];
 
 function CreateSalonLandingPreview({ salonName, themePreset }) {
   const bookingPreviewSrc = useMemo(() => {
@@ -227,6 +239,259 @@ function monthlyPriceKrInputValue(amount) {
   return String(Math.round(ore / 100));
 }
 
+function trialDateInputValue(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toISOString().slice(0, 10);
+}
+
+function statusValueForEditor(salon) {
+  const st = String(salon?.status || '').toLowerCase();
+  if (st === 'live') return 'live';
+  if (st === 'inactive' || st === 'suspended' || st === 'paused' || st === 'canceled') return 'inactive';
+  return 'demo';
+}
+
+function addDaysInputDate(value, days) {
+  const base = value ? new Date(`${value}T12:00:00`) : new Date();
+  if (Number.isNaN(base.getTime())) return '';
+  base.setDate(base.getDate() + days);
+  return base.toISOString().slice(0, 10);
+}
+
+function SuperadminSalonEditSheet({ salon, onClose, onSaved }) {
+  const [name, setName] = useState(salon.name || '');
+  const [subdomain, setSubdomain] = useState(salon.subdomain || salon.slug || '');
+  const [plan, setPlan] = useState(salon.plan || 'demo');
+  const [price, setPrice] = useState(monthlyPriceKrInputValue(salon.monthly_price_amount));
+  const [status, setStatus] = useState(statusValueForEditor(salon));
+  const [trialEndsAt, setTrialEndsAt] = useState(trialDateInputValue(salon.trial_ends_at));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !busy) onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [busy, onClose]);
+
+  const cleanSubdomain = (value) =>
+    value.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '');
+
+  const save = async (e) => {
+    e.preventDefault();
+    const amountKr = Number(String(price).replace(',', '.'));
+    if (!name.trim()) {
+      setError('Salongsnamn krävs.');
+      return;
+    }
+    if (!subdomain.trim()) {
+      setError('Subdomän krävs.');
+      return;
+    }
+    if (!Number.isFinite(amountKr) || amountKr < 0) {
+      setError('Ange ett giltigt pris.');
+      return;
+    }
+
+    setBusy(true);
+    setError('');
+    try {
+      const detailsRes = await fetch(`/api/superadmin/salons/${salon.id}/details`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ name: name.trim(), subdomain: cleanSubdomain(subdomain) }),
+      });
+      const detailsData = await detailsRes.json().catch(() => ({}));
+      if (!detailsRes.ok) {
+        throw new Error(typeof detailsData.error === 'string' ? detailsData.error : 'Kunde inte spara grunduppgifter.');
+      }
+
+      const billingStatus = status === 'demo' ? 'active' : status;
+      const billingRes = await fetch(`/api/superadmin/salons/${salon.id}/billing`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          plan,
+          status: billingStatus,
+          monthly_price_amount: Math.round(amountKr * 100),
+        }),
+      });
+      const billingData = await billingRes.json().catch(() => ({}));
+      if (!billingRes.ok) {
+        throw new Error(typeof billingData.error === 'string' ? billingData.error : 'Kunde inte spara abonnemang.');
+      }
+
+      const lifecycleRes = await fetch(`/api/superadmin/salons/${salon.id}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          status: billingStatus,
+          trial_ends_at: trialEndsAt || null,
+        }),
+      });
+      const lifecycleData = await lifecycleRes.json().catch(() => ({}));
+      if (!lifecycleRes.ok) {
+        throw new Error(typeof lifecycleData.error === 'string' ? lifecycleData.error : 'Kunde inte spara trial.');
+      }
+
+      onSaved?.();
+    } catch (err) {
+      setError(err.message || 'Kunde inte spara ändringarna.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const inactivate = async () => {
+    const ok = confirm(`Inaktivera salongen "${salon.name}"? Salongen flyttas till Inaktiva och kan återställas senare.`);
+    if (!ok) return;
+    setBusy(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/superadmin/salons/${salon.id}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ status: 'deleted', deleted_at: new Date().toISOString() }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof d.error === 'string' ? d.error : 'Kunde inte inaktivera salongen.');
+      onSaved?.();
+    } catch (err) {
+      setError(err.message || 'Kunde inte inaktivera salongen.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="sa-sheet-overlay" role="presentation" onMouseDown={(e) => {
+      if (e.target === e.currentTarget && !busy) onClose();
+    }}>
+      <aside className="sa-sheet" role="dialog" aria-modal="true" aria-labelledby="sa-edit-sheet-title">
+        <div className="sa-sheet-header">
+          <div>
+            <h3 id="sa-edit-sheet-title" className="sa-sheet-title">Redigera {salon.name}</h3>
+            <p className="sa-sheet-subtitle">Uppdatera salongens publika uppgifter, abonnemang och testperiod.</p>
+          </div>
+          <button type="button" className="sa-sheet-close" onClick={onClose} disabled={busy} aria-label="Stäng">
+            ×
+          </button>
+        </div>
+
+        <form className="sa-sheet-form" onSubmit={save}>
+          <div className="sa-sheet-scroll">
+            <section className="sa-sheet-section">
+              <h4 className="sa-sheet-section-title">Grunduppgifter</h4>
+              <label className="sa-sheet-field">
+                <span>Salongsnamn</span>
+                <input className="sa-sheet-input" value={name} onChange={(e) => setName(e.target.value)} disabled={busy} />
+              </label>
+              <label className="sa-sheet-field">
+                <span>Subdomän</span>
+                <div className="sa-sheet-input-suffix-wrap">
+                  <input
+                    className="sa-sheet-input sa-sheet-input--suffix"
+                    value={subdomain}
+                    onChange={(e) => setSubdomain(cleanSubdomain(e.target.value))}
+                    disabled={busy}
+                  />
+                  <span>.appbok.se</span>
+                </div>
+              </label>
+            </section>
+
+            <section className="sa-sheet-section">
+              <h4 className="sa-sheet-section-title">Abonnemang</h4>
+              <label className="sa-sheet-field">
+                <span>Plan</span>
+                <select className="sa-sheet-input" value={plan} onChange={(e) => setPlan(e.target.value)} disabled={busy}>
+                  {SUPERADMIN_PLAN_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="sa-sheet-field">
+                <span>Pris</span>
+                <div className="sa-sheet-input-suffix-wrap">
+                  <input
+                    className="sa-sheet-input sa-sheet-input--suffix"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    disabled={busy}
+                  />
+                  <span>kr/mån</span>
+                </div>
+              </label>
+              <label className="sa-sheet-field">
+                <span>Status</span>
+                <select className="sa-sheet-input" value={status} onChange={(e) => setStatus(e.target.value)} disabled={busy}>
+                  {SUPERADMIN_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </label>
+            </section>
+
+            <section className="sa-sheet-section">
+              <h4 className="sa-sheet-section-title">Testperiod (Trial)</h4>
+              <label className="sa-sheet-field">
+                <span>Slutdatum för Trial</span>
+                <input
+                  className="sa-sheet-input"
+                  type="date"
+                  value={trialEndsAt}
+                  onChange={(e) => setTrialEndsAt(e.target.value)}
+                  disabled={busy}
+                />
+              </label>
+              <div className="sa-sheet-pill-row" aria-label="Snabbval för trial">
+                {[
+                  { label: '+7d', days: 7 },
+                  { label: '+30d', days: 30 },
+                  { label: '+1år', days: 365 },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className="sa-sheet-pill-btn"
+                    onClick={() => setTrialEndsAt(addDaysInputDate(trialEndsAt, item.days))}
+                    disabled={busy}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {error ? <p className="sa-sheet-error">{error}</p> : null}
+          </div>
+
+          <footer className="sa-sheet-footer">
+            <div className="sa-sheet-footer-actions">
+              <button type="button" className="sa-sheet-secondary-btn" onClick={onClose} disabled={busy}>
+                Avbryt
+              </button>
+              <button type="submit" className="sa-sheet-primary-btn" disabled={busy}>
+                {busy ? 'Sparar...' : 'Spara ändringar'}
+              </button>
+            </div>
+            <button type="button" className="sa-sheet-danger-btn" onClick={inactivate} disabled={busy}>
+              Inaktivera salong
+            </button>
+          </footer>
+        </form>
+      </aside>
+    </div>
+  );
+}
+
 function SuperadminMonthlyPriceCell({ salon }) {
   return (
     <span className="sa-readonly-cell">{monthlyPriceKrInputValue(salon.monthly_price_amount)} kr/mån</span>
@@ -308,6 +573,7 @@ export default function SuperadminTab() {
   const [loadError, setLoadError] = useState('');
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editSalon, setEditSalon] = useState(null);
   const [expandedSalonId, setExpandedSalonId] = useState(null);
   const [restoreBusyId, setRestoreBusyId] = useState(null);
   const [permanentModalSalon, setPermanentModalSalon] = useState(null);
@@ -556,7 +822,7 @@ export default function SuperadminTab() {
                       <div className="sa-table-actions-cell">
                         <ActionsDropdown
                           salon={s}
-                          onSalonUpdated={() => loadSalons()}
+                          onEdit={() => setEditSalon(s)}
                           onViewStaff={() => setExpandedSalonId((cur) => (cur === s.id ? null : s.id))}
                           onImpersonate={() => {
                             localStorage.setItem('sb_superadmin_impersonate', JSON.stringify(s));
@@ -570,7 +836,6 @@ export default function SuperadminTab() {
                             );
                             window.location.reload();
                           }}
-                          onCopyLink={() => {}}
                         />
                       </div>
                     </td>
@@ -598,6 +863,16 @@ export default function SuperadminTab() {
           }}
         />
       )}
+      {editSalon ? (
+        <SuperadminSalonEditSheet
+          salon={editSalon}
+          onClose={() => setEditSalon(null)}
+          onSaved={() => {
+            setEditSalon(null);
+            loadSalons();
+          }}
+        />
+      ) : null}
       {permanentModalSalon ? (
         <div
           className="modal-backdrop"

@@ -37,33 +37,10 @@ function CopyIcon() {
   );
 }
 
-function InactivateIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="12" cy="12" r="10" />
-      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-    </svg>
-  );
-}
-
-function authHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${localStorage.getItem('sb_token')}`,
-  };
-}
-
-/** Billing-inaktiverad (syns under Aktiva) — aktiveras via /billing, inte soft delete. */
-function isBillingPausedStatus(status) {
-  return status === 'paused' || status === 'suspended' || status === 'inactive';
-}
-
-export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLink, onSalonUpdated, onViewStaff }) {
+export default function ActionsDropdown({ salon, onEdit, onImpersonate, onViewStaff }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const [copied, setCopied] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const isBillingPaused = isBillingPausedStatus(salon.status);
 
   // Close on outside click
   useEffect(() => {
@@ -83,55 +60,6 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLi
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function handleToggleInactive() {
-    if (isBillingPaused) {
-      const msg = `Aktivera salongen "${salon.name}"? Salongen blir synlig igen i listan med status aktiv.`;
-      if (!confirm(msg)) return;
-      setBusy(true);
-      try {
-        const res = await fetch(`/api/superadmin/salons/${salon.id}/billing`, {
-          method: 'PUT',
-          headers: authHeaders(),
-          body: JSON.stringify({ status: 'active' }),
-        });
-        const d = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(typeof d.error === 'string' ? d.error : 'Kunde inte aktivera salongen.');
-        onSalonUpdated?.();
-      } catch (e) {
-        alert(e?.message || 'Fel');
-      } finally {
-        setBusy(false);
-        setOpen(false);
-      }
-      return;
-    }
-
-    const msg =
-      `Inaktivera salongen "${salon.name}"? Salongen flyttas till fliken Inaktiva (soft delete). ` +
-      'All data sparas och kan återställas från Inaktiva.';
-    if (!confirm(msg)) return;
-
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/superadmin/salons/${salon.id}`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({
-          status: 'deleted',
-          deleted_at: new Date().toISOString(),
-        }),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(typeof d.error === 'string' ? d.error : 'Kunde inte inaktivera salongen.');
-      onSalonUpdated?.();
-    } catch (e) {
-      alert(e?.message || 'Fel');
-    } finally {
-      setBusy(false);
-      setOpen(false);
-    }
-  }
-
   return (
     <div className="sa-actions" ref={ref}>
       <button
@@ -146,6 +74,18 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLi
 
       {open && (
         <div className="sa-actions-menu" role="menu">
+          {onEdit ? (
+            <button
+              type="button"
+              className="sa-actions-item"
+              role="menuitem"
+              onClick={() => { onEdit(); setOpen(false); }}
+            >
+              <EditIcon />
+              <span>Redigera</span>
+            </button>
+          ) : null}
+
           <button
             type="button"
             className="sa-actions-item"
@@ -176,21 +116,6 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLi
           >
             <CopyIcon />
             <span>{copied ? 'Link kopierad!' : 'Kopiera demolänk'}</span>
-          </button>
-
-          <div className="sa-actions-divider" role="separator" />
-
-          <button
-            type="button"
-            className="sa-actions-item sa-actions-item--danger"
-            role="menuitem"
-            onClick={handleToggleInactive}
-            disabled={busy}
-          >
-            <InactivateIcon />
-            <span>
-              {busy ? 'Uppdaterar…' : isBillingPaused ? 'Aktivera salong' : 'Inaktivera salong'}
-            </span>
           </button>
         </div>
       )}
