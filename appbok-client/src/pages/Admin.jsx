@@ -29,6 +29,7 @@ import {
   ChevronDown,
   ListChecks,
   Copy,
+  ExternalLink,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SuperadminSidebar from '../components/SuperadminSidebar.jsx';
@@ -3772,11 +3773,66 @@ function GdprTab() {
 }
 
 // ─── Billing Tab (platform owner) ─────────────────────────────────────────────
+function platformBillingStatusMeta(salon) {
+  const subscriptionStatus = String(salon.subscription_status || '').toLowerCase();
+  const salonStatus = String(salon.status || '').toLowerCase();
+  const raw =
+    subscriptionStatus && subscriptionStatus !== 'none'
+      ? subscriptionStatus
+      : salonStatus === 'active'
+        ? 'trialing'
+        : salonStatus;
+  if (raw === 'active' || raw === 'live') {
+    return { label: 'Betald', variant: 'active' };
+  }
+  if (raw === 'past_due' || raw === 'unpaid' || raw === 'incomplete') {
+    return { label: 'Förfallen', variant: 'past-due' };
+  }
+  if (raw === 'trialing' || raw === 'trial' || raw === 'demo') {
+    return { label: 'Testperiod', variant: 'trialing' };
+  }
+  if (raw === 'canceled' || raw === 'cancelled' || raw === 'inactive' || raw === 'deleted') {
+    return { label: 'Avslutad', variant: 'canceled' };
+  }
+  return { label: 'Testperiod', variant: 'trialing' };
+}
+
+function platformBillingNextInvoice(salon) {
+  const subscriptionStatus = String(salon.subscription_status || '').toLowerCase();
+  const salonStatus = String(salon.status || '').toLowerCase();
+  const status =
+    subscriptionStatus && subscriptionStatus !== 'none'
+      ? subscriptionStatus
+      : salonStatus === 'active'
+        ? 'trialing'
+        : salonStatus;
+  if (status === 'canceled' || status === 'cancelled' || status === 'deleted' || status === 'inactive') {
+    return '—';
+  }
+  if ((status === 'trialing' || status === 'trial') && salon.trial_ends_at) {
+    return new Date(salon.trial_ends_at).toLocaleDateString('sv-SE', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+  if (status !== 'active' && status !== 'live') {
+    return '—';
+  }
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  return d.toLocaleDateString('sv-SE', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 function BillingTab({ user }) {
   const [salons, setSalons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [updating, setUpdating] = useState(null);
+  const [stripeBusyId, setStripeBusyId] = useState(null);
 
   useEffect(() => {
     fetch('/api/superadmin/salons', { headers: authHeaders() })
@@ -3785,33 +3841,22 @@ function BillingTab({ user }) {
       .catch(() => { setError('Kunde inte hämta salonger.'); setLoading(false); });
   }, []);
 
-  const PLANS = [
-    { value: 'starter',   label: 'Starter',   desc: 'Grundläggande funktioner' },
-    { value: 'pro',       label: 'Pro',       desc: 'Avancerade funktioner'    },
-    { value: 'enterprise',label: 'Enterprise', desc: 'Obegränsat'              },
-  ];
-
-  const STATUSES = [
-    { value: 'active',   label: 'Active',   color: '#22c55e' },
-    { value: 'trialing',  label: 'Trialing', color: '#f59e0b' },
-    { value: 'past_due',  label: 'Past Due', color: '#ef4444' },
-    { value: 'canceled',  label: 'Canceled', color: '#6b7280' },
-  ];
-
-  async function savePlan(salonId, plan) {
-    setUpdating(salonId);
+  async function openStripe(salon) {
+    setStripeBusyId(salon.id);
     try {
-      const res = await fetch(`/api/superadmin/salons/${salonId}/billing`, {
-        method: 'PUT',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+      const res = await fetch('/api/stripe/connect-dashboard', {
+        headers: {
+          ...authHeaders(),
+          'X-Impersonate-Salon-Id': salon.id,
+        },
       });
-      if (!res.ok) throw new Error();
-      setSalons(prev => prev.map(s => s.id === salonId ? { ...s, plan } : s));
-    } catch {
-      alert('Kunde inte spara.');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Kunde inte öppna Stripe.');
+      if (data.url) window.open(data.url, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      alert(e.message || 'Kunde inte öppna Stripe.');
     } finally {
-      setUpdating(null);
+      setStripeBusyId(null);
     }
   }
 
@@ -3827,49 +3872,46 @@ function BillingTab({ user }) {
       ) : (
         <div className="admin-card">
           <p className="admin-hint" style={{ marginBottom: '1.5rem' }}>
-            Hantera abonnemang och faktureringsstatus för alla salonger.
+            Läs av plattformens prenumerationsintäkter och betalningsstatus. Ändringar görs i Stripe eller via salongens redigeringspanel.
           </p>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
+          <div className="admin-table-wrap superadmin-billing-table-wrap">
+            <table className="admin-table superadmin-billing-table">
               <thead>
                 <tr>
-                  <th>Salong</th>
-                  <th>Plan</th>
-                  <th>Status</th>
+                  <th>SALONG</th>
+                  <th>MRR</th>
+                  <th>BETALNINGSSTATUS</th>
+                  <th>NÄSTA FAKTURA</th>
+                  <th style={{ textAlign: 'right' }}>ÅTGÄRD</th>
                 </tr>
               </thead>
               <tbody>
-                {salons.map(salon => (
-                  <tr key={salon.id}>
-                    <td style={{ fontWeight: 500 }}>{salon.name}</td>
-                    <td>
-                      <select
-                        className="admin-select"
-                        value={salon.plan || 'starter'}
-                        disabled={updating === salon.id}
-                        onChange={e => savePlan(salon.id, e.target.value)}
-                      >
-                        {PLANS.map(p => (
-                          <option key={p.value} value={p.value}>{p.label}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                        color: STATUSES.find(st => st.value === salon.status)?.color || '#6b7280',
-                        fontSize: '0.85rem', fontWeight: 500,
-                      }}>
-                        <span style={{
-                          width: 7, height: 7, borderRadius: '50%',
-                          background: STATUSES.find(st => st.value === salon.status)?.color || '#6b7280',
-                          display: 'inline-block',
-                        }} />
-                        {STATUSES.find(st => st.value === salon.status)?.label || '—'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {salons.map(salon => {
+                  const statusMeta = platformBillingStatusMeta(salon);
+                  return (
+                    <tr key={salon.id}>
+                      <td className="superadmin-billing-salon-name">{salon.name}</td>
+                      <td>{fmtKr(Number(salon.monthly_price_amount) || 0)}/mån</td>
+                      <td>
+                        <span className={`superadmin-billing-status superadmin-billing-status--${statusMeta.variant}`}>
+                          {statusMeta.label}
+                        </span>
+                      </td>
+                      <td>{platformBillingNextInvoice(salon)}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          className="superadmin-billing-stripe-btn"
+                          onClick={() => openStripe(salon)}
+                          disabled={stripeBusyId === salon.id}
+                        >
+                          <span>{stripeBusyId === salon.id ? 'Öppnar…' : 'Öppna i Stripe'}</span>
+                          <ExternalLink size={14} strokeWidth={2} aria-hidden />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

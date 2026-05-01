@@ -133,7 +133,7 @@ router.get('/salons', async (req, res) => {
   try {
     let q = supabase
       .from('salons')
-      .select('id, name, slug, subdomain, plan, status, monthly_price_amount, created_at, deleted_at, trial_ends_at')
+      .select('id, name, slug, subdomain, plan, status, monthly_price_amount, created_at, deleted_at, trial_ends_at, stripe_customer_id, stripe_subscription_id, subscription_status')
       .order('created_at', { ascending: false });
 
     if (scope === 'inactive') {
