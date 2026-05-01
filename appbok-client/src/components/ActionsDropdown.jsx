@@ -58,7 +58,7 @@ function isBillingPausedStatus(status) {
   return status === 'paused' || status === 'suspended' || status === 'inactive';
 }
 
-export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLink, onSalonUpdated }) {
+export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLink, onSalonUpdated, onViewStaff }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const [copied, setCopied] = useState(false);
@@ -155,6 +155,18 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onCopyLi
             <UserIcon />
             <span>Logga in som salong</span>
           </button>
+
+          {onViewStaff ? (
+            <button
+              type="button"
+              className="sa-actions-item"
+              role="menuitem"
+              onClick={() => { onViewStaff(); setOpen(false); }}
+            >
+              <UserIcon />
+              <span>Visa personal</span>
+            </button>
+          ) : null}
 
           <button
             type="button"

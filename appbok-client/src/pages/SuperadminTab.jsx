@@ -3,105 +3,6 @@ import ActionsDropdown from '../components/ActionsDropdown.jsx';
 import AddSalonModal from '../components/AddSalonModal.jsx';
 import { getLandingOriginForThemePreview } from '../lib/subdomain.js';
 
-
-function EditIcon(props) {
-  return (
-    <svg
-      {...props}
-      viewBox="0 0 24 24"
-      width="14"
-      height="14"
-      stroke="currentColor"
-      strokeWidth="2"
-      fill="none"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="admin-edit-icon"
-      style={{ cursor: 'pointer', color: '#9ca3af', marginLeft: '6px', verticalAlign: 'text-bottom', transition: 'color 0.2s', ...(props.style || {}) }}
-    >
-      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
-      <style>{`.admin-edit-icon:hover { color: #4b5563 !important; }`}</style>
-    </svg>
-  );
-}
-
-function EditSalonModal({ salon, onClose, onSaved }) {
-  const [name, setName] = useState(salon.name || '');
-  const [subdomain, setSubdomain] = useState(salon.subdomain || salon.slug || '');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleSubdomainChange = (e) => {
-    const val = e.target.value.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
-    setSubdomain(val);
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    try {
-      const res = await fetch(`/api/superadmin/salons/${salon.id}/details`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('sb_token')}`,
-        },
-        body: JSON.stringify({ name: name.trim(), subdomain: subdomain.trim() })
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || 'Fel vid sparning.');
-      }
-      onSaved();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="modal-backdrop">
-      <div className="modal-content" style={{ maxWidth: '400px' }}>
-        <button type="button" className="close-btn" onClick={onClose}>&times;</button>
-        <h3 style={{ marginBottom: '1rem', fontSize: '1.2rem', fontWeight: 600 }}>Redigera salong</h3>
-        <form onSubmit={handleSave} className="superadmin-modal-form">
-          <label>
-            Namn
-            <input 
-              className="admin-input" 
-              value={name} 
-              onChange={e => setName(e.target.value)} 
-              required 
-            />
-          </label>
-          <label>
-            Subdomän
-            <div style={{ display: 'flex', alignItems: 'center', background: '#f9fafb', border: '1px solid #d1d5db', borderRadius: '4px', overflow: 'hidden' }}>
-              <span style={{ padding: '0 8px', color: '#6b7280', fontSize: '14px', whiteSpace: 'nowrap' }}>https://</span>
-              <input 
-                value={subdomain} 
-                onChange={handleSubdomainChange} 
-                required 
-                style={{ flex: 1, border: 'none', padding: '10px 4px', fontSize: '14px', outline: 'none', background: 'transparent' }} 
-              />
-              <span style={{ padding: '0 8px', color: '#6b7280', fontSize: '14px', whiteSpace: 'nowrap' }}>.appbok.se</span>
-            </div>
-          </label>
-          {error && <p className="superadmin-error" style={{ margin: 0, fontSize: '0.9rem' }}>{error}</p>}
-          <div className="superadmin-modal-actions" style={{ marginTop: '1.5rem' }}>
-            <button type="button" className="btn-sm btn-ghost" onClick={onClose}>Avbryt</button>
-            <button type="submit" className="btn-superadmin-gold" disabled={saving}>
-              {saving ? 'Sparar...' : 'Spara'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 function authHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -244,7 +145,7 @@ function SalonStaffPanel({ salon }) {
   return (
     <div className="superadmin-salon-staff-panel">
       <h4 className="admin-card-title" style={{ marginTop: 0, marginBottom: '0.75rem' }}>
-        👥 Personal
+        Personal
       </h4>
       <div className="admin-table-wrap">
         <table className="admin-table">
@@ -271,7 +172,7 @@ function SalonStaffPanel({ salon }) {
                     onClick={() => loginAs(m)}
                     title="Logga in som denna användare"
                   >
-                    🔑 Logga in som
+                    Logga in som
                   </button>
                 </td>
               </tr>
@@ -283,134 +184,18 @@ function SalonStaffPanel({ salon }) {
   );
 }
 
-/** Inline trial-date editor with +7d / +30d / +1å quick buttons for a single salon row. */
 function TrialEditor({ salon }) {
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState('');
-  const st = String(salon.status ?? '').toLowerCase();
-  const isTrialLike = ['trial', 'active', 'demo', 'draft'].includes(st) || salon.trial_ends_at;
-
-  const getCurrentDate = () => {
-    if (salon.trial_ends_at) {
-      try {
-        return new Date(salon.trial_ends_at).toISOString().slice(0, 10);
-      } catch { /* fall through */ }
-    }
-    return '';
-  };
-
-  const [dateValue, setDateValue] = useState(getCurrentDate);
-
-  const save = async (newDate) => {
-    setBusy(true);
-    setMsg('');
-    try {
-      const body = { trial_ends_at: newDate || null };
-      const res = await fetch(`/api/superadmin/salons/${salon.id}`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify(body),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || 'Kunde inte spara.');
-      setMsg('✓ Sparat');
-      setTimeout(() => setMsg(''), 2000);
-    } catch (err) {
-      setMsg(`✗ ${err.message}`);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const adjustDays = async (days) => {
-    const base = salon.trial_ends_at ? new Date(salon.trial_ends_at) : new Date();
-    base.setDate(base.getDate() + days);
-    const iso = base.toISOString().slice(0, 10);
-    setDateValue(iso);
-    await save(iso);
-  };
-
-  const handleDateChange = (e) => {
-    setDateValue(e.target.value);
-  };
-
-  const handleDateBlur = () => {
-    if (!dateValue) return;
-    save(dateValue);
-  };
-
-  if (!isTrialLike) return <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>—</span>;
-
+  if (!salon.trial_ends_at) {
+    return <span className="sa-muted-cell">Ej aktiv</span>;
+  }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '120px' }}>
-      {/* Current value display */}
-      <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>
-        {salon.trial_ends_at
-          ? new Date(salon.trial_ends_at).toLocaleDateString('sv-SE', { year: 'numeric', month: 'short', day: 'numeric' })
-          : 'Inget datum'}
-      </span>
-
-      {/* Date picker + quick buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-        <input
-          type="date"
-          value={dateValue}
-          onChange={handleDateChange}
-          onBlur={handleDateBlur}
-          disabled={busy}
-          style={{
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            padding: '0.25rem 0.4rem',
-            fontSize: '0.72rem',
-            color: '#374151',
-            background: '#fff',
-            width: '110px',
-            cursor: busy ? 'wait' : 'default',
-            opacity: busy ? 0.6 : 1,
-          }}
-          title="Ändra trial-slutdatum"
-        />
-        {msg && (
-          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: msg.startsWith('✓') ? '#16a34a' : '#dc2626', whiteSpace: 'nowrap' }}>
-            {msg}
-          </span>
-        )}
-      </div>
-
-      {/* Quick-adjust buttons */}
-      <div style={{ display: 'flex', gap: '0.3rem' }}>
-        {[
-          { label: '+7d', days: 7 },
-          { label: '+30d', days: 30 },
-          { label: '+1år', days: 365 },
-        ].map(({ label, days }) => (
-          <button
-            key={label}
-            type="button"
-            disabled={busy}
-            onClick={() => adjustDays(days)}
-            title={`Lägg till ${days} dagar`}
-            style={{
-              padding: '0.15rem 0.4rem',
-              fontSize: '0.68rem',
-              fontWeight: 600,
-              borderRadius: '5px',
-              border: '1px solid #e5e7eb',
-              background: '#f9fafb',
-              color: '#374151',
-              cursor: busy ? 'not-allowed' : 'pointer',
-              opacity: busy ? 0.5 : 1,
-              lineHeight: 1.4,
-            }}
-            onMouseEnter={e => { if (!busy) e.currentTarget.style.background = '#e5e7eb'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#f9fafb'; }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-    </div>
+    <span className="sa-readonly-cell">
+      {new Date(salon.trial_ends_at).toLocaleDateString('sv-SE', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })}
+    </span>
   );
 }
 
@@ -442,71 +227,9 @@ function monthlyPriceKrInputValue(amount) {
   return String(Math.round(ore / 100));
 }
 
-function SuperadminMonthlyPriceCell({ salon, onSaved }) {
-  const [value, setValue] = useState(monthlyPriceKrInputValue(salon.monthly_price_amount));
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    setValue(monthlyPriceKrInputValue(salon.monthly_price_amount));
-    setError('');
-  }, [salon.id, salon.monthly_price_amount]);
-
-  const save = async () => {
-    const kr = Number(String(value).replace(',', '.'));
-    if (!Number.isFinite(kr) || kr < 0) {
-      setError('Ogiltigt pris');
-      return;
-    }
-    const amount = Math.round(kr * 100);
-    const currentAmount = Math.round(Number(salon.monthly_price_amount) || 200000);
-    if (amount === currentAmount) return;
-
-    setSaving(true);
-    setError('');
-    try {
-      const res = await fetch(`/api/superadmin/salons/${salon.id}/billing`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({ monthly_price_amount: amount }),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(typeof d.error === 'string' ? d.error : 'Kunde inte spara pris.');
-      onSaved?.();
-    } catch (e) {
-      setError(e.message || 'Fel');
-    } finally {
-      setSaving(false);
-    }
-  };
-
+function SuperadminMonthlyPriceCell({ salon }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '130px' }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <input
-          className="admin-input"
-          type="number"
-          min="0"
-          step="1"
-          value={value}
-          disabled={saving}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={save}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') e.currentTarget.blur();
-            if (e.key === 'Escape') {
-              setValue(monthlyPriceKrInputValue(salon.monthly_price_amount));
-              e.currentTarget.blur();
-            }
-          }}
-          aria-label={`Månadspris för ${salon.name}`}
-          style={{ width: '86px', padding: '0.45rem 0.55rem' }}
-        />
-        <span style={{ color: '#6b7280', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>kr/mån</span>
-      </label>
-      {saving ? <span style={{ color: '#6b7280', fontSize: '0.72rem' }}>Sparar...</span> : null}
-      {error ? <span className="superadmin-error" style={{ margin: 0, fontSize: '0.72rem' }}>{error}</span> : null}
-    </div>
+    <span className="sa-readonly-cell">{monthlyPriceKrInputValue(salon.monthly_price_amount)} kr/mån</span>
   );
 }
 
@@ -532,20 +255,7 @@ function SuperadminSalonStatusCell({ salon }) {
     const left = trialDaysLeft(salon.trial_ends_at);
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-        <span
-          style={{
-            display: 'inline-block',
-            fontSize: '0.78rem',
-            fontWeight: 700,
-            padding: '0.2rem 0.55rem',
-            borderRadius: '50px',
-            textTransform: 'none',
-            letterSpacing: '0.02em',
-            background: '#fef9c3',
-            color: '#a16207',
-            border: '1px solid #fde047',
-          }}
-        >
+        <span className="sa-status sa-status--trial" title="Trial">
           TRIAL
         </span>
         {salon.trial_ends_at && left !== null ? (
@@ -598,7 +308,6 @@ export default function SuperadminTab() {
   const [loadError, setLoadError] = useState('');
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [quickEditSalon, setQuickEditSalon] = useState(null);
   const [expandedSalonId, setExpandedSalonId] = useState(null);
   const [restoreBusyId, setRestoreBusyId] = useState(null);
   const [permanentModalSalon, setPermanentModalSalon] = useState(null);
@@ -829,17 +538,13 @@ export default function SuperadminTab() {
               {filtered.map((s) => (
                 <Fragment key={s.id}>
                   <tr className="superadmin-row-hover">
-                    <td className="sa-td-name">
-                      {s.name}
-                      <EditIcon onClick={() => setQuickEditSalon(s)} title="Redigera namn och subdomän" />
-                    </td>
+                    <td className="sa-td-name">{s.name}</td>
                     <td>
-                      <code className="sa-subdomain">{s.subdomain || s.slug}</code>
-                      <EditIcon onClick={() => setQuickEditSalon(s)} title="Redigera namn och subdomän" />
+                      <span className="sa-subdomain">{s.subdomain || s.slug || '—'}</span>
                     </td>
                     <td className="sa-td-plan">{superadminPlanLabel(s.plan)}</td>
                     <td>
-                      <SuperadminMonthlyPriceCell salon={s} onSaved={loadSalons} />
+                      <SuperadminMonthlyPriceCell salon={s} />
                     </td>
                     <td>
                       <SuperadminSalonStatusCell salon={s} />
@@ -848,18 +553,11 @@ export default function SuperadminTab() {
                       <TrialEditor salon={s} />
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        <button
-                          type="button"
-                          className="btn-sm btn-ghost"
-                          onClick={() => setExpandedSalonId((cur) => (cur === s.id ? null : s.id))}
-                          aria-expanded={expandedSalonId === s.id}
-                        >
-                          {expandedSalonId === s.id ? '▼ 👥 Personal' : '👥 Personal'}
-                        </button>
+                      <div className="sa-table-actions-cell">
                         <ActionsDropdown
                           salon={s}
                           onSalonUpdated={() => loadSalons()}
+                          onViewStaff={() => setExpandedSalonId((cur) => (cur === s.id ? null : s.id))}
                           onImpersonate={() => {
                             localStorage.setItem('sb_superadmin_impersonate', JSON.stringify(s));
                             localStorage.setItem(
@@ -900,17 +598,6 @@ export default function SuperadminTab() {
           }}
         />
       )}
-      {quickEditSalon && (
-        <EditSalonModal
-          salon={quickEditSalon}
-          onClose={() => setQuickEditSalon(null)}
-          onSaved={() => {
-            setQuickEditSalon(null);
-            loadSalons();
-          }}
-        />
-      )}
-
       {permanentModalSalon ? (
         <div
           className="modal-backdrop"

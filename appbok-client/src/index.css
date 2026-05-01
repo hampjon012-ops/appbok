@@ -3916,70 +3916,99 @@ body:has(.admin-layout) {
 }
 
 .sa-subdomain {
-  font-size: 0.8em;
-  background: #f3f4f6;
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
+  font-size: 0.86rem;
   color: #374151;
-  font-family: 'Geist Mono', monospace;
+  font-family: inherit;
+}
+
+.sa-readonly-cell {
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.sa-muted-cell {
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #a3a3a3;
+  white-space: nowrap;
 }
 
 .sa-status {
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 0.2rem 0.55rem;
-  border-radius: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.22rem 0.62rem;
+  border-radius: 999px;
+  letter-spacing: 0.035em;
   text-transform: capitalize;
+  border: 1px solid transparent;
 }
 
 .sa-status--active,
 .sa-status--active {
-  background: #dcfce7;
-  color: #15803d;
+  background: #ecfdf5;
+  color: #065f46;
+  border-color: #d1fae5;
 }
 
 .sa-status--trial,
 .sa-status--trialing {
-  background: #fef9c3;
-  color: #a16207;
+  background: #fefce8;
+  color: #854d0e;
+  border-color: #fef08a;
 }
 
 .sa-status--past_due,
 .sa-status--suspended {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fee2e2;
 }
 
 .sa-status--canceled,
 .sa-status--inactive {
   background: #f3f4f6;
-  color: #6b7280;
+  color: #4b5563;
+  border-color: #e5e7eb;
 }
 
 .sa-status--paused {
-  background: #fef3c7;
-  color: #92400e;
+  background: #fff7ed;
+  color: #9a3412;
+  border-color: #fed7aa;
 }
 
 .sa-status--demo {
-  background: #ede9fe;
-  color: #6d28d9;
+  background: #ffedd5;
+  color: #9a3412;
+  border-color: #fed7aa;
 }
 
 .sa-status--live {
-  background: #dcfce7;
-  color: #15803d;
-  border: 1px solid #86efac;
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #a7f3d0;
 }
 
 .sa-status--unknown {
   background: #f3f4f6;
-  color: #9ca3af;
+  color: #6b7280;
+  border-color: #e5e7eb;
 }
 
 .superadmin-row-hover:hover {
   background: #fafafa;
-  cursor: pointer;
+}
+
+.sa-table-actions-cell {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 /* ── Superadmin Settings ───────────────────────────────────────────────────── */
@@ -7145,12 +7174,25 @@ textarea.admin-input {
 }
 .superadmin-table-wrap {
   margin-top: 0.5rem;
+  border-radius: 12px;
+  box-shadow: none;
+  border-color: #f3f4f6;
 }
 .superadmin-table tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.02);
+  background: #fff;
 }
 .superadmin-table tbody tr:hover {
-  background: rgba(23, 23, 23, 0.04);
+  background: #fafafa;
+}
+.superadmin-table th {
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+.superadmin-table td {
+  border-bottom: 1px solid #f3f4f6;
+}
+.superadmin-table tbody tr:last-child td {
+  border-bottom: none;
 }
 .superadmin-row-click {
   cursor: pointer;
