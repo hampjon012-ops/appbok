@@ -718,6 +718,8 @@ function App() {
           />
         </div>
       </div>
+
+      {!isBookingModalOpen ? <CookieBanner /> : null}
     </div>
   );
 }
@@ -1408,7 +1410,7 @@ function BookingSection({
       </div>
       <div className="booking-modal-body">
         <div id="boka-nu" className="booking-modal-inner">
-          <div className="container booking-container" style={{ padding: '1rem', paddingBottom: '2.5rem' }}>
+          <div className="container booking-container" style={{ padding: '1rem', paddingBottom: '1rem' }}>
 
         {/* Stepper */}
         <div className="stepper-nav">
@@ -1956,7 +1958,6 @@ function BookingSection({
           </div>
         </div>
       </div>
-      <CookieBanner />
     </>
   );
 }

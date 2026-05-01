@@ -9182,6 +9182,8 @@ textarea.admin-input {
 .booking-modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
+  height: 100vh;
+  height: 100dvh;
   z-index: 9999;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
@@ -9189,18 +9191,19 @@ textarea.admin-input {
   align-items: flex-end;
   box-sizing: border-box;
   padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+  overflow: hidden;
   animation: fadeIn 0.3s ease;
 }
 
 .booking-modal-sheet {
   width: 100%;
   max-width: 42rem;
-  height: 90vh;
-  height: 90dvh;
+  height: calc(100% - max(0.75rem, env(safe-area-inset-top, 0px)));
+  max-height: 90vh;
+  max-height: 90dvh;
   background: #F5F4F0;
   border-top-left-radius: 40px;
   border-top-right-radius: 40px;
-  max-height: calc(100dvh - max(0.75rem, env(safe-area-inset-top, 0px)));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -9264,16 +9267,43 @@ textarea.admin-input {
 .booking-modal-body {
   flex: 1;
   min-height: 0;
+  height: 100%;
+  max-height: none;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding: 1rem 1.5rem 2rem;
+  overscroll-behavior: contain;
   scrollbar-width: none;
 }
 
 .booking-modal-inner,
 .booking-modal-body .booking-container {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
+}
+
+.booking-modal-inner {
+  min-height: 100%;
+}
+
+.booking-modal-body .booking-container {
+  flex: 1;
+  width: 100%;
+}
+
+.booking-modal-body .booking-card-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: fit-content;
+}
+
+.booking-modal-body .category-selection-list {
+  flex: 1 0 auto;
+  min-height: 0;
+  padding-bottom: 0.25rem;
 }
 
 .booking-modal-body::-webkit-scrollbar {
