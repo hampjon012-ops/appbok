@@ -28,7 +28,7 @@ const PREVIEW_BOOKING_SLUG = 'colorisma';
 const SUPERADMIN_STATUS_OPTIONS = [
   { value: 'demo', label: 'Demo' },
   { value: 'trialing', label: 'Trialing' },
-  { value: 'active', label: 'Active' },
+  { value: 'live', label: 'Active' },
   { value: 'past_due', label: 'Past Due' },
   { value: 'canceled', label: 'Canceled' },
 ];
@@ -122,7 +122,7 @@ function trialDateInputValue(value) {
 
 function statusValueForEditor(salon) {
   const st = String(salon?.status || '').toLowerCase();
-  if (st === 'live' || st === 'active') return 'active';
+  if (st === 'live') return 'live';
   if (st === 'trialing' || st === 'trial') return 'trialing';
   if (st === 'past_due') return 'past_due';
   if (st === 'canceled' || st === 'cancelled' || st === 'inactive' || st === 'suspended' || st === 'paused') return 'canceled';
@@ -392,8 +392,8 @@ function SuperadminSalonStatusCell({ salon }) {
   }
   if (st === 'active') {
     return (
-      <span className="sa-status sa-status--live" style={{ textTransform: 'none' }} title="Active">
-        ACTIVE
+      <span className="sa-status sa-status--demo" style={{ textTransform: 'none' }} title="Före trial (visas som demo)">
+        DEMO
       </span>
     );
   }
