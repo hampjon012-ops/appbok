@@ -1,4 +1,5 @@
 import { Fragment, useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import ActionsDropdown from '../components/ActionsDropdown.jsx';
 import AddSalonModal from '../components/AddSalonModal.jsx';
 import { getLandingOriginForThemePreview } from '../lib/subdomain.js';
@@ -367,7 +368,7 @@ function SuperadminSalonEditSheet({ salon, onClose, onSaved }) {
     }
   };
 
-  return (
+  const sheet = (
     <div className="sa-sheet-overlay" role="presentation" onMouseDown={(e) => {
       if (e.target === e.currentTarget && !busy) onClose();
     }}>
@@ -490,6 +491,7 @@ function SuperadminSalonEditSheet({ salon, onClose, onSaved }) {
       </aside>
     </div>
   );
+  return createPortal(sheet, document.body);
 }
 
 function SuperadminMonthlyPriceCell({ salon }) {

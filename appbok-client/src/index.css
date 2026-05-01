@@ -4015,8 +4015,6 @@ body:has(.admin-layout) {
   position: fixed;
   inset: 0;
   z-index: 1200;
-  display: flex;
-  justify-content: flex-end;
   background: rgba(17, 24, 39, 0.28);
   backdrop-filter: blur(2px);
   animation: sa-sheet-overlay-in 0.16s ease-out;
@@ -4029,11 +4027,13 @@ body:has(.admin-layout) {
 
 .sa-sheet {
   position: fixed;
-  inset-block: 0;
+  top: 0;
   right: 0;
+  bottom: 0;
   width: 100%;
   max-width: 28rem;
-  height: 100%;
+  height: 100vh;
+  max-height: 100vh;
   display: flex;
   flex-direction: column;
   background: #fff;
@@ -4096,8 +4096,10 @@ body:has(.admin-layout) {
 .sa-sheet-form {
   flex: 1;
   min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .sa-sheet-scroll {
@@ -4105,6 +4107,7 @@ body:has(.admin-layout) {
   min-height: 0;
   overflow-y: auto;
   padding: 1.5rem;
+  padding-bottom: 2rem;
 }
 
 .sa-sheet-section {
