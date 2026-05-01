@@ -5657,11 +5657,40 @@ table.admin-table.bookings-table-modern .bookings-table-th-actions {
   color: #111827;
 }
 
-.bookings-calendar-date-label {
-  margin: 0.25rem 0 0;
+.bookings-calendar-date-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.35rem 0 0 -0.45rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
   color: #6b7280;
+  cursor: pointer;
+  font-family: var(--font-sans);
   font-size: 0.88rem;
+  font-weight: 550;
+  padding: 0.35rem 0.45rem;
   text-transform: capitalize;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bookings-calendar-date-trigger:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.bookings-calendar-date-trigger svg {
+  flex-shrink: 0;
+}
+
+.bookings-calendar-date-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .bookings-calendar-nav {

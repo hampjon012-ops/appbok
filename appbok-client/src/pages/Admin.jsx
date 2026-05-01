@@ -7,6 +7,7 @@ import {
   MessageSquare,
   X,
   CalendarCheck,
+  CalendarDays,
   BarChart3,
   Wallet,
   Users,
@@ -2721,10 +2722,28 @@ function BookingsCalendarView({
     return slots;
   }, []);
   const [now, setNow] = useState(() => new Date());
+  const datePickerRef = useRef(null);
+  const swipeStartRef = useRef(null);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const tagName = event.target?.tagName?.toLowerCase();
+      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select' || event.target?.isContentEditable) return;
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        onDateChange(addDaysToIsoDate(selectedDate, -1));
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        onDateChange(addDaysToIsoDate(selectedDate, 1));
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onDateChange, selectedDate]);
   const columns = staff.length > 0 ? staff : [{ id: 'any', name: 'Valfri' }];
   const bookingsByStylist = useMemo(() => {
     const map = new Map();
@@ -2749,13 +2768,51 @@ function BookingsCalendarView({
   const nowMinutesFromStart = (now.getHours() - 8) * 60 + now.getMinutes();
   const showNowLine = selectedDate === localIsoDate(now) && nowMinutesFromStart >= 0 && nowMinutesFromStart <= 600;
   const nowLineTop = (nowMinutesFromStart / 30) * 44;
+  const openDatePicker = () => {
+    const picker = datePickerRef.current;
+    if (!picker) return;
+    if (typeof picker.showPicker === 'function') {
+      picker.showPicker();
+    } else {
+      picker.focus();
+      picker.click();
+    }
+  };
+  const handleTouchStart = (event) => {
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+  const handleTouchEnd = (event) => {
+    const start = swipeStartRef.current;
+    const touch = event.changedTouches?.[0];
+    swipeStartRef.current = null;
+    if (!start || !touch) return;
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
+    onDateChange(addDaysToIsoDate(selectedDate, dx < 0 ? 1 : -1));
+  };
 
   return (
     <div className="admin-card bookings-calendar-card">
       <div className="bookings-calendar-toolbar">
         <div>
           <h3 className="bookings-calendar-title">Kalendervy</h3>
-          <p className="bookings-calendar-date-label">{prettyDate}</p>
+          <button type="button" className="bookings-calendar-date-trigger" onClick={openDatePicker}>
+            <CalendarDays size={15} strokeWidth={2} aria-hidden />
+            <span>{prettyDate}</span>
+          </button>
+          <input
+            ref={datePickerRef}
+            type="date"
+            className="bookings-calendar-date-input"
+            value={selectedDate}
+            onChange={(event) => {
+              if (event.target.value) onDateChange(event.target.value);
+            }}
+            aria-label="Välj datum"
+          />
         </div>
         <div className="bookings-calendar-nav" aria-label="Byt dag">
           <button type="button" onClick={() => onDateChange(addDaysToIsoDate(selectedDate, -1))} aria-label="Föregående dag">
@@ -2773,7 +2830,11 @@ function BookingsCalendarView({
       {loading ? (
         <div className="admin-loading">Laddar kalender...</div>
       ) : (
-        <div className="bookings-calendar-scroll">
+        <div
+          className="bookings-calendar-scroll"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="bookings-calendar-grid" style={{ '--calendar-staff-count': columns.length }}>
             <div className="bookings-calendar-corner" />
             {columns.map((stylist) => (
