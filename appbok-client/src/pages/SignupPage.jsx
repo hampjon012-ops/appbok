@@ -581,6 +581,13 @@ export default function SignupPage() {
                 <button type="button" className="signup-v2-secondary" onClick={() => setStep(3)}>Tillbaka</button>
                 <button type="submit" className="signup-v2-primary">Fortsätt</button>
               </div>
+              <button
+                type="button"
+                className="signup-v2-skip"
+                onClick={() => setStep(5)}
+              >
+                Hoppa över tjänster
+              </button>
             </form>
           ) : null}
 
