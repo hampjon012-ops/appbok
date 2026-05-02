@@ -9334,9 +9334,9 @@ textarea.admin-input {
  */
 .theme-preview-phone.theme-preview-phone-premium {
   box-sizing: border-box;
-  width: 390px;
+  width: min(360px, 100%);
   max-width: 100%;
-  height: min(844px, calc(100vh - 80px));
+  height: min(780px, calc(100vh - 88px));
   margin: 0 auto;
   padding: 0;
   border: 2px solid #0f0f0f;
@@ -9350,8 +9350,6 @@ textarea.admin-input {
   overflow: hidden;
   flex-shrink: 0;
   z-index: 10;
-  transform: scale(0.7);
-  transform-origin: top center;
 }
 
 .theme-preview-phone-premium .theme-preview-iframe-viewport {

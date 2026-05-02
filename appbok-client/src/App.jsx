@@ -714,7 +714,7 @@ function App() {
         </div>
       </div>
 
-      {!isBookingModalOpen ? <CookieBanner /> : null}
+      {!previewEmbed && !isBookingModalOpen ? <CookieBanner /> : null}
     </div>
   );
 }
