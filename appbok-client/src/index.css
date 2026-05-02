@@ -928,6 +928,13 @@ a.insta-item-link:focus-visible {
   }
 }
 
+/* Adminens mobil-preview ska spegla temat, inte den publika sidans vita sticky footer. */
+html.preview-embed-mode .floating-action {
+  background: var(--bg-color, #fff);
+  box-shadow: none;
+  border-top: 1px solid color-mix(in srgb, var(--text-color, #111827) 12%, transparent);
+}
+
 /* =========================================
    STYLIST SELECTION STEP
    ========================================= */
