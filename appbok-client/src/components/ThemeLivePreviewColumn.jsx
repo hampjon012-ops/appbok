@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { resolveAccentTextColor } from '../lib/salonPublicConfig.js';
 
@@ -42,6 +42,8 @@ export default function ThemeLivePreviewColumn({
   text,
   bgImage,
 }) {
+  const [selectedService, setSelectedService] = useState(FALLBACK_SERVICES[0].name);
+  const [bookingTouched, setBookingTouched] = useState(false);
   const previewTheme = useMemo(
     () => ({
       backgroundColor: background,
@@ -61,6 +63,7 @@ export default function ThemeLivePreviewColumn({
   const footer = isDarkTheme ? secondary || background : '#ffffff';
   const muted = isDarkTheme ? 'rgba(255,255,255,.58)' : '#78716c';
   const divider = isDarkTheme ? 'rgba(255,255,255,.14)' : 'rgba(17,24,39,.1)';
+  const selectedServiceLabel = selectedService || FALLBACK_SERVICES[0].name;
 
   return (
     <div
@@ -101,11 +104,16 @@ export default function ThemeLivePreviewColumn({
               <section className="signup-v2-preview-section">
                 <h3>Våra mest populära tjänster</h3>
                 {FALLBACK_SERVICES.map((service, index) => (
-                  <div
+                  <button
                     key={`${service.name}-${index}`}
-                    className="signup-v2-preview-service-row"
-                    role="button"
-                    tabIndex={0}
+                    type="button"
+                    className={`signup-v2-preview-service-row theme-live-preview-service-btn ${
+                      selectedService === service.name ? 'is-selected' : ''
+                    }`}
+                    onClick={() => {
+                      setSelectedService(service.name);
+                      setBookingTouched(false);
+                    }}
                   >
                     <div>
                       <strong>{service.name}</strong>
@@ -114,7 +122,7 @@ export default function ThemeLivePreviewColumn({
                       </span>
                     </div>
                     <ChevronRight className="signup-v2-preview-service-chevron" size={16} strokeWidth={2.15} aria-hidden />
-                  </div>
+                  </button>
                 ))}
               </section>
 
@@ -133,7 +141,15 @@ export default function ThemeLivePreviewColumn({
             </div>
 
             <div className="signup-v2-preview-footer">
-              <button type="button">Boka Tid</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setBookingTouched(true);
+                  window.setTimeout(() => setBookingTouched(false), 1300);
+                }}
+              >
+                {bookingTouched ? `${selectedServiceLabel} vald` : 'Boka Tid'}
+              </button>
             </div>
           </div>
         </div>
