@@ -64,6 +64,10 @@ export default function ThemeLivePreviewColumn({
   const muted = isDarkTheme ? 'rgba(255,255,255,.58)' : '#78716c';
   const divider = isDarkTheme ? 'rgba(255,255,255,.14)' : 'rgba(17,24,39,.1)';
   const selectedServiceLabel = selectedService || FALLBACK_SERVICES[0].name;
+  const activateBookingPreview = () => {
+    setBookingTouched(true);
+    window.setTimeout(() => setBookingTouched(false), 1600);
+  };
 
   return (
     <div
@@ -110,7 +114,14 @@ export default function ThemeLivePreviewColumn({
                     className={`signup-v2-preview-service-row theme-live-preview-service-btn ${
                       selectedService === service.name ? 'is-selected' : ''
                     }`}
-                    onClick={() => {
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+                      setSelectedService(service.name);
+                      setBookingTouched(false);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter' && event.key !== ' ') return;
+                      event.preventDefault();
                       setSelectedService(service.name);
                       setBookingTouched(false);
                     }}
@@ -143,9 +154,14 @@ export default function ThemeLivePreviewColumn({
             <div className="signup-v2-preview-footer">
               <button
                 type="button"
-                onClick={() => {
-                  setBookingTouched(true);
-                  window.setTimeout(() => setBookingTouched(false), 1300);
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                  activateBookingPreview();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  activateBookingPreview();
                 }}
               >
                 {bookingTouched ? `${selectedServiceLabel} vald` : 'Boka Tid'}

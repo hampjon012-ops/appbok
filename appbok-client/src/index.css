@@ -10881,6 +10881,7 @@ a.insta-handle-link:focus-visible {
 .theme-live-preview-phone .signup-v2-preview-footer {
   position: sticky;
   bottom: 0;
+  z-index: 20;
   margin-top: -1px;
 }
 
