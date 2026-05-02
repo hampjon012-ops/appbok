@@ -102,6 +102,7 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
     theme_text,
     theme_secondary,
     theme_background_image_url,
+    theme_preset,
     logo_url,
     tagline,
     map_url,
@@ -178,7 +179,8 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
       theme_primary !== undefined ||
       theme_text !== undefined ||
       theme_secondary !== undefined ||
-      theme_background_image_url !== undefined;
+      theme_background_image_url !== undefined ||
+      theme_preset !== undefined;
 
     if (themePatch) {
       const theme = { ...(current.theme && typeof current.theme === 'object' ? current.theme : {}) };
@@ -189,6 +191,7 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
       if (theme_background_image_url !== undefined) {
         theme.backgroundImageUrl = (theme_background_image_url || '').trim();
       }
+      if (theme_preset !== undefined) theme.themePreset = (theme_preset || '').trim();
       updates.theme = theme;
     }
 
@@ -649,4 +652,3 @@ router.post('/current/gallery-upload', requireAuth, requireAdmin, async (req, re
 });
 
 export default router;
-

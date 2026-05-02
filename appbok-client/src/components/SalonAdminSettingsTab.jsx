@@ -8,6 +8,7 @@ import {
   resolvePrimaryAccentHex,
 } from '../lib/salonPublicConfig.js';
 import { DEFAULT_PLATFORM_SALON_THEME } from '../lib/themePresets.js';
+import { ONBOARDING_THEME_PRESETS, onboardingThemeToSalonTheme } from '../lib/onboardingThemePresets.js';
 import { adminApiHeaders as authHeaders, adminApiHeadersForUpload } from '../lib/adminApiHeaders.js';
 import { getSalonPublicBookingPreviewUrl, copyTextToClipboard } from '../lib/adminUrls.js';
 import AccountingIntegrationsTab from './AccountingIntegrationsTab.jsx';
@@ -49,6 +50,7 @@ function SalonThemePanel({ salon, onSaved }) {
   const [bgImagePreview, setBgImagePreview] = useState(t.backgroundImageUrl || '');
   const [bgImageUploading, setBgImageUploading] = useState(false);
   const [bgImageUploadErr, setBgImageUploadErr] = useState('');
+  const [selectedPresetId, setSelectedPresetId] = useState(t.themePreset || '');
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -63,7 +65,20 @@ function SalonThemePanel({ salon, onSaved }) {
     const bg = th.backgroundImageUrl || '';
     setBgImage(bg);
     setBgImagePreview(bg);
+    setSelectedPresetId(th.themePreset || '');
   }, [salon]);
+
+  const applyThemePreset = (preset) => {
+    const nextTheme = onboardingThemeToSalonTheme(preset);
+    if (!nextTheme) return;
+    setSelectedPresetId(preset.id);
+    setBackground(nextTheme.backgroundColor);
+    setAccent(nextTheme.primaryAccent);
+    setText(nextTheme.textColor);
+    setSecondary(nextTheme.secondaryColor);
+    setBgImage(nextTheme.backgroundImageUrl);
+    setBgImagePreview(nextTheme.backgroundImageUrl);
+  };
 
   const handleLogoFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -279,6 +294,7 @@ function SalonThemePanel({ salon, onSaved }) {
           theme_text: text,
           theme_secondary: secondary,
           theme_background_image_url: bgImage,
+          theme_preset: selectedPresetId,
         }),
       });
       const data = await res.json();
@@ -301,6 +317,39 @@ function SalonThemePanel({ salon, onSaved }) {
         onSubmit={save}
       >
         <h3 className="admin-card-title">Kontroller</h3>
+
+        <div className="theme-preset-section">
+          <div className="theme-preset-section-head">
+            <span className="theme-upload-field-label">Välj färdigt uttryck</span>
+            <span className="admin-hint admin-hint--field theme-hint-subtle">
+              Byter färger och bakgrundsbild direkt. Du kan finjustera alla värden efteråt.
+            </span>
+          </div>
+          <div className="theme-preset-grid">
+            {ONBOARDING_THEME_PRESETS.map((preset) => (
+              <button
+                type="button"
+                key={preset.id}
+                className={selectedPresetId === preset.id ? 'is-selected' : ''}
+                onClick={() => applyThemePreset(preset)}
+              >
+                <span className="theme-preset-thumb">
+                  <img src={preset.image} alt="" loading="lazy" />
+                </span>
+                <span className="theme-preset-meta">
+                  <strong>{preset.name}</strong>
+                  <span className="theme-preset-swatches" aria-hidden>
+                    {[preset.bg, preset.primary, preset.accent].map((color) => (
+                      <i key={color} style={{ backgroundColor: color }} />
+                    ))}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <hr className="theme-section-hr theme-section-hr--compact" />
 
         <div className="theme-colors-stack">
           <label>

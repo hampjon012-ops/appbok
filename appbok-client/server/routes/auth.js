@@ -257,42 +257,91 @@ router.post('/register', async (req, res) => {
       background_preset: selectedBackground,
     };
 
+    const salonSlugNormalized = (salonSlug || salonName).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const baseSalonInsert = {
+      name: salonName,
+      slug: salonSlugNormalized,
+      theme,
+      contact,
+    };
+    const fullSalonInsert = {
+      ...baseSalonInsert,
+      bokadirekt_url: bokadirektUrl || null,
+      status: 'demo',
+    };
+
     let { data: salon, error: salonErr } = await supabase
       .from('salons')
-      .insert({
-        name: salonName,
-        slug: (salonSlug || salonName).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-        bokadirekt_url: bokadirektUrl || null,
-        status: 'demo',
-        theme,
-        contact,
-      })
+      .insert(fullSalonInsert)
       .select()
       .single();
 
     if (salonErr) {
       if (salonErr.code === '23505') return res.status(409).json({ error: 'Salongnamnet eller subdomänen är redan upptagen.' });
       
-      // Fallback hantering om bokadirekt_url eller status saknas i gamla instanser:
+      // Fallback hantering om bokadirekt_url/status saknas i gamla instanser.
+      // Behall theme/contact sa onboardingens valda uttryck inte tappas.
       const m = String(salonErr?.message || salonErr?.details || '');
       const missingStatus = salonErr.code === '42703' || m.includes('does not exist') || /column.*salons|salons.*column/i.test(m);
       if (missingStatus) {
-        // Försök igen utan de nya kolumnerna
-        const { data: retrySalon, error: retryErr } = await supabase
-          .from('salons')
-          .insert({
-            name: salonName,
-            slug: (salonSlug || salonName).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-          })
-          .select()
-          .single();
+        const retryVariants = [
+          baseSalonInsert,
+          { name: salonName, slug: salonSlugNormalized, theme },
+          { name: salonName, slug: salonSlugNormalized },
+        ];
+        let retrySalon = null;
+        let retryErr = null;
+        for (const retryInsert of retryVariants) {
+          const retry = await supabase
+            .from('salons')
+            .insert(retryInsert)
+            .select()
+            .single();
+          retrySalon = retry.data;
+          retryErr = retry.error;
+          if (!retryErr) break;
+          if (retryErr.code === '23505') break;
+        }
         if (retryErr) {
           if (retryErr.code === '23505') return res.status(409).json({ error: 'Salongnamnet eller subdomänen är redan upptagen.' });
           throw retryErr;
         }
         salon = retrySalon;
+        if (!salon?.theme) {
+          // Sista chans pa DB:er dar insert fallback saknade theme men kolumnen finns.
+          try {
+            const { data: patchedSalon } = await supabase
+              .from('salons')
+              .update({ theme, contact })
+              .eq('id', salon.id)
+              .select()
+              .single();
+            if (patchedSalon) salon = patchedSalon;
+          } catch {
+            /* older schemas may not have JSON columns */
+          }
+        }
       } else {
         throw salonErr;
+      }
+    }
+
+    if (salon?.id && (!salon.theme || !salon.contact)) {
+      try {
+        const patch = {};
+        if (!salon.theme) patch.theme = theme;
+        if (!salon.contact) patch.contact = contact;
+        if (Object.keys(patch).length) {
+          const { data: patchedSalon } = await supabase
+            .from('salons')
+            .update(patch)
+            .eq('id', salon.id)
+            .select()
+            .single();
+          if (patchedSalon) salon = patchedSalon;
+        }
+      } catch {
+        /* ignore legacy schema patch failure */
       }
     }
 
@@ -404,6 +453,8 @@ router.post('/register', async (req, res) => {
         id: salon.id,
         name: salon.name,
         slug: salon.slug,
+        theme: salon.theme || theme,
+        contact: salon.contact || contact,
         ...(verifyTokErr ? {} : { email_verified: false }),
       },
       demoUrl,
