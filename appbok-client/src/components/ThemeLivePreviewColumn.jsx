@@ -66,7 +66,7 @@ export default function ThemeLivePreviewColumn({
   const selectedServiceLabel = selectedService || FALLBACK_SERVICES[0].name;
   const activateBookingPreview = () => {
     setBookingTouched(true);
-    window.setTimeout(() => setBookingTouched(false), 1600);
+    window.setTimeout(() => setBookingTouched(false), 2200);
   };
 
   return (
@@ -111,11 +111,11 @@ export default function ThemeLivePreviewColumn({
                   <button
                     key={`${service.name}-${index}`}
                     type="button"
+                    aria-pressed={selectedService === service.name}
                     className={`signup-v2-preview-service-row theme-live-preview-service-btn ${
                       selectedService === service.name ? 'is-selected' : ''
                     }`}
-                    onPointerDown={(event) => {
-                      event.stopPropagation();
+                    onClick={() => {
                       setSelectedService(service.name);
                       setBookingTouched(false);
                     }}
@@ -152,19 +152,21 @@ export default function ThemeLivePreviewColumn({
             </div>
 
             <div className="signup-v2-preview-footer">
+              {bookingTouched ? (
+                <div className="theme-live-preview-toast" role="status">
+                  Bokningsflöde öppnas för {selectedServiceLabel}
+                </div>
+              ) : null}
               <button
                 type="button"
-                onPointerDown={(event) => {
-                  event.stopPropagation();
-                  activateBookingPreview();
-                }}
+                onClick={activateBookingPreview}
                 onKeyDown={(event) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
                   activateBookingPreview();
                 }}
               >
-                {bookingTouched ? `${selectedServiceLabel} vald` : 'Boka Tid'}
+                {bookingTouched ? 'Öppnar bokning...' : `Boka ${selectedServiceLabel}`}
               </button>
             </div>
           </div>
