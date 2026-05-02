@@ -38,7 +38,7 @@ body {
 
 /* Admin iframe (preview_embed=1): inga scrollbars, grab-scroll via pekare */
 html.preview-embed-mode {
-  --preview-status-bar-height: 3.25rem;
+  --preview-status-bar-height: 0rem;
   cursor: grab;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -122,12 +122,12 @@ html.preview-embed-mode [role='button'] {
   top: calc(var(--preview-status-bar-height, 3.25rem) + env(safe-area-inset-top, 0px));
 }
 
-/* I preview täcker statusraden topputsnittet — ingen dubbel safe-area på hero */
+/* I preview ska hero-bilden börja direkt i telefonen. */
 .preview-embed-mode .hero-minimal {
   padding-top: 0;
 }
 
-/* Undvik extra luft ovanför salongsnamn i hero när statusraden redan tar toppytan */
+/* Undvik extra luft ovanför salongsnamn i hero. */
 .preview-embed-mode .hero-content {
   padding-top: 0;
 }

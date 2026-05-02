@@ -15,7 +15,6 @@ import {
 import './App.css';
 import { usePreviewEmbedUi } from './hooks/usePreviewEmbedUi.js';
 import { useSalonCatalog } from './hooks/useSalonCatalog.js';
-import PreviewDeviceStatusBar from './components/PreviewDeviceStatusBar.jsx';
 import PublicOpeningHours from './components/PublicOpeningHours.jsx';
 import SalonTenantNotFoundView from './components/SalonTenantNotFoundView.jsx';
 import { getValidOpeningHoursWeek } from './lib/publicOpeningHours.js';
@@ -360,7 +359,6 @@ function App() {
 
   return (
     <div className="app-wrapper">
-      {previewEmbed ? <PreviewDeviceStatusBar /> : null}
       {/* ── Förhandsgranskning: ingen riktig bokning förrän testperiod startats ── */}
       {isSalonPreviewMode && !previewEmbed && (
         <div className="preview-booking-banner" role="status">
