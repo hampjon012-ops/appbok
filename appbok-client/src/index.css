@@ -8837,20 +8837,21 @@ textarea.admin-input {
 .superadmin-theme-controls.superadmin-theme-controls--themed {
   padding: 1.25rem;
   border-radius: 14px;
-  border: 1px solid var(--panel-secondary);
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
   box-sizing: border-box;
 }
 
 .superadmin-theme-controls--themed .admin-card-title {
-  color: var(--panel-text);
+  color: #111827;
 }
 
 .superadmin-theme-controls--themed label {
-  color: var(--panel-text);
+  color: #111827;
 }
 
 .superadmin-theme-controls--themed .admin-hint--field {
-  color: color-mix(in srgb, var(--panel-text) 70%, transparent);
+  color: #6b7280;
 }
 
 .superadmin-theme-save-hint {
@@ -8858,9 +8859,9 @@ textarea.admin-input {
 }
 
 .superadmin-theme-controls--themed .admin-input {
-  color: var(--panel-text);
-  background: color-mix(in srgb, var(--panel-secondary) 52%, #ffffff);
-  border-color: color-mix(in srgb, var(--panel-text) 14%, var(--panel-secondary));
+  color: #111827;
+  background: #ffffff;
+  border-color: #d1d5db;
 }
 
 .superadmin-theme-controls--themed .admin-input:focus {
@@ -8870,7 +8871,7 @@ textarea.admin-input {
 }
 
 .superadmin-theme-controls--themed .admin-input::placeholder {
-  color: color-mix(in srgb, var(--panel-text) 45%, transparent);
+  color: #9ca3af;
 }
 
 .superadmin-theme-controls-save {
@@ -8903,9 +8904,9 @@ textarea.admin-input {
 }
 
 .superadmin-theme-controls--themed .color-input {
-  border: 1px solid color-mix(in srgb, var(--panel-text) 18%, var(--panel-secondary));
+  border: 1px solid #d1d5db;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--panel-secondary) 30%, #ffffff);
+  background: #ffffff;
 }
 
 /* Logo upload component */
@@ -9051,10 +9052,10 @@ textarea.admin-input {
   width: 100%;
   min-width: 0;
   padding: 0.65rem;
-  border: 1px solid color-mix(in srgb, var(--panel-text) 13%, var(--panel-secondary));
+  border: 1px solid #e5e7eb;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--panel-secondary) 22%, #ffffff);
-  color: var(--panel-text);
+  background: #ffffff;
+  color: #111827;
   text-align: left;
   cursor: pointer;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease, background 0.16s ease;
@@ -9063,7 +9064,7 @@ textarea.admin-input {
 .theme-preset-grid button:hover {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--panel-accent) 55%, var(--panel-secondary));
-  background: color-mix(in srgb, var(--panel-secondary) 10%, #ffffff);
+  background: #f9fafb;
 }
 
 .theme-preset-grid button.is-selected {
@@ -9076,7 +9077,7 @@ textarea.admin-input {
   aspect-ratio: 16 / 10;
   overflow: hidden;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--panel-secondary) 65%, #ffffff);
+  background: #f3f4f6;
 }
 
 .theme-preset-thumb img {
@@ -9152,7 +9153,7 @@ textarea.admin-input {
 }
 
 .superadmin-theme-controls--themed .theme-upload-field-label {
-  color: var(--panel-text);
+  color: #111827;
 }
 
 .theme-upload-compact-row {
