@@ -1320,6 +1320,18 @@ function BookingSection({
     fetchPaymentIntent();
   }, [fetchPaymentIntent, intentRequested, paymentChoice, previewBookingLocked, step]);
 
+  const saveBookingSummaryForThankYou = (booking) => {
+    sessionStorage.setItem('appbok_booking_summary', JSON.stringify({
+      bookingId: booking?.id,
+      serviceName: selectedServices.map((s) => s.name).join(' + '),
+      date: selectedDate?.toISOString().slice(0, 10),
+      time: selectedTime,
+      durationMinutes: totalDurationMin,
+      stylistName: selectedStylist?.name || 'Valfri stylist',
+      salonName: config?.salonName || 'Salongen',
+    }));
+  };
+
   const handleBookPayOnSite = async () => {
     setLoading(true);
     setApiError('');
@@ -1331,6 +1343,7 @@ function BookingSection({
         name: form.name,
         bookingId: booking?.id,
       }));
+      saveBookingSummaryForThankYou(booking);
       window.location.href = booking?.id ? `/tack?session_id=${encodeURIComponent(booking.id)}` : '/tack';
     } catch (err) {
       setApiError(err.message || 'Kunde inte skapa bokningen.');
@@ -1353,6 +1366,7 @@ function BookingSection({
         name: form.name,
         bookingId: booking?.id,
       }));
+      saveBookingSummaryForThankYou(booking);
       const sid = encodeURIComponent(confirmedPaymentIntentId || paymentIntentId || '');
       window.location.href = sid ? `/tack?session_id=${sid}` : '/tack';
     } catch (err) {

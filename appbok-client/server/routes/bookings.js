@@ -636,7 +636,7 @@ router.get('/public', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('bookings')
-      .select('id, customer_name, customer_phone, customer_email, booking_date, booking_time, amount_paid, status, salon_id, stripe_payment_intent_id')
+      .select('id, customer_name, customer_phone, customer_email, booking_date, booking_time, duration_minutes, amount_paid, status, salon_id, service_id, stylist_id, booking_services, stripe_payment_intent_id')
       .eq('id', id)
       .maybeSingle();
 
@@ -646,9 +646,17 @@ router.get('/public', async (req, res) => {
     // Hämta tjänst + salongnamn
     let serviceName = '';
     let salonName = '';
+    let stylist = null;
+    if (Array.isArray(data.booking_services) && data.booking_services.length > 0) {
+      serviceName = data.booking_services.map((svc) => svc?.name).filter(Boolean).join(' + ');
+    }
     if (data.service_id) {
       const { data: svc } = await supabase.from('services').select('name').eq('id', data.service_id).single();
-      serviceName = svc?.name || '';
+      serviceName = serviceName || svc?.name || '';
+    }
+    if (data.stylist_id) {
+      const { data: st } = await supabase.from('users').select('id, name').eq('id', data.stylist_id).single();
+      stylist = st || null;
     }
     if (data.salon_id) {
       const { data: s } = await supabase.from('salons').select('name').eq('id', data.salon_id).single();
@@ -658,6 +666,7 @@ router.get('/public', async (req, res) => {
     return res.json({
       ...data,
       service: { name: serviceName },
+      stylist,
       salonName,
     });
   } catch (err) {

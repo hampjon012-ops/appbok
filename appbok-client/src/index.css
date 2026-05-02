@@ -2642,6 +2642,46 @@ a.insta-item-link:focus-visible {
   color: var(--text-color, #1A1A1A);
 }
 
+.ty-calendar-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: -0.75rem 0 2rem;
+}
+
+.ty-calendar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 46px;
+  border: 1px solid color-mix(in srgb, var(--text-color, #1A1A1A) 12%, transparent);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--text-color, #1A1A1A);
+  font-family: var(--font-sans, sans-serif);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+
+.ty-calendar-btn svg {
+  color: var(--accent-color, #6f4e37);
+  flex-shrink: 0;
+}
+
+.ty-calendar-btn:hover {
+  border-color: color-mix(in srgb, var(--accent-color, #6f4e37) 42%, transparent);
+  background: color-mix(in srgb, var(--accent-color, #6f4e37) 5%, #ffffff);
+  transform: translateY(-1px);
+}
+
+.ty-calendar-btn:active {
+  transform: scale(0.99);
+}
+
 .ty-back-btn {
   display: inline-block;
   background: var(--text-color, #1A1A1A);
@@ -2658,6 +2698,16 @@ a.insta-item-link:focus-visible {
   background: var(--accent-color, #6f4e37);
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+@media (max-width: 520px) {
+  .thankyou-card {
+    padding: 2.25rem 1.25rem;
+  }
+
+  .ty-calendar-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* =========================================
