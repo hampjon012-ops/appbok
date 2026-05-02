@@ -9,6 +9,93 @@ import { scrapeBokadirekt } from '../lib/bokadirektScraper.js';
 
 const router = Router();
 
+const ONBOARDING_THEMES = {
+  'hair-nordic-studio': {
+    name: 'Nordic Studio',
+    backgroundColor: '#ffffff',
+    primaryAccent: '#000000',
+    secondaryColor: '#f3f4f6',
+    textColor: '#111827',
+    backgroundImageUrl: '/images/onboarding/hair-nordic-studio.jpg',
+  },
+  'hair-soft-blonde': {
+    name: 'Soft Blonde',
+    backgroundColor: '#fffaf3',
+    primaryAccent: '#9a6a3f',
+    secondaryColor: '#f2e7d8',
+    textColor: '#2f241b',
+    backgroundImageUrl: '/images/onboarding/hair-soft-blonde.jpg',
+  },
+  'hair-noir-salon': {
+    name: 'Noir Salon',
+    backgroundColor: '#0f0f10',
+    primaryAccent: '#f4f4f5',
+    secondaryColor: '#1a1a1c',
+    textColor: '#f8fafc',
+    backgroundImageUrl: '/images/onboarding/hair-noir-salon.jpg',
+  },
+  'hair-barber-steel': {
+    name: 'Barber Steel',
+    backgroundColor: '#11100f',
+    primaryAccent: '#9a5f38',
+    secondaryColor: '#201c18',
+    textColor: '#f7f2eb',
+    backgroundImageUrl: '/images/onboarding/hair-barber-steel.jpg',
+  },
+  'hair-warm-walnut': {
+    name: 'Warm Walnut',
+    backgroundColor: '#fbf4ea',
+    primaryAccent: '#7c4a2d',
+    secondaryColor: '#ead9c8',
+    textColor: '#2d2218',
+    backgroundImageUrl: '/images/onboarding/hair-warm-walnut.jpg',
+  },
+  nordic: {
+    name: 'Nordic Studio',
+    backgroundColor: '#ffffff',
+    primaryAccent: '#000000',
+    secondaryColor: '#f3f4f6',
+    textColor: '#111827',
+    backgroundImageUrl: '/images/onboarding/hair-nordic-studio.jpg',
+  },
+  earthy: {
+    name: 'Earthy Canvas',
+    backgroundColor: '#fdfbf7',
+    primaryAccent: '#78350f',
+    secondaryColor: '#e7e5e4',
+    textColor: '#292524',
+    backgroundImageUrl: '/images/yoga1.jpg',
+  },
+};
+
+const ONBOARDING_INDUSTRIES = {
+  hair: {
+    label: 'Frisör & Skönhet',
+    defaultTheme: 'hair-warm-walnut',
+    defaultBackground: '/images/onboarding/hair-warm-walnut.jpg',
+  },
+  barber: {
+    label: 'Barberare',
+    defaultTheme: 'hair-barber-steel',
+    defaultBackground: '/images/onboarding/hair-barber-steel.jpg',
+  },
+  tattoo: {
+    label: 'Tatuerare',
+    defaultTheme: 'hair-noir-salon',
+    defaultBackground: '/images/onboarding/hair-noir-salon.jpg',
+  },
+  sport: {
+    label: 'PT & Sport',
+    defaultTheme: 'hair-warm-walnut',
+    defaultBackground: '/images/onboarding/hair-warm-walnut.jpg',
+  },
+  custom: {
+    label: 'Annat / Anpassa själv',
+    defaultTheme: 'hair-warm-walnut',
+    defaultBackground: '/images/onboarding/hair-warm-walnut.jpg',
+  },
+};
+
 /** Normaliserar tjänster från onboarding (klient kan skicka tom duration eller strängar). */
 function normalizeRegisterServices(raw) {
   if (!Array.isArray(raw)) return [];
@@ -17,7 +104,7 @@ function normalizeRegisterServices(raw) {
     const name = String(s?.name ?? '').trim();
     if (!name) continue;
     const price = Math.round(Number(s?.price_amount));
-    if (!Number.isFinite(price) || price <= 0) continue;
+    if (!Number.isFinite(price) || price < 0) continue;
     let dm = parseInt(String(s?.duration_minutes ?? '').trim(), 10);
     if (!Number.isFinite(dm) || dm <= 0) dm = 60;
     const row = {
@@ -123,13 +210,53 @@ async function importBokadirektServicesForNewSalon(salon, bokadirektUrl) {
 
 // ── POST /api/auth/register — Skapa admin-konto ─────────────────────────────
 router.post('/register', async (req, res) => {
-  const { email, password, name, salonName, salonSlug, bokadirektUrl, services } = req.body;
+  const {
+    email,
+    password,
+    name,
+    salonName,
+    salonSlug,
+    bokadirektUrl,
+    services,
+    businessType = 'hair',
+    themePreset = '',
+    backgroundImageUrl = '',
+    backgroundPreset = '',
+  } = req.body;
 
   if (!email || !password || !name || !salonName) {
     return res.status(400).json({ error: 'Alla fält krävs (email, password, name, salonName).' });
   }
 
   try {
+    const industry = ONBOARDING_INDUSTRIES[businessType] || ONBOARDING_INDUSTRIES.hair;
+    const selectedThemeKey = ONBOARDING_THEMES[themePreset] ? themePreset : industry.defaultTheme;
+    const selectedTheme = ONBOARDING_THEMES[selectedThemeKey] || ONBOARDING_THEMES.nordic;
+    const rawBackground = String(backgroundImageUrl || backgroundPreset || '').trim();
+    const selectedBackground =
+      rawBackground.startsWith('/images/')
+        ? rawBackground
+        : selectedTheme.backgroundImageUrl || industry.defaultBackground;
+    const theme = {
+      backgroundColor: selectedTheme.backgroundColor,
+      primaryAccent: selectedTheme.primaryAccent,
+      secondaryColor: selectedTheme.secondaryColor,
+      textColor: selectedTheme.textColor,
+      backgroundImageUrl: selectedBackground,
+      businessType: businessType in ONBOARDING_INDUSTRIES ? businessType : 'hair',
+      themePreset: selectedThemeKey,
+      backgroundPreset: selectedBackground,
+    };
+    const contact = {
+      email: email.trim(),
+      hours: ['Mån-Fre 09-18'],
+      opening_hours: 'Mån-Fre 09-18',
+      business_type: theme.businessType,
+      business_label: industry.label,
+      onboarding_theme: selectedTheme.name,
+      background_preset: selectedBackground,
+    };
+
     let { data: salon, error: salonErr } = await supabase
       .from('salons')
       .insert({
@@ -137,6 +264,8 @@ router.post('/register', async (req, res) => {
         slug: (salonSlug || salonName).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         bokadirekt_url: bokadirektUrl || null,
         status: 'demo',
+        theme,
+        contact,
       })
       .select()
       .single();

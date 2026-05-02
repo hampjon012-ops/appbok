@@ -1,54 +1,260 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
+import { Brush, ChevronRight, Dumbbell, PenTool, Scissors, Sparkles, SlidersHorizontal } from 'lucide-react';
 import { ADMIN_PUBLIC_ORIGIN } from '../lib/domainConfig.js';
 
-/** price_amount lagras i öre (API/databas); användaren skriver kronor i fälten. */
-const DEFAULT_SERVICES = [
-  { name: 'Klippning', price_amount: 35000, duration_minutes: 45 },
-  { name: 'Färg', price_amount: 80000, duration_minutes: 120 },
-  { name: 'Styling', price_amount: 40000, duration_minutes: 45 },
-  { name: 'Barnklippning', price_amount: 20000, duration_minutes: 30 },
+const THEME_PRESETS = [
+  {
+    id: 'hair-warm-walnut',
+    industryIds: ['hair', 'barber', 'sport'],
+    name: 'Warm Walnut',
+    description: 'Boutique-salong med varm valnöt, speglar och mjuk belysning.',
+    bg: '#fbf4ea',
+    text: '#2d2218',
+    primary: '#7c4a2d',
+    accent: '#ead9c8',
+    image: '/images/onboarding/hair-warm-walnut.jpg',
+  },
+  {
+    id: 'hair-nordic-studio',
+    industryIds: ['hair'],
+    name: 'Nordic Studio',
+    description: 'Ljust, rent och skandinaviskt med mjuk salongskänsla.',
+    bg: '#ffffff',
+    text: '#111827',
+    primary: '#000000',
+    accent: '#f3f4f6',
+    image: '/images/onboarding/hair-nordic-studio.jpg',
+  },
+  {
+    id: 'hair-soft-blonde',
+    industryIds: ['hair'],
+    name: 'Soft Blonde',
+    description: 'Varm champagne, mjuka blonda toner och elegant beauty-känsla.',
+    bg: '#fffaf3',
+    text: '#2f241b',
+    primary: '#9a6a3f',
+    accent: '#f2e7d8',
+    image: '/images/onboarding/hair-soft-blonde.jpg',
+  },
+  {
+    id: 'hair-noir-salon',
+    industryIds: ['hair', 'barber', 'tattoo'],
+    name: 'Noir Salon',
+    description: 'Mörkt, exklusivt och high-end med subtila metallreflektioner.',
+    bg: '#0f0f10',
+    text: '#f8fafc',
+    primary: '#f4f4f5',
+    primaryText: '#111827',
+    accent: '#1a1a1c',
+    surface: '#151517',
+    footer: '#18181b',
+    image: '/images/onboarding/hair-noir-salon.jpg',
+  },
+  {
+    id: 'hair-barber-steel',
+    industryIds: ['barber'],
+    name: 'Barber Steel',
+    description: 'Maskulint barber-uttryck med läder, stål och varmt trä.',
+    bg: '#11100f',
+    text: '#f7f2eb',
+    primary: '#9a5f38',
+    primaryText: '#fff7ed',
+    accent: '#201c18',
+    surface: '#171412',
+    footer: '#1d1915',
+    image: '/images/onboarding/hair-barber-steel.jpg',
+  },
 ];
+
+const INDUSTRIES = [
+  {
+    id: 'hair',
+    name: 'Frisör & Skönhet',
+    label: 'Frisör, skönhet och klinik',
+    defaultTheme: 'hair-warm-walnut',
+    services: [
+      { name: 'Klippning', price_amount: 55000, duration_minutes: 45 },
+      { name: 'Färgbehandling', price_amount: 120000, duration_minutes: 120 },
+      { name: 'Styling', price_amount: 65000, duration_minutes: 60 },
+      { name: 'Konsultation', price_amount: 0, duration_minutes: 30 },
+    ],
+  },
+  {
+    id: 'barber',
+    name: 'Barberare',
+    label: 'Barber, grooming och herrsalong',
+    defaultTheme: 'hair-barber-steel',
+    services: [
+      { name: 'Herrklippning', price_amount: 55000, duration_minutes: 45 },
+      { name: 'Skäggtrimning', price_amount: 35000, duration_minutes: 30 },
+      { name: 'Klippning & skägg', price_amount: 85000, duration_minutes: 75 },
+      { name: 'Rakning', price_amount: 45000, duration_minutes: 40 },
+    ],
+  },
+  {
+    id: 'tattoo',
+    name: 'Tatuerare',
+    label: 'Tattoo, piercing och premium',
+    defaultTheme: 'hair-noir-salon',
+    services: [
+      { name: 'Konsultation', price_amount: 0, duration_minutes: 30 },
+      { name: 'Tatuering liten', price_amount: 150000, duration_minutes: 120 },
+      { name: 'Heldag', price_amount: 600000, duration_minutes: 360 },
+      { name: 'Touch-up', price_amount: 80000, duration_minutes: 60 },
+    ],
+  },
+  {
+    id: 'sport',
+    name: 'PT & Sport',
+    label: 'Personlig träning och sport',
+    defaultTheme: 'hair-warm-walnut',
+    services: [
+      { name: 'PT-pass', price_amount: 75000, duration_minutes: 60 },
+      { name: 'Intro coaching', price_amount: 0, duration_minutes: 30 },
+      { name: 'Gruppträning', price_amount: 22000, duration_minutes: 45 },
+      { name: 'Kostrådgivning', price_amount: 65000, duration_minutes: 60 },
+    ],
+  },
+  {
+    id: 'custom',
+    name: 'Annat / Anpassa själv',
+    label: 'Se alla teman och bygg en egen start',
+    defaultTheme: 'hair-warm-walnut',
+    services: [
+      { name: 'Konsultation', price_amount: 0, duration_minutes: 30 },
+      { name: 'Standardbokning', price_amount: 65000, duration_minutes: 60 },
+      { name: 'Premiumbokning', price_amount: 120000, duration_minutes: 90 },
+      { name: 'Uppföljning', price_amount: 45000, duration_minutes: 30 },
+    ],
+  },
+];
+
+const INDUSTRY_ICONS = {
+  hair: Scissors,
+  barber: Brush,
+  tattoo: PenTool,
+  sport: Dumbbell,
+  custom: SlidersHorizontal,
+};
+
+function slugify(value) {
+  return String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 
 function priceOreToKrInputValue(ore) {
   if (ore === '' || ore === null || ore === undefined) return '';
-  const n = Number(ore);
-  if (!Number.isFinite(n)) return '';
-  return String(Math.round(n / 100));
+  const value = Number(ore);
+  if (!Number.isFinite(value)) return '';
+  return String(Math.round(value / 100));
 }
 
-function handlePriceKrFieldChange(index, rawString, setServices) {
+function servicesPayloadForRegister(rows) {
+  return rows
+    .filter((service) => {
+      const name = String(service.name || '').trim();
+      const price = Number(service.price_amount);
+      return name && Number.isFinite(price) && price >= 0;
+    })
+    .map((service) => {
+      const duration = parseInt(String(service.duration_minutes ?? '').trim(), 10);
+      return {
+        name: String(service.name).trim(),
+        price_amount: Math.round(Number(service.price_amount)),
+        duration_minutes: Number.isFinite(duration) && duration > 0 ? duration : 60,
+      };
+    });
+}
+
+function updatePriceAt(index, rawValue, setServices) {
   setServices((prev) => {
     const next = [...prev];
-    if (rawString === '') {
+    if (rawValue === '') {
       next[index] = { ...next[index], price_amount: '' };
       return next;
     }
-    const kr = parseInt(String(rawString), 10);
-    if (Number.isNaN(kr) || kr < 0) return prev;
+    const kr = parseInt(String(rawValue), 10);
+    if (!Number.isFinite(kr) || kr < 0) return prev;
     next[index] = { ...next[index], price_amount: kr * 100 };
     return next;
   });
 }
 
-/** Skicka alltid heltal för price (ör) och duration till register — undvik tomma strängar som gör serverfiltrering tom. */
-function servicesPayloadForRegister(rows) {
-  return rows
-    .filter((s) => {
-      const name = String(s.name || '').trim();
-      const price = Number(s.price_amount);
-      return name && Number.isFinite(price) && price > 0;
-    })
-    .map((s) => {
-      let dm = parseInt(String(s.duration_minutes ?? '').trim(), 10);
-      if (!Number.isFinite(dm) || dm <= 0) dm = 60;
-      return {
-        name: String(s.name).trim(),
-        price_amount: Math.round(Number(s.price_amount)),
-        duration_minutes: dm,
-      };
-    });
+function ThemeSwatches({ theme }) {
+  return (
+    <span className="signup-v2-swatches" aria-hidden>
+      {[theme.bg, theme.primary, theme.accent].map((color) => (
+        <span key={color} style={{ backgroundColor: color }} />
+      ))}
+    </span>
+  );
+}
+
+function LivePreview({ salonName, industry, theme, image, services }) {
+  const displayServices = servicesPayloadForRegister(services).slice(0, 4);
+  const rows = displayServices.length > 0 ? displayServices : industry.services;
+  const safeSalonName = salonName.trim() || 'Studio Nova';
+  const isDarkTheme = theme.bg === '#0f0f10' || theme.bg === '#11100f' || theme.bg === '#09090b' || theme.bg === '#171717';
+
+  return (
+    <div className="signup-v2-phone-frame">
+      <div
+        className="signup-v2-phone signup-v2-landing-preview"
+        style={{
+          '--signup-preview-bg': theme.bg,
+          '--signup-preview-text': theme.text,
+          '--signup-preview-accent': theme.primary,
+          '--signup-preview-accent-text': theme.primaryText || '#ffffff',
+          '--signup-preview-surface': theme.surface || theme.bg,
+          '--signup-preview-muted': theme.text === '#ffffff' ? 'rgba(255,255,255,.68)' : '#78716c',
+          '--signup-preview-chevron': isDarkTheme ? 'rgba(255,255,255,.42)' : '#9ca3af',
+          '--signup-preview-footer-bg': isDarkTheme ? theme.footer || theme.surface || theme.bg : '#ffffff',
+          '--signup-preview-divider': isDarkTheme ? 'rgba(255,255,255,.12)' : 'rgba(17,24,39,.1)',
+        }}
+      >
+        <div
+          className="signup-v2-preview-hero"
+          style={{ backgroundImage: `linear-gradient(rgba(0,0,0,.46), rgba(0,0,0,.46)), url(${image})` }}
+        >
+          <div className="signup-v2-preview-hero-content">
+            <h2>{safeSalonName}</h2>
+            <p>Upplev hantverk och personlig service i en lugn och modern miljö.</p>
+          </div>
+        </div>
+
+        <div className="signup-v2-preview-card">
+          <section className="signup-v2-preview-section">
+            <h3>Våra mest populära tjänster</h3>
+            {rows.map((service, index) => (
+              <div
+                key={`${service.name}-${index}`}
+                className="signup-v2-preview-service-row"
+                role="button"
+                tabIndex={0}
+              >
+                <div>
+                  <strong>{service.name || 'Ny tjänst'}</strong>
+                  <span>
+                    {service.duration_minutes || 60} min · Från{' '}
+                    {Math.round(Number(service.price_amount || 0) / 100).toLocaleString('sv-SE')} kr
+                  </span>
+                </div>
+                <ChevronRight className="signup-v2-preview-service-chevron" size={16} strokeWidth={2.15} aria-hidden />
+              </div>
+            ))}
+          </section>
+        </div>
+
+        <div className="signup-v2-preview-footer">
+          <button type="button">Boka Tid</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function SignupPage() {
@@ -57,50 +263,70 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Step 1: Base info
   const [salonName, setSalonName] = useState('');
   const [subdomain, setSubdomain] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  // Step 2: Services
-  const [services, setServices] = useState(
-    DEFAULT_SERVICES.map(s => ({ ...s, active: true }))
-  );
-
-  // Step 3: Bokadirekt
+  const [industryId, setIndustryId] = useState('hair');
+  const [themeId, setThemeId] = useState('hair-warm-walnut');
+  const [services, setServices] = useState(INDUSTRIES[0].services.map((service) => ({ ...service })));
   const [bokadirektUrl, setBokadirektUrl] = useState('');
 
-  // Auto-generate subdomain from salonName if user hasn't typed in subdomain yet
-  const handleSalonNameChange = (e) => {
-    const val = e.target.value;
-    setSalonName(val);
-    const generated = val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    setSubdomain(generated);
-  };
+  const industry = useMemo(
+    () => INDUSTRIES.find((item) => item.id === industryId) || INDUSTRIES[0],
+    [industryId],
+  );
+  const availableThemes = useMemo(
+    () =>
+      industryId === 'custom'
+        ? THEME_PRESETS
+        : THEME_PRESETS.filter((item) => item.industryIds.includes(industryId)),
+    [industryId],
+  );
+  const theme = useMemo(
+    () =>
+      THEME_PRESETS.find((item) => item.id === themeId) ||
+      availableThemes[0] ||
+      THEME_PRESETS[0],
+    [availableThemes, themeId],
+  );
+  const image = theme.image;
 
-  const handleSubdomainChange = (e) => {
-    setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
-  };
+  function handleSalonNameChange(event) {
+    const nextName = event.target.value;
+    setSalonName(nextName);
+    setSubdomain(slugify(nextName));
+  }
 
-  const updateService = (index, field, value) => {
-    const newServices = [...services];
-    if (field === 'duration_minutes') {
-      newServices[index][field] = value !== '' && value != null ? parseInt(value, 10) : '';
-    } else {
-      newServices[index][field] = value;
-    }
-    setServices(newServices);
-  };
+  function handleIndustrySelect(nextIndustryId) {
+    const nextIndustry = INDUSTRIES.find((item) => item.id === nextIndustryId) || INDUSTRIES[0];
+    setIndustryId(nextIndustry.id);
+    setThemeId(nextIndustry.defaultTheme);
+    setServices(nextIndustry.services.map((service) => ({ ...service })));
+  }
 
-  const submitForm = async (e) => {
-    e?.preventDefault();
+  function updateService(index, field, value) {
+    setServices((prev) => {
+      const next = [...prev];
+      next[index] = {
+        ...next[index],
+        [field]: field === 'duration_minutes' && value !== '' ? parseInt(value, 10) : value,
+      };
+      return next;
+    });
+  }
+
+  async function submitForm(event) {
+    event?.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      // Generera ägarnamn från e-postadressen (t.ex. "anna@salong.se" → "Anna")
-      const nameFromEmail = email.trim().split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const nameFromEmail = email
+        .trim()
+        .split('@')[0]
+        .replace(/[._-]/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
 
       const payload = {
         name: nameFromEmail,
@@ -109,13 +335,17 @@ export default function SignupPage() {
         salonName: salonName.trim(),
         salonSlug: subdomain.trim(),
         bokadirektUrl: bokadirektUrl.trim(),
+        businessType: industryId,
+        themePreset: themeId,
+        backgroundImageUrl: image,
+        backgroundPreset: image,
         services: servicesPayloadForRegister(services),
       };
 
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       const raw = await res.text();
@@ -127,288 +357,278 @@ export default function SignupPage() {
           throw new Error('Servern svarade med ogiltig data. Försök igen om en stund.');
         }
       } else if (!res.ok) {
-        throw new Error(res.status === 502 || res.status === 503
-          ? 'API-servern svarar inte. Starta om utveckling: cd appbok-client && npm run dev (startar både API och Vite).'
-          : 'Tomt svar från servern. Kontrollera att du kör npm run dev i appbok-client.');
+        throw new Error('Tomt svar från servern. Kontrollera att utvecklingsservern kör.');
       }
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Något gick fel vid registreringen.');
-      }
+      if (!res.ok) throw new Error(data.error || 'Något gick fel vid registreringen.');
+      if (!data.token) throw new Error('Registreringen lyckades men inget inloggningsbevis kom tillbaka.');
 
-      if (!data.token) {
-        throw new Error('Registreringen lyckades men inget inloggningsbevis kom tillbaka. Kontakta support.');
-      }
-
-      const bdImp = data.bokadirekt_import;
-      const toastBokadirekt =
-        bdImp?.ok && typeof bdImp.imported === 'number' && bdImp.imported > 0;
-
-      const hostname =
-        typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+      const hostname = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
       const isApexMarketing = hostname === 'appbok.se' || hostname === 'www.appbok.se';
 
-      // På apex ligger admin på admin.appbok.se — annan origin, localStorage följer inte med.
-      // Skicka session i hash så Admin kan läsa in innan auth-kontroll.
       if (isApexMarketing) {
-        try {
-          const adminOrigin = import.meta.env.VITE_ADMIN_ORIGIN || ADMIN_PUBLIC_ORIGIN;
-          const payload = encodeURIComponent(
-            JSON.stringify({
-              t: data.token,
-              u: data.user,
-              s: data.salon,
-              toastBokadirekt,
-            }),
-          );
-          window.location.href = `${adminOrigin}/admin/dashboard#sb=${payload}`;
-        } catch {
-          setLoading(false);
-          setError('Kunde inte öppna admin-panelen. Försök logga in manuellt.');
-        }
+        const adminOrigin = import.meta.env.VITE_ADMIN_ORIGIN || ADMIN_PUBLIC_ORIGIN;
+        const sessionPayload = encodeURIComponent(
+          JSON.stringify({ t: data.token, u: data.user, s: data.salon }),
+        );
+        window.location.href = `${adminOrigin}/admin/dashboard#sb=${sessionPayload}`;
         return;
       }
 
       localStorage.setItem('sb_token', data.token);
       localStorage.setItem('sb_user', JSON.stringify(data.user));
       localStorage.setItem('sb_salon', JSON.stringify(data.salon));
-
-      if (toastBokadirekt) {
-        try {
-          sessionStorage.setItem('sb_onboarding_bokadirekt_toast', '1');
-        } catch {
-          /* ignore */
-        }
-      }
-
-      setLoading(false);
       navigate('/admin/dashboard');
-      
     } catch (err) {
       setError(err.message);
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div style={{ fontFamily: 'var(--font-sans)', background: '#FAFAFA', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header mini */}
-      <header style={{ padding: '1.5rem', display: 'flex', justifyContent: 'center', background: '#FFFFFF', borderBottom: '1px solid #E5E5E5' }}>
-        <Link to="/">
-          <img src="/sidebar-logo.png" alt="Appbok" style={{ height: '32px', filter: 'brightness(0)' }} />
-        </Link>
-      </header>
+    <div className="signup-v2-page">
+      <Link to="/" className="signup-v2-logo" aria-label="Till startsidan">
+        <img src="/sidebar-logo.png" alt="Appbok" />
+      </Link>
 
-      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
-        <div style={{
-          background: '#FFFFFF', padding: '2.5rem', borderRadius: '16px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.04), 0 10px 20px rgba(0,0,0,0.06), 0 24px 48px rgba(0,0,0,0.08)',
-          maxWidth: '500px', width: '100%'
-        }}>
-          
-          {/* Progress bar */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '2rem' }}>
-            {[1, 2, 3].map(s => (
-              <div key={s} style={{ 
-                height: '4px', flex: 1, borderRadius: '4px',
-                background: s <= step ? '#171717' : '#E5E5E5',
-                transition: 'background 0.3s'
-              }} />
+      <main className={`signup-v2-shell${step < 3 ? ' signup-v2-shell--solo' : ''}`}>
+        <section className="signup-v2-left">
+          <div className="signup-v2-progress" aria-label={`Steg ${step} av 5`}>
+            {[1, 2, 3, 4, 5].map((item) => (
+              <span key={item} className={item <= step ? 'is-active' : ''} />
             ))}
           </div>
 
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem', marginBottom: '0.5rem', color: '#1A1A1A' }}>
-            {step === 1 && 'Sätt upp din salong'}
-            {step === 2 && 'Lägg till tjänster'}
-            {step === 3 && 'Bokadirekt-import'}
-          </h1>
-          <p style={{ color: '#737373', marginBottom: '2rem' }}>
-            {step === 1 && 'Skapa ditt konto på under 2 minuter.'}
-            {step === 2 && 'Du kan lägga till 4 snabbtjänster nu eller ändra senare.'}
-            {step === 3 && 'Har du en extern bokningssida vi ska flytta över?'}
-          </p>
+          {error ? <div className="signup-v2-error">{error}</div> : null}
 
-          {error && <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem' }}>{error}</div>}
-
-          {step === 1 && (
-            <form onSubmit={(e) => { e.preventDefault(); setStep(2); }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <label>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Salongens Namn</div>
-                <input required type="text" value={salonName} onChange={handleSalonNameChange} style={inputStyle} placeholder="Annas Salong" />
-              </label>
-
-              <label>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Bokningslänk (Subdomän)</div>
-                <div style={{ display: 'flex', alignItems: 'center', background: '#F5F5F5', borderRadius: '8px', overflow: 'hidden', padding: '0 0.5rem', border: '1px solid #E5E5E5' }}>
-                  <input required type="text" value={subdomain} onChange={handleSubdomainChange} style={{ ...inputStyle, border: 'none', background: 'transparent', paddingLeft: '0.2rem' }} />
-                  <span style={{ color: '#737373', fontSize: '0.9rem', paddingRight: '0.5rem' }}>.appbok.se</span>
-                </div>
-              </label>
-
-              <label>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>E-postadress</div>
-                <input required type="email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} placeholder="anna@salong.se" />
-              </label>
-
-              <label>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Lösenord</div>
-                <input required type="password" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} placeholder="Minst 6 tecken" minLength={6} />
-              </label>
-
-              <button type="submit" style={primaryButtonStyle}>Nästa steg →</button>
-            </form>
-          )}
-
-          {step === 2 && (
-            <form onSubmit={(e) => { e.preventDefault(); setStep(3); }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {services.length === 0 ? (
-                <p style={{ fontSize: '0.9rem', color: '#525252', lineHeight: 1.55, margin: 0 }}>
-                  Du har valt att inte lägga in snabbtjänster nu. Efter registrering hittar du allt under{' '}
-                  <strong>Tjänster</strong> i admin. Du behöver inga rader här för att gå vidare.
-                </p>
-              ) : null}
-              {services.map((svc, i) => (
-                <div key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <div style={{ flex: 2 }}>
-                    {i === 0 && <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#737373', marginBottom: '0.2rem' }}>Tjänst</div>}
-                    <input type="text" value={svc.name} onChange={e => updateService(i, 'name', e.target.value)} placeholder={DEFAULT_SERVICES[i]?.name} style={inputStyle} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    {i === 0 && <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#737373', marginBottom: '0.2rem' }}>Pris (kr)</div>}
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      inputMode="numeric"
-                      value={priceOreToKrInputValue(svc.price_amount)}
-                      onChange={(e) => handlePriceKrFieldChange(i, e.target.value, setServices)}
-                      style={inputStyle}
-                      placeholder={DEFAULT_SERVICES[i] != null ? String(Math.round(DEFAULT_SERVICES[i].price_amount / 100)) : ''}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    {i === 0 && <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#737373', marginBottom: '0.2rem' }}>Tid (min)</div>}
-                    <input type="number" value={svc.duration_minutes} onChange={e => updateService(i, 'duration_minutes', e.target.value)} style={inputStyle} placeholder={DEFAULT_SERVICES[i]?.duration_minutes} />
-                  </div>
-                </div>
-              ))}
-
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button type="button" onClick={() => setStep(1)} style={{ ...buttonBase, background: '#F5F5F5', color: '#1A1A1A', flex: 1 }}>← Tillbaka</button>
-                <button type="submit" style={{ ...primaryButtonStyle, flex: 2 }}>Nästa steg →</button>
+          {step === 1 ? (
+            <form className="signup-v2-step" onSubmit={(event) => { event.preventDefault(); setStep(2); }}>
+              <div className="signup-v2-copy">
+                <span>Steg 1 av 5</span>
+                <h1>Vad bygger du?</h1>
+                <p>Välj typ av verksamhet först. I nästa steg lägger du in uppgifterna och därefter väljer du utseende.</p>
               </div>
-              <button
-                type="button"
-                className="signup-onboarding-skip"
-                onClick={() => {
-                  setServices([]);
-                  setStep(3);
-                }}
-              >
-                Hoppa över, jag lägger in tjänster senare
-              </button>
-            </form>
-          )}
 
-          {step === 3 && (
-            <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div
-                style={{
-                  padding: '1.35rem 1.25rem 1.5rem',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  textAlign: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    marginBottom: '0.5rem',
-                    color: '#6366f1',
-                  }}
-                  aria-hidden
-                >
-                  <Sparkles size={24} strokeWidth={2} />
+              <div className="signup-v2-industry-grid" role="radiogroup" aria-label="Bransch">
+                {INDUSTRIES.map((item) => {
+                  const Icon = INDUSTRY_ICONS[item.id] || Sparkles;
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      className={item.id === industryId ? 'is-selected' : ''}
+                      onClick={() => handleIndustrySelect(item.id)}
+                      role="radio"
+                      aria-checked={item.id === industryId}
+                    >
+                      <span><Icon size={17} strokeWidth={2.15} aria-hidden /></span>
+                      <strong>{item.name}</strong>
+                      <small>{item.label}</small>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="signup-v2-actions">
+                <button type="submit" className="signup-v2-primary">Fortsätt</button>
+              </div>
+            </form>
+          ) : null}
+
+          {step === 2 ? (
+            <form className="signup-v2-step" onSubmit={(event) => { event.preventDefault(); setStep(3); }}>
+              <div className="signup-v2-copy">
+                <span>Steg 2 av 5</span>
+                <h1>Grunduppgifter</h1>
+                <p>Det här blir basen för din bokningssida och din inloggning till admin.</p>
+              </div>
+
+              <div className="signup-v2-fields">
+                <label>
+                  <span>Salongens namn</span>
+                  <input required type="text" value={salonName} onChange={handleSalonNameChange} placeholder="Studio Nova" />
+                </label>
+                <label>
+                  <span>Bokningslänk</span>
+                  <div className="signup-v2-subdomain">
+                    <input
+                      required
+                      type="text"
+                      value={subdomain}
+                      onChange={(event) => setSubdomain(slugify(event.target.value))}
+                      placeholder="studio-nova"
+                    />
+                    <em>.appbok.se</em>
+                  </div>
+                </label>
+                <div className="signup-v2-field-row">
+                  <label>
+                    <span>E-post</span>
+                    <input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="du@studio.se" />
+                  </label>
+                  <label>
+                    <span>Lösenord</span>
+                    <input
+                      required
+                      minLength={6}
+                      type="password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder="Minst 6 tecken"
+                    />
+                  </label>
                 </div>
-                <h4
-                  style={{
-                    margin: '0 0 0.5rem 0',
-                    fontWeight: 600,
-                    fontSize: '1.05rem',
-                    color: '#171717',
-                  }}
-                >
-                  Flytta från Bokadirekt?
-                </h4>
-                <p style={{ fontSize: '0.875rem', color: '#737373', margin: '0 0 1rem', lineHeight: 1.5 }}>
-                  Klistra in din nuvarande bokningslänk så hämtar vi och konfigurerar hela ditt tjänsteutbud automatiskt på några sekunder.
-                </p>
+              </div>
+
+              <div className="signup-v2-actions signup-v2-actions--split">
+                <button type="button" className="signup-v2-secondary" onClick={() => setStep(1)}>Tillbaka</button>
+                <button type="submit" className="signup-v2-primary">Fortsätt</button>
+              </div>
+            </form>
+          ) : null}
+
+          {step === 3 ? (
+            <form className="signup-v2-step" onSubmit={(event) => { event.preventDefault(); setStep(4); }}>
+              <div className="signup-v2-copy">
+                <span>Steg 3 av 5</span>
+                <h1>Välj uttryck</h1>
+                <p>Välj ett färdigt tema. Färger och 16:9-bakgrund följer med som ett matchat premium-paket.</p>
+              </div>
+
+              <div className="signup-v2-section-head">
+                <span>Tema</span>
+                <small>{availableThemes.length} matchade presets · {industry.name}</small>
+              </div>
+
+              <div className="signup-v2-theme-grid">
+                {availableThemes.map((item) => (
+                  <button
+                    type="button"
+                    key={item.id}
+                    className={item.id === themeId ? 'is-selected' : ''}
+                    onClick={() => setThemeId(item.id)}
+                    aria-pressed={item.id === themeId}
+                  >
+                    <span
+                      className="signup-v2-theme-card-image"
+                      style={{ backgroundImage: `linear-gradient(rgba(0,0,0,.22), rgba(0,0,0,.28)), url(${item.image})` }}
+                    />
+                    <span className="signup-v2-theme-card-body">
+                      <span className="signup-v2-theme-card-title">
+                        <strong>{item.name}</strong>
+                        <ThemeSwatches theme={item} />
+                      </span>
+                      <small>{item.description}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="signup-v2-actions signup-v2-actions--split">
+                <button type="button" className="signup-v2-secondary" onClick={() => setStep(2)}>Tillbaka</button>
+                <button type="submit" className="signup-v2-primary">Fortsätt</button>
+              </div>
+            </form>
+          ) : null}
+
+          {step === 4 ? (
+            <form className="signup-v2-step" onSubmit={(event) => { event.preventDefault(); setStep(5); }}>
+              <div className="signup-v2-copy">
+                <span>Steg 4 av 5</span>
+                <h1>Lägg till tjänster</h1>
+                <p>Skapa några starttjänster nu. De visas direkt i telefon-previewn.</p>
+              </div>
+
+              <div className="signup-v2-service-list">
+                {services.map((service, index) => (
+                  <div className="signup-v2-service-row" key={index}>
+                    <label>
+                      <span>Tjänst</span>
+                      <input
+                        type="text"
+                        value={service.name}
+                        onChange={(event) => updateService(index, 'name', event.target.value)}
+                        placeholder="Tjänst"
+                      />
+                    </label>
+                    <label>
+                      <span>Pris</span>
+                      <input
+                        type="number"
+                        min={0}
+                        inputMode="numeric"
+                        value={priceOreToKrInputValue(service.price_amount)}
+                        onChange={(event) => updatePriceAt(index, event.target.value, setServices)}
+                        placeholder="0"
+                      />
+                    </label>
+                    <label>
+                      <span>Tid</span>
+                      <input
+                        type="number"
+                        min={5}
+                        inputMode="numeric"
+                        value={service.duration_minutes}
+                        onChange={(event) => updateService(index, 'duration_minutes', event.target.value)}
+                        placeholder="60"
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              <div className="signup-v2-actions signup-v2-actions--split">
+                <button type="button" className="signup-v2-secondary" onClick={() => setStep(3)}>Tillbaka</button>
+                <button type="submit" className="signup-v2-primary">Fortsätt</button>
+              </div>
+            </form>
+          ) : null}
+
+          {step === 5 ? (
+            <form className="signup-v2-step" onSubmit={submitForm}>
+              <div className="signup-v2-copy">
+                <span>Steg 5 av 5</span>
+                <h1>Bokadirekt-import</h1>
+                <p>Har du en befintlig Bokadirekt-sida kan vi importera tjänster automatiskt.</p>
+              </div>
+
+              <div className="signup-v2-import-card">
+                <Sparkles size={24} strokeWidth={2} />
+                <strong>Flytta från Bokadirekt?</strong>
+                <p>Klistra in länken nu eller hoppa över. Du kan alltid lägga till mer i admin senare.</p>
                 <input
                   type="url"
                   value={bokadirektUrl}
-                  onChange={(e) => setBokadirektUrl(e.target.value)}
-                  style={{ ...inputStyle, textAlign: 'left' }}
+                  onChange={(event) => setBokadirektUrl(event.target.value)}
                   placeholder="https://www.bokadirekt.se/places/..."
-                  autoComplete="url"
                   inputMode="url"
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.25rem' }}>
-                <button type="button" onClick={() => setStep(2)} disabled={loading} style={{ ...buttonBase, background: '#F5F5F5', color: '#1A1A1A', flex: 1 }}>← Tillbaka</button>
-                <button type="submit" disabled={loading} style={{ ...primaryButtonStyle, flex: 2, justifyContent: 'center' }}>
-                  {loading ? 'Skapar konto...' : 'Skicka in & Slutför'}
+              <div className="signup-v2-actions signup-v2-actions--split">
+                <button type="button" className="signup-v2-secondary" onClick={() => setStep(4)} disabled={loading}>Tillbaka</button>
+                <button type="submit" className="signup-v2-primary" disabled={loading}>
+                  {loading ? 'Skapar...' : 'Skapa bokningssida'}
                 </button>
               </div>
               <button
                 type="button"
-                className="signup-onboarding-skip"
+                className="signup-v2-skip"
                 disabled={loading}
                 onClick={() => void submitForm()}
               >
-                Nej tack, jag sätter upp allt själv
+                Hoppa över import och slutför
               </button>
             </form>
-          )}
+          ) : null}
+        </section>
 
-        </div>
+        {step >= 3 ? (
+          <aside className="signup-v2-right">
+            <LivePreview salonName={salonName} industry={industry} theme={theme} image={image} services={services} />
+          </aside>
+        ) : null}
       </main>
     </div>
   );
 }
-
-const inputStyle = {
-  width: '100%',
-  padding: '0.75rem 1rem',
-  borderRadius: '8px',
-  border: '1px solid #E5E5E5',
-  fontSize: '0.95rem',
-  fontFamily: 'inherit',
-  outline: 'none',
-  transition: 'border-color 0.2s',
-  boxSizing: 'border-box'
-};
-
-const buttonBase = {
-  padding: '0.85rem 1.5rem',
-  borderRadius: '8px',
-  border: 'none',
-  fontSize: '1rem',
-  fontWeight: '600',
-  cursor: 'pointer',
-  transition: 'transform 0.1s, opacity 0.2s',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  textDecoration: 'none'
-};
-
-const primaryButtonStyle = {
-  ...buttonBase,
-  background: '#171717',
-  color: '#FFFFFF',
-  width: '100%',
-  boxShadow: '0 4px 14px rgba(0,0,0,0.22)'
-};

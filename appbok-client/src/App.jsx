@@ -481,14 +481,7 @@ function App() {
                               <p className="service-popular-meta">{metaLine}</p>
                             ) : null}
                           </div>
-                          <button
-                            type="button"
-                            className="service-popular-btn"
-                            tabIndex={-1}
-                            style={{ backgroundColor: accentColor }}
-                          >
-                            Välj
-                          </button>
+                          <ChevronRight className="service-popular-chevron" size={19} strokeWidth={2.1} aria-hidden />
                         </div>
                       );
                     });
