@@ -28,6 +28,25 @@ function UserIcon() {
   );
 }
 
+function UsersIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ open }) {
+  return (
+    <svg className={open ? 'sa-actions-chevron sa-actions-chevron--open' : 'sa-actions-chevron'} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
 function CopyIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -56,11 +75,19 @@ function BanIcon() {
   );
 }
 
-export default function ActionsDropdown({ salon, onEdit, onImpersonate, onInactivate }) {
+function staffInitial(name) {
+  return String(name || 'S').trim().charAt(0).toUpperCase() || 'S';
+}
+
+export default function ActionsDropdown({ salon, onEdit, onImpersonate, onImpersonateStaff, onInactivate }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const [copied, setCopied] = useState(false);
   const [stripeBusy, setStripeBusy] = useState(false);
+  const [staffOpen, setStaffOpen] = useState(false);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [staffError, setStaffError] = useState('');
+  const [staffList, setStaffList] = useState(null);
 
   // Close on outside click
   useEffect(() => {
@@ -101,6 +128,31 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onInacti
     }
   }
 
+  async function toggleStaffPicker() {
+    const nextOpen = !staffOpen;
+    setStaffOpen(nextOpen);
+    if (!nextOpen || staffList || staffLoading) return;
+
+    setStaffLoading(true);
+    setStaffError('');
+    try {
+      const res = await fetch(`/api/superadmin/salons/${salon.id}/staff`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('sb_token')}`,
+        },
+      });
+      const data = await res.json().catch(() => []);
+      if (!res.ok) throw new Error(data.error || 'Kunde inte hämta stylister.');
+      setStaffList((Array.isArray(data) ? data : []).filter((u) => u.role === 'staff' && u.active !== false));
+    } catch (e) {
+      setStaffError(e.message || 'Kunde inte hämta stylister.');
+      setStaffList([]);
+    } finally {
+      setStaffLoading(false);
+    }
+  }
+
   return (
     <div className="sa-actions" ref={ref}>
       <button
@@ -136,6 +188,52 @@ export default function ActionsDropdown({ salon, onEdit, onImpersonate, onInacti
             <UserIcon />
             <span>Logga in som salong</span>
           </button>
+
+          {onImpersonateStaff ? (
+            <>
+              <button
+                type="button"
+                className="sa-actions-item"
+                role="menuitem"
+                onClick={toggleStaffPicker}
+                aria-expanded={staffOpen}
+              >
+                <UsersIcon />
+                <span>Logga in som stylist</span>
+                <ChevronIcon open={staffOpen} />
+              </button>
+
+              {staffOpen ? (
+                <div className="sa-staff-picker">
+                  {staffLoading ? (
+                    <div className="sa-staff-picker-state">Hämtar stylister…</div>
+                  ) : staffError ? (
+                    <div className="sa-staff-picker-state sa-staff-picker-state--error">{staffError}</div>
+                  ) : staffList?.length ? (
+                    staffList.map((staff) => (
+                      <button
+                        key={staff.id}
+                        type="button"
+                        className="sa-staff-picker-item"
+                        onClick={() => {
+                          onImpersonateStaff(staff);
+                          setOpen(false);
+                        }}
+                      >
+                        <span className="sa-staff-picker-avatar">{staffInitial(staff.name)}</span>
+                        <span className="sa-staff-picker-copy">
+                          <span className="sa-staff-picker-name">{staff.name || 'Namnlös stylist'}</span>
+                          <span className="sa-staff-picker-meta">{staff.title || staff.email || 'Stylist'}</span>
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="sa-staff-picker-state">Inga stylister finns i salongen.</div>
+                  )}
+                </div>
+              ) : null}
+            </>
+          ) : null}
 
           <button
             type="button"

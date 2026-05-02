@@ -723,6 +723,30 @@ export default function SuperadminTab() {
                         salon={s}
                         onEdit={() => setEditSalon(s)}
                         onInactivate={() => handleInactivateSalon(s)}
+                        onImpersonateStaff={(staff) => {
+                          localStorage.setItem(
+                            'sb_superadmin_impersonate',
+                            JSON.stringify({
+                              id: staff.id,
+                              name: staff.name,
+                              email: staff.email,
+                              title: staff.title,
+                              role: 'staff',
+                              salonId: s.id,
+                              salonName: s.name,
+                              salonSlug: s.slug || s.subdomain,
+                            }),
+                          );
+                          localStorage.setItem(
+                            'sb_salon',
+                            JSON.stringify({
+                              id: s.id,
+                              name: s.name,
+                              slug: s.slug || s.subdomain,
+                            }),
+                          );
+                          window.location.reload();
+                        }}
                         onImpersonate={() => {
                           localStorage.setItem('sb_superadmin_impersonate', JSON.stringify(s));
                           localStorage.setItem(
