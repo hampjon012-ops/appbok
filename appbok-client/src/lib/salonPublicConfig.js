@@ -297,6 +297,26 @@ export function resolvePrimaryAccentHex(theme) {
   return canonicalAccentHex(norm) ?? DEFAULT_ACCENT_HEX;
 }
 
+function readableTextOnHex(hex) {
+  const normalized = normalizeHex6Color(hex);
+  if (!normalized) return '#ffffff';
+  const raw = normalized.slice(1);
+  const r = parseInt(raw.slice(0, 2), 16) / 255;
+  const g = parseInt(raw.slice(2, 4), 16) / 255;
+  const b = parseInt(raw.slice(4, 6), 16) / 255;
+  const channel = (v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+  const luminance = 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  return luminance > 0.58 ? '#111827' : '#ffffff';
+}
+
+export function resolveAccentTextColor(theme) {
+  if (theme && typeof theme === 'object') {
+    const explicit = normalizeHex6Color(theme.primaryText) ?? normalizeHex6Color(theme.primary_text);
+    if (explicit) return explicit;
+  }
+  return readableTextOnHex(resolvePrimaryAccentHex(theme));
+}
+
 /** Samma logik som applyThemeToDocument — för live preview utan att skriva till :root. */
 export function resolveThemeCssVars(theme) {
   if (!theme || typeof theme !== 'object') return {};
@@ -304,11 +324,13 @@ export function resolveThemeCssVars(theme) {
   const bg = theme.backgroundColor;
 
   const resolvedAccent = resolvePrimaryAccentHex(theme);
+  const resolvedAccentText = resolveAccentTextColor(theme);
   const resolvedBg =
     !bg || bg === '#FAFAFA' || bg === '#FAFAF9' || bg === '#FFFFFF' || bg === '#ffffff' ? NEW_BG : bg;
 
   const vars = {
     '--accent-color': resolvedAccent,
+    '--accent-text': resolvedAccentText,
     '--accent-hover': `${resolvedAccent}CC`,
     '--bg-color': resolvedBg,
   };

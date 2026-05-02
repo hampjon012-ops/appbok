@@ -95,7 +95,7 @@ html.preview-embed-mode [role='button'] {
   font-size: 15px;
   font-weight: 600;
   line-height: 1.1;
-  color: #171717;
+  color: var(--text-color, #171717);
   letter-spacing: -0.02em;
   flex-shrink: 0;
 }
@@ -110,7 +110,7 @@ html.preview-embed-mode [role='button'] {
   justify-content: flex-end;
   gap: 0.35rem;
   flex-shrink: 0;
-  color: #171717;
+  color: var(--text-color, #171717);
 }
 .preview-device-status-icon {
   display: block;
@@ -275,6 +275,16 @@ html.preview-embed-mode [role='button'] {
   color: #111827;
   line-height: 1;
   text-align: center;
+}
+
+html.preview-embed-mode .sticky-top-bar.visible {
+  background: var(--bg-color, #fff);
+  border-bottom: 1px solid color-mix(in srgb, var(--text-color, #111827) 12%, transparent);
+  box-shadow: none;
+}
+
+html.preview-embed-mode .sticky-top-bar h3 {
+  color: var(--text-color, #111827);
 }
 
 /* =========================================
@@ -906,7 +916,7 @@ a.insta-item-link:focus-visible {
     width: 100%;
     max-width: none;
     background: var(--accent-color);
-    color: white;
+    color: var(--accent-text, #fff);
     border: none;
     padding: 1rem 1.5rem;
     border-radius: 1rem;
@@ -10043,7 +10053,7 @@ a.insta-handle-link:focus-visible {
    ========================================= */
 .btn-floating {
   background: var(--accent-color);
-  color: #fff;
+  color: var(--accent-text, #fff);
   font-weight: 500;
   border-radius: 1rem;
   width: 100%;

@@ -9,6 +9,7 @@ import {
   SALON_CONFIG_UPDATED,
   SALON_CONFIG_STORAGE_KEY,
   resolvePrimaryAccentHex,
+  resolveAccentTextColor,
   isSalonPreviewBookingMode,
 } from './lib/salonPublicConfig';
 import './App.css';
@@ -326,6 +327,7 @@ function App() {
   }, []);
 
   const accentColor = useMemo(() => resolvePrimaryAccentHex(config?.theme), [config?.theme]);
+  const accentTextColor = useMemo(() => resolveAccentTextColor(config?.theme), [config?.theme]);
   const validOpeningWeek = useMemo(() => {
     if (!config || config.tenantNotFound) return null;
     return getValidOpeningHoursWeek(config.contact);
@@ -380,7 +382,7 @@ function App() {
             isExpired
               ? { opacity: 0.5, cursor: 'not-allowed', pointerEvents: 'none' }
               : scrollY > 50
-              ? { backgroundColor: accentColor, color: '#fff' }
+              ? { backgroundColor: accentColor, color: accentTextColor }
               : undefined
           }
         >
@@ -680,7 +682,7 @@ function App() {
           type="button"
           className="btn-floating"
           disabled={isExpired}
-          style={isExpired ? { opacity: 0.5, cursor: 'not-allowed', backgroundColor: '#9CA3AF' } : { backgroundColor: accentColor }}
+          style={isExpired ? { opacity: 0.5, cursor: 'not-allowed', backgroundColor: '#9CA3AF' } : { backgroundColor: accentColor, color: accentTextColor }}
           onClick={isExpired ? undefined : () => openBookingModal(null)}
         >
           {isExpired ? 'Bokning stängd' : 'Boka Tid'}
