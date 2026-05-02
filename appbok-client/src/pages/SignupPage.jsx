@@ -214,11 +214,8 @@ export default function SignupPage() {
     [industryId],
   );
   const availableThemes = useMemo(
-    () =>
-      industryId === 'custom'
-        ? THEME_PRESETS
-        : THEME_PRESETS.filter((item) => item.industryIds.includes(industryId)),
-    [industryId],
+    () => THEME_PRESETS,
+    [],
   );
   const theme = useMemo(
     () =>
@@ -328,10 +325,10 @@ export default function SignupPage() {
         <img src="/sidebar-logo.png" alt="Appbok" />
       </Link>
 
-      <main className={`signup-v2-shell${step < 3 ? ' signup-v2-shell--solo' : ''}`}>
+      <main className={`signup-v2-shell${step < 2 ? ' signup-v2-shell--solo' : ''}`}>
         <section className="signup-v2-left">
-          <div className="signup-v2-progress" aria-label={`Steg ${step} av 5`}>
-            {[1, 2, 3, 4, 5].map((item) => (
+          <div className="signup-v2-progress" aria-label={`Steg ${step} av 4`}>
+            {[1, 2, 3, 4].map((item) => (
               <span key={item} className={item <= step ? 'is-active' : ''} />
             ))}
           </div>
@@ -341,41 +338,7 @@ export default function SignupPage() {
           {step === 1 ? (
             <form className="signup-v2-step" onSubmit={(event) => { event.preventDefault(); setStep(2); }}>
               <div className="signup-v2-copy">
-                <span>Steg 1 av 5</span>
-                <h1>Vad bygger du?</h1>
-                <p>Välj typ av verksamhet först. I nästa steg lägger du in uppgifterna och därefter väljer du utseende.</p>
-              </div>
-
-              <div className="signup-v2-industry-grid" role="radiogroup" aria-label="Bransch">
-                {INDUSTRIES.map((item) => {
-                  const Icon = INDUSTRY_ICONS[item.id] || Sparkles;
-                  return (
-                    <button
-                      type="button"
-                      key={item.id}
-                      className={item.id === industryId ? 'is-selected' : ''}
-                      onClick={() => handleIndustrySelect(item.id)}
-                      role="radio"
-                      aria-checked={item.id === industryId}
-                    >
-                      <span><Icon size={17} strokeWidth={2.15} aria-hidden /></span>
-                      <strong>{item.name}</strong>
-                      <small>{item.label}</small>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="signup-v2-actions">
-                <button type="submit" className="signup-v2-primary">Fortsätt</button>
-              </div>
-            </form>
-          ) : null}
-
-          {step === 2 ? (
-            <form className="signup-v2-step" onSubmit={(event) => { event.preventDefault(); setStep(3); }}>
-              <div className="signup-v2-copy">
-                <span>Steg 2 av 5</span>
+                <span>Steg 1 av 4</span>
                 <h1>Grunduppgifter</h1>
                 <p>Det här blir basen för din bokningssida och din inloggning till admin.</p>
               </div>
@@ -417,24 +380,23 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              <div className="signup-v2-actions signup-v2-actions--split">
-                <button type="button" className="signup-v2-secondary" onClick={() => setStep(1)}>Tillbaka</button>
+              <div className="signup-v2-actions">
                 <button type="submit" className="signup-v2-primary">Fortsätt</button>
               </div>
             </form>
           ) : null}
 
-          {step === 3 ? (
-            <form className="signup-v2-step" onSubmit={(event) => { event.preventDefault(); setStep(4); }}>
+          {step === 2 ? (
+            <form className="signup-v2-step" onSubmit={(event) => { event.preventDefault(); setStep(3); }}>
               <div className="signup-v2-copy">
-                <span>Steg 3 av 5</span>
+                <span>Steg 2 av 4</span>
                 <h1>Välj uttryck</h1>
                 <p>Välj ett färdigt tema. Färger och 16:9-bakgrund följer med som ett matchat premium-paket.</p>
               </div>
 
               <div className="signup-v2-section-head">
                 <span>Tema</span>
-                <small>{availableThemes.length} matchade presets · {industry.name}</small>
+                <small>{availableThemes.length} färdiga uttryck</small>
               </div>
 
               <div className="signup-v2-theme-grid">
@@ -462,16 +424,16 @@ export default function SignupPage() {
               </div>
 
               <div className="signup-v2-actions signup-v2-actions--split">
-                <button type="button" className="signup-v2-secondary" onClick={() => setStep(2)}>Tillbaka</button>
+                <button type="button" className="signup-v2-secondary" onClick={() => setStep(1)}>Tillbaka</button>
                 <button type="submit" className="signup-v2-primary">Fortsätt</button>
               </div>
             </form>
           ) : null}
 
-          {step === 4 ? (
-            <form className="signup-v2-step" onSubmit={(event) => { event.preventDefault(); setStep(5); }}>
+          {step === 3 ? (
+            <form className="signup-v2-step" onSubmit={(event) => { event.preventDefault(); setStep(4); }}>
               <div className="signup-v2-copy">
-                <span>Steg 4 av 5</span>
+                <span>Steg 3 av 4</span>
                 <h1>Lägg till tjänster</h1>
                 <p>Skapa några starttjänster nu. De visas direkt i telefon-previewn.</p>
               </div>
@@ -515,23 +477,23 @@ export default function SignupPage() {
               </div>
 
               <div className="signup-v2-actions signup-v2-actions--split">
-                <button type="button" className="signup-v2-secondary" onClick={() => setStep(3)}>Tillbaka</button>
+                <button type="button" className="signup-v2-secondary" onClick={() => setStep(2)}>Tillbaka</button>
                 <button type="submit" className="signup-v2-primary">Fortsätt</button>
               </div>
               <button
                 type="button"
                 className="signup-v2-skip"
-                onClick={() => setStep(5)}
+                onClick={() => setStep(4)}
               >
                 Hoppa över tjänster
               </button>
             </form>
           ) : null}
 
-          {step === 5 ? (
+          {step === 4 ? (
             <form className="signup-v2-step" onSubmit={submitForm}>
               <div className="signup-v2-copy">
-                <span>Steg 5 av 5</span>
+                <span>Steg 4 av 4</span>
                 <h1>Bokadirekt-import</h1>
                 <p>Har du en befintlig Bokadirekt-sida kan vi importera tjänster automatiskt.</p>
               </div>
@@ -550,7 +512,7 @@ export default function SignupPage() {
               </div>
 
               <div className="signup-v2-actions signup-v2-actions--split">
-                <button type="button" className="signup-v2-secondary" onClick={() => setStep(4)} disabled={loading}>Tillbaka</button>
+                <button type="button" className="signup-v2-secondary" onClick={() => setStep(3)} disabled={loading}>Tillbaka</button>
                 <button type="submit" className="signup-v2-primary" disabled={loading}>
                   {loading ? 'Skapar...' : 'Skapa bokningssida'}
                 </button>
@@ -567,7 +529,7 @@ export default function SignupPage() {
           ) : null}
         </section>
 
-        {step >= 3 ? (
+        {step >= 2 ? (
           <aside className="signup-v2-right">
             <LivePreview salonName={salonName} industry={industry} theme={theme} image={image} services={services} />
           </aside>
