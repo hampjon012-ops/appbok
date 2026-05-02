@@ -10822,6 +10822,78 @@ a.insta-handle-link:focus-visible {
   letter-spacing: 0;
 }
 
+.theme-live-preview-phone-frame {
+  width: min(100%, 330px);
+}
+
+.theme-live-preview-phone {
+  height: 620px;
+  min-height: 620px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.theme-live-preview-phone::-webkit-scrollbar {
+  display: none;
+}
+
+.theme-live-preview-phone .signup-v2-preview-hero {
+  position: relative;
+  inset: auto;
+  height: 360px;
+  padding: 2.7rem 1.1rem 7.25rem;
+}
+
+.theme-live-preview-phone .signup-v2-preview-card {
+  position: relative;
+  inset: auto;
+  z-index: 2;
+  min-height: 410px;
+  margin-top: -82px;
+  padding-bottom: 1.15rem;
+  overflow: visible;
+}
+
+.theme-live-preview-phone .signup-v2-preview-footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: -1px;
+}
+
+.theme-live-preview-extra-section {
+  margin-top: 1.4rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--signup-preview-divider, rgba(17, 24, 39, 0.1));
+  text-align: center;
+}
+
+.theme-live-preview-extra-section h3 {
+  margin-bottom: 0.75rem;
+}
+
+.theme-live-preview-extra-section p {
+  margin: 0;
+  color: var(--signup-preview-muted, #78716c);
+  font-size: 0.72rem;
+}
+
+.theme-live-preview-team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.theme-live-preview-team-grid span {
+  display: grid;
+  min-height: 84px;
+  place-items: center;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--signup-preview-text, #111827) 7%, transparent);
+  color: var(--signup-preview-muted, #78716c);
+  font-size: 0.72rem;
+}
+
 @media (max-width: 920px) {
   .signup-v2-page {
     justify-content: flex-start;

@@ -72,7 +72,7 @@ export default function ThemeLivePreviewColumn({
         <h3 className="admin-card-title theme-live-preview-stack-title">Live preview</h3>
         <div className="signup-v2-phone-frame theme-live-preview-phone-frame">
           <div
-            className="signup-v2-phone signup-v2-landing-preview"
+            className="signup-v2-phone signup-v2-landing-preview theme-live-preview-phone"
             style={{
               '--signup-preview-bg': background,
               '--signup-preview-text': text,
@@ -116,6 +116,19 @@ export default function ThemeLivePreviewColumn({
                     <ChevronRight className="signup-v2-preview-service-chevron" size={16} strokeWidth={2.15} aria-hidden />
                   </div>
                 ))}
+              </section>
+
+              <section className="theme-live-preview-extra-section">
+                <h3>Träffa vårt team</h3>
+                <div className="theme-live-preview-team-grid">
+                  <span>Emma</span>
+                  <span>Alex</span>
+                </div>
+              </section>
+
+              <section className="theme-live-preview-extra-section">
+                <h3>@Colorisma</h3>
+                <p>Följ oss för daglig inspiration</p>
               </section>
             </div>
 
