@@ -1,12 +1,6 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { buildMobileThemePreviewPath } from '../lib/salonPublicConfig.js';
-import { getLandingOriginForThemePreview } from '../lib/subdomain.js';
-
-/** Logisk viewport — samma som iframe-intern bredd */
-const IFRAME_W = 390;
-const IFRAME_H = 844;
-/** Skala ner till mockup-skärm (origin top-left) */
-const PREVIEW_SCALE = 0.7;
+import { useMemo } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { resolveAccentTextColor } from '../lib/salonPublicConfig.js';
 
 const STICKY_WRAP = {
   position: 'sticky',
@@ -14,75 +8,120 @@ const STICKY_WRAP = {
   alignSelf: 'start',
 };
 
-const IFRAME_STYLE = {
-  flex: 1,
-  width: '100%',
-  height: '100%',
-  border: 0,
-  display: 'block',
-};
+const FALLBACK_SERVICES = [
+  { name: 'Konsultation', duration_minutes: 30, price_amount: 0 },
+  { name: 'Klippning inkl. tvätt & fön', duration_minutes: 60, price_amount: 75000 },
+  { name: 'Balayage / Ombre', duration_minutes: 180, price_amount: 180000 },
+  { name: 'Styling', duration_minutes: 60, price_amount: 65000 },
+];
 
-const PREVIEW_DEBOUNCE_MS = 320;
+function hexIsDark(hex) {
+  const raw = String(hex || '').trim().replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(raw)) return false;
+  const r = parseInt(raw.slice(0, 2), 16);
+  const g = parseInt(raw.slice(2, 4), 16);
+  const b = parseInt(raw.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 < 128;
+}
+
+function formatPrice(ore) {
+  const value = Math.max(0, Math.round(Number(ore) || 0) / 100);
+  return value === 0 ? '0 kr' : `${value.toLocaleString('sv-SE')} kr`;
+}
 
 /**
- * Live preview: iframe 390px med svart ram som möter skärmen (ingen mellanliggande bezel), skalning.
+ * Live preview i admin: samma telefonlayout som onboarding, men driven av de
+ * faktiska temafälten i inställningar.
  */
 export default function ThemeLivePreviewColumn({
   salonName,
   tagline = '',
-  logoUrl,
   accent,
   secondary,
   background,
   text,
   bgImage,
 }) {
-  const livePath = useMemo(
-    () =>
-      buildMobileThemePreviewPath({
-        salonName,
-        tagline,
-        logoUrl,
-        accent,
-        background,
-        text,
-        secondary,
-        bgImage,
-      }),
-    [salonName, tagline, logoUrl, accent, background, text, secondary, bgImage],
+  const previewTheme = useMemo(
+    () => ({
+      backgroundColor: background,
+      primaryAccent: accent,
+      secondaryColor: secondary,
+      textColor: text,
+    }),
+    [accent, background, secondary, text],
   );
-
-  const liveUrl = useMemo(() => {
-    const origin = getLandingOriginForThemePreview();
-    return origin ? `${origin}${livePath}` : livePath;
-  }, [livePath]);
-
-  const [iframeSrc, setIframeSrc] = useState(liveUrl);
-  const previewHasMounted = useRef(false);
-
-  useEffect(() => {
-    const delay = previewHasMounted.current ? PREVIEW_DEBOUNCE_MS : 0;
-    previewHasMounted.current = true;
-    const t = window.setTimeout(() => setIframeSrc(liveUrl), delay);
-    return () => window.clearTimeout(t);
-  }, [liveUrl]);
+  const isDarkTheme = hexIsDark(background);
+  const accentText = resolveAccentTextColor(previewTheme);
+  const safeSalonName = String(salonName || '').trim() || 'Studio Flex';
+  const safeTagline =
+    String(tagline || '').trim() || 'Upplev hantverk och personlig service i en lugn och modern miljö.';
+  const heroImage = String(bgImage || '').trim() || '/images/onboarding/hair-warm-walnut.jpg';
+  const surface = isDarkTheme ? secondary || background : background;
+  const footer = isDarkTheme ? secondary || background : '#ffffff';
+  const muted = isDarkTheme ? 'rgba(255,255,255,.58)' : '#78716c';
+  const divider = isDarkTheme ? 'rgba(255,255,255,.14)' : 'rgba(17,24,39,.1)';
 
   return (
     <div
       className="superadmin-preview-wrap superadmin-preview-wrap--sticky"
       style={STICKY_WRAP}
-      data-appbok-preview="iframe-mobile"
+      data-appbok-preview="onboarding-mobile"
     >
       <div className="theme-live-preview-stack">
         <h3 className="admin-card-title theme-live-preview-stack-title">Live preview</h3>
-        <div className="theme-preview-phone theme-preview-phone-premium">
-          <div className="theme-preview-iframe-viewport">
-            <iframe
-              key={iframeSrc}
-              title="Mobilförhandsvisning — bokningssida"
-              src={iframeSrc}
-              style={IFRAME_STYLE}
-            />
+        <div className="signup-v2-phone-frame theme-live-preview-phone-frame">
+          <div
+            className="signup-v2-phone signup-v2-landing-preview"
+            style={{
+              '--signup-preview-bg': background,
+              '--signup-preview-text': text,
+              '--signup-preview-accent': accent,
+              '--signup-preview-accent-text': accentText,
+              '--signup-preview-surface': surface,
+              '--signup-preview-muted': muted,
+              '--signup-preview-chevron': isDarkTheme ? 'rgba(255,255,255,.46)' : '#9ca3af',
+              '--signup-preview-footer-bg': footer,
+              '--signup-preview-divider': divider,
+            }}
+          >
+            <div
+              className="signup-v2-preview-hero"
+              style={{
+                backgroundImage: `linear-gradient(rgba(0,0,0,.46), rgba(0,0,0,.46)), url(${heroImage})`,
+              }}
+            >
+              <div className="signup-v2-preview-hero-content">
+                <h2>{safeSalonName}</h2>
+                <p>{safeTagline}</p>
+              </div>
+            </div>
+
+            <div className="signup-v2-preview-card">
+              <section className="signup-v2-preview-section">
+                <h3>Våra mest populära tjänster</h3>
+                {FALLBACK_SERVICES.map((service, index) => (
+                  <div
+                    key={`${service.name}-${index}`}
+                    className="signup-v2-preview-service-row"
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <div>
+                      <strong>{service.name}</strong>
+                      <span>
+                        {service.duration_minutes} min · Från {formatPrice(service.price_amount)}
+                      </span>
+                    </div>
+                    <ChevronRight className="signup-v2-preview-service-chevron" size={16} strokeWidth={2.15} aria-hidden />
+                  </div>
+                ))}
+              </section>
+            </div>
+
+            <div className="signup-v2-preview-footer">
+              <button type="button">Boka Tid</button>
+            </div>
           </div>
         </div>
       </div>
